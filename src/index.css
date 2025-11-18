@@ -1,0 +1,167 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 240 5% 4%;
+    --foreground: 0 0% 100%;
+
+    --card: 240 5% 6%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 240 5% 6%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 45 65% 52%;
+    --primary-foreground: 240 5% 4%;
+
+    --secondary: 240 5% 10%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 240 5% 15%;
+    --muted-foreground: 0 0% 70%;
+
+    --accent: 45 65% 52%;
+    --accent-foreground: 240 5% 4%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 5% 15%;
+    --input: 240 5% 15%;
+    --ring: 45 65% 52%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 240 5% 5%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 45 65% 52%;
+    --sidebar-primary-foreground: 240 5% 4%;
+    --sidebar-accent: 240 5% 10%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 240 5% 15%;
+    --sidebar-ring: 45 65% 52%;
+
+    /* HIXA custom tokens */
+    --gold: 45 65% 52%;
+    --gold-dark: 45 55% 42%;
+    --gold-light: 45 75% 62%;
+    --dark-bg: 240 5% 4%;
+    --dark-card: 240 5% 6%;
+    --glass-bg: 240 5% 8%;
+    
+    /* Gradients */
+    --gradient-gold: linear-gradient(135deg, hsl(45 75% 62%) 0%, hsl(45 65% 52%) 100%);
+    --gradient-dark: linear-gradient(180deg, hsl(240 5% 6%) 0%, hsl(240 5% 4%) 100%);
+    
+    /* Shadows */
+    --shadow-gold: 0 10px 40px -10px hsl(45 65% 52% / 0.3);
+    --shadow-card: 0 4px 20px hsl(240 5% 2% / 0.5);
+    
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .light {
+    --background: 0 0% 100%;
+    --foreground: 240 5% 10%;
+    --card: 0 0% 98%;
+    --card-foreground: 240 5% 10%;
+    --primary: 45 65% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 5% 10%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 5% 40%;
+    --accent: 45 65% 52%;
+    --accent-foreground: 0 0% 100%;
+    --border: 240 5% 90%;
+    --input: 240 5% 90%;
+    --ring: 45 65% 52%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-glass-bg backdrop-blur-lg border border-border/50;
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-gold-light to-gold bg-clip-text text-transparent;
+  }
+
+  .hexagon {
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  }
+
+  .hexagon-icon {
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .hexagon-none {
+    clip-path: none !important;
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.6s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.6s ease-out forwards;
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-20px);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
