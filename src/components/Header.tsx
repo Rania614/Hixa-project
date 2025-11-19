@@ -4,13 +4,15 @@ import { Button } from './ui/button';
 import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { HexagonIcon } from './ui/hexagon-icon';
+import { useNavigate } from 'react-router-dom';
 
 export const Header = () => {
   const { content, language, setIsAuthenticated } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
   const handleGetStarted = () => {
-    setIsAuthenticated(true);
+    navigate('/admin/login');
   };
 
   const navLinks = [
@@ -42,8 +44,8 @@ export const Header = () => {
       <div className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           <div
-            className="flex items-center gap-2 text-2xl font-bold text-gradient cursor-pointer"
-            onClick={() => scrollToSection('hero')}
+            className="flex items-center gap-2 text-2xl font-bold text-gradient cursor-pointer transition-transform duration-300 hover:scale-105"
+            onClick={() => navigate('/')}
           >
             <img
               src={content.header.logoImage}

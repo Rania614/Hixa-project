@@ -2,12 +2,14 @@ import { useApp } from '@/context/AppContext';
 import { Button } from './ui/button';
 import { ArrowRight } from 'lucide-react';
 import { HexagonIcon } from './ui/hexagon-icon';
+import { useNavigate } from 'react-router-dom';
 
 export const CTA = () => {
   const { content, language, setIsAuthenticated } = useApp();
+  const navigate = useNavigate();
 
   const handleGetStarted = () => {
-    setIsAuthenticated(true);
+    navigate('/admin/login');
   };
 
   return (

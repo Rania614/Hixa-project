@@ -5,17 +5,20 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Lock } from 'lucide-react';
 import { HexagonIcon } from '@/components/ui/hexagon-icon';
+import { useNavigate } from 'react-router-dom';
 
 const AdminLogin = () => {
   const { setIsAuthenticated } = useApp();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const navigate = useNavigate();
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     // Simple mock authentication - just redirect
     if (username && password) {
       setIsAuthenticated(true);
+      navigate('/admin/dashboard');
     }
   };
 

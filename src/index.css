@@ -55,13 +55,20 @@ All colors MUST be HSL.
     --dark-card: 240 5% 6%;
     --glass-bg: 240 5% 8%;
     
+    /* Engineering platform colors */
+    --cyan: 180 100% 35%;
+    --cyan-light: 180 100% 45%;
+    --cyan-dark: 180 100% 25%;
+    
     /* Gradients */
     --gradient-gold: linear-gradient(135deg, hsl(45 75% 62%) 0%, hsl(45 65% 52%) 100%);
     --gradient-dark: linear-gradient(180deg, hsl(240 5% 6%) 0%, hsl(240 5% 4%) 100%);
+    --gradient-cyan: linear-gradient(135deg, hsl(180 100% 45%) 0%, hsl(180 100% 35%) 100%);
     
     /* Shadows */
     --shadow-gold: 0 10px 40px -10px hsl(45 65% 52% / 0.3);
     --shadow-card: 0 4px 20px hsl(240 5% 2% / 0.5);
+    --shadow-cyan: 0 10px 40px -10px hsl(180 100% 35% / 0.3);
     
     /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -134,6 +141,55 @@ All colors MUST be HSL.
 
   .animate-slide-up {
     animation: slideUp 0.6s ease-out forwards;
+  }
+
+  /* Custom color utilities */
+  .bg-cyan {
+    background-color: hsl(var(--cyan));
+  }
+
+  .text-cyan {
+    color: hsl(var(--cyan));
+  }
+
+  .bg-cyan-light {
+    background-color: hsl(var(--cyan-light));
+  }
+
+  .text-cyan-light {
+    color: hsl(var(--cyan-light));
+  }
+
+  .bg-cyan-dark {
+    background-color: hsl(var(--cyan-dark));
+  }
+
+  .text-cyan-dark {
+    color: hsl(var(--cyan-dark));
+  }
+
+  .hover\:bg-cyan:hover {
+    background-color: hsl(var(--cyan));
+  }
+
+  .hover\:text-cyan:hover {
+    color: hsl(var(--cyan));
+  }
+
+  .hover\:bg-cyan-light:hover {
+    background-color: hsl(var(--cyan-light));
+  }
+
+  .hover\:text-cyan-light:hover {
+    color: hsl(var(--cyan-light));
+  }
+
+  .hover\:bg-cyan-dark:hover {
+    background-color: hsl(var(--cyan-dark));
+  }
+
+  .hover\:text-cyan-dark:hover {
+    color: hsl(var(--cyan-dark));
   }
 
   @keyframes float {

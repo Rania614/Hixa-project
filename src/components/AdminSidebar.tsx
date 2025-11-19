@@ -3,12 +3,15 @@ import { NavLink } from '@/components/NavLink';
 import { useApp } from '@/context/AppContext';
 import { Button } from './ui/button';
 import { HexagonIcon } from './ui/hexagon-icon';
+import { useNavigate } from 'react-router-dom';
 
 export const AdminSidebar = () => {
   const { setIsAuthenticated } = useApp();
+  const navigate = useNavigate();
 
   const handleLogout = () => {
     setIsAuthenticated(false);
+    navigate('/');
   };
 
   return (
