@@ -16,24 +16,40 @@ export const PlatformFeatures = () => {
   return (
     <section id="features" className="py-24 bg-secondary/30">
       <div className="container mx-auto px-6">
+        {/* Platform Header with Badge and Slogan */}
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            {language === 'en' ? 'Platform Features' : 'ميزات المنصة'}
+          {/* Platform-specific Badge */}
+          <div className="inline-flex items-center gap-2 mb-6 px-4 py-2 bg-gold/20 border border-gold/40 rounded-full">
+            <div className="w-2 h-2 bg-gold rounded-full animate-pulse" />
+            <span className="text-sm font-semibold text-gold">
+              {content.platformContent.platformLabel[language]}
+            </span>
+          </div>
+          
+          {/* Platform Heading */}
+          <h2 className="text-4xl md:text-5xl font-bold mb-4 text-gold">
+            {content.platformContent.heading[language]}
           </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            {language === 'en'
-              ? 'Enterprise-grade features for modern businesses'
-              : 'ميزات على مستوى المؤسسات للأعمال الحديثة'}
+          
+          {/* Platform Slogan */}
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-6 font-semibold">
+            {content.platformContent.slogan[language]}
+          </p>
+          
+          {/* Partners - Clients Label */}
+          <p className="text-sm text-gold/80 font-semibold tracking-wide">
+            {content.platformContent.partnersClientsLabel[language]}
           </p>
         </div>
 
+        {/* Feature Cards */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {content.platformFeatures.map((feature, index) => {
             const Icon = iconMap[feature.icon as keyof typeof iconMap];
             return (
               <Card
                 key={feature.id}
-                className="glass-card hover:border-gold/50 transition-all duration-300 animate-slide-up"
+                className="glass-card hover:border-gold/50 transition-all duration-300 animate-slide-up border border-gold/20"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
                 <CardContent className="p-6 text-center">

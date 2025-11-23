@@ -53,6 +53,12 @@ export const Footer = () => {
                 ? 'Professional engineering services platform connecting experts with clients for innovative solutions.'
                 : 'منصة خدمات هندسية احترافية تربط الخبراء بالعملاء لتقديم حلول مبتكرة.'}
             </p>
+            {/* Platform Label in Footer */}
+            <div className="mb-4 inline-flex items-center gap-2 px-3 py-1 bg-gold/20 border border-gold/40 rounded-full">
+              <span className="text-xs font-semibold text-gold">
+                {content.platformContent.platformLabel[language]}
+              </span>
+            </div>
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <HexagonIcon size="sm" className="text-cyan">

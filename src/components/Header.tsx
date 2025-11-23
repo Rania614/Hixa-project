@@ -12,7 +12,8 @@ export const Header = () => {
   const navigate = useNavigate();
 
   const handleGetStarted = () => {
-    navigate('/admin/login');
+    // Navigate to the platform landing page
+    navigate('/platform');
   };
 
   const navLinks = [
@@ -20,21 +21,47 @@ export const Header = () => {
     { id: 'about', label: { en: 'About', ar: 'عن الشركة' } },
     { id: 'services', label: { en: 'Services', ar: 'الخدمات' } },
     { id: 'projects', label: { en: 'Projects', ar: 'المشاريع' } },
-    { id: 'features', label: { en: 'Features', ar: 'الميزات' } },
+    { id: 'partners', label: { en: 'Partners', ar: 'الشركاء' } },
+    { id: 'jobs', label: { en: 'Jobs', ar: 'الوظائف' } },
     { id: 'contact', label: { en: 'Contact', ar: 'اتصل بنا' } },
   ];
 
   const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      const headerOffset = 80;
-      const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+    // Check if we're on the platform page or the company landing page
+    const isPlatformPage = window.location.pathname === '/platform';
+    const isCompanyLandingPage = window.location.pathname === '/';
+    
+    if (isPlatformPage) {
+      // Scroll to section on platform page
+      const element = document.getElementById(sectionId);
+      if (element) {
+        const headerOffset = 80;
+        const elementPosition = element.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
 
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth',
-      });
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth',
+        });
+        setMobileMenuOpen(false);
+      }
+    } else if (isCompanyLandingPage) {
+      // Scroll to section on company landing page
+      const element = document.getElementById(sectionId);
+      if (element) {
+        const headerOffset = 80;
+        const elementPosition = element.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth',
+        });
+        setMobileMenuOpen(false);
+      }
+    } else {
+      // Navigate to platform page with hash
+      navigate(`/platform#${sectionId}`);
       setMobileMenuOpen(false);
     }
   };
@@ -49,11 +76,13 @@ export const Header = () => {
           >
             <img
               src={content.header.logoImage}
-              alt={`${content.header.logo} logo`}
-              className="w-16 h-16 "
+              alt="Company logo"
+              className="w-16 h-16"
               loading="lazy"
             />
-            {content.header.logo}
+            {content.header.logo && (
+              <span>{content.header.logo}</span>
+            )}
           </div>
           
           {/* Desktop Navigation */}

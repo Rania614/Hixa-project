@@ -1,6 +1,6 @@
 const mockData = {
   header: {
-    logoImage: "src/assets/images/logo.png",
+    logoImage: "src/assets/images/update logo.png",
   },
   hero: {
     title: {
@@ -181,6 +181,32 @@ const mockData = {
       },
     },
   ],
+  platformContent: {
+    slogan: {
+      en: "Connecting expertise and High Xpert ART BUILD opportunities with no spatial limits",
+      ar: "ربطك بالخبرات وفرص المشاريع عالية الجودة... بلا حدود مكانية",
+    },
+    heading: {
+      en: "HIXA Platform",
+      ar: "منصة هيكسا",
+    },
+    platformLabel: {
+      en: "Platform-specific",
+      ar: "خاص بالمنصة",
+    },
+    partnersClientsLabel: {
+      en: "Partners – Clients",
+      ar: "شركاؤنا - عملاؤنا",
+    },
+    ctaButtonLabel: {
+      en: "Get Started",
+      ar: "ابدأ الآن",
+    },
+    ctaPlatformBadge: {
+      en: "Platform-specific",
+      ar: "خاص بالمنصة",
+    },
+  },
   footer: {
     links: [
       { id: "1", label: { en: "About", ar: "عن الشركة" }, url: "#about" },

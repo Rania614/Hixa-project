@@ -1,0 +1,220 @@
+{
+  "faqData": [
+    {
+      "category": {
+        "en": "HIXA Partners",
+        "ar": "شركاء HIXA"
+      },
+      "subCategory": {
+        "en": "Partner Registration",
+        "ar": "تسجيل الشركاء"
+      },
+      "question": {
+        "en": "How do I register as a partner?",
+        "ar": "كيف اسجل كشريك؟"
+      },
+      "answer": {
+        "en": "Registration is done by filling out the company data form and attaching the commercial register and work record. The application is approved within 24-72 hours.",
+        "ar": "التسجيل يتم عبر تعبئة نموذج بيانات الشركة وإرفاق السجل التجاري وسابقة الأعمال، ويتم اعتماد الطلب خلال 24–72 ساعة."
+      }
+    },
+    {
+      "category": {
+        "en": "HIXA Partners",
+        "ar": "شركاء HIXA"
+      },
+      "subCategory": {
+        "en": "Partner Benefits",
+        "ar": "فوائد الشراكة"
+      },
+      "question": {
+        "en": "What is the benefit of registering as a partner?",
+        "ar": "ما الفائدة من التسجيل كشريك؟"
+      },
+      "answer": {
+        "en": "Receiving ready projects, displaying services in the marketplace, tender opportunities and business cooperation.",
+        "ar": "استقبال مشاريع جاهزة، عرض الخدمات في الماركت بليس، فرص المناقصات والتعاون التجاري."
+      }
+    },
+    {
+      "category": {
+        "en": "HIXA Partners",
+        "ar": "شركاء HIXA"
+      },
+      "subCategory": {
+        "en": "Registration Fees",
+        "ar": "رسوم التسجيل"
+      },
+      "question": {
+        "en": "Is there a fee for registration?",
+        "ar": "هل يوجد رسوم للتسجيل؟"
+      },
+      "answer": {
+        "en": "No, registration is free. Some premium services are optional with subscription.",
+        "ar": "لا، التسجيل مجاني. بعض الخدمات المميزة اختيارية باشتراك."
+      }
+    },
+    {
+      "category": {
+        "en": "HIXA Partners",
+        "ar": "شركاء HIXA"
+      },
+      "subCategory": {
+        "en": "Available Specializations",
+        "ar": "التخصصات المتاحة"
+      },
+      "question": {
+        "en": "What specializations are available?",
+        "ar": "ما التخصصات المتاحة؟"
+      },
+      "answer": {
+        "en": "Architectural - Structural - MEP - BIM - PMC - QS - Training - Supplies and others.",
+        "ar": "تصميم معماري – إنشائي – MEP – BIM – PMC – QS – تدريب – توريدات وغيرها."
+      }
+    },
+    {
+      "category": {
+        "en": "HIXA Partners",
+        "ar": "شركاء HIXA"
+      },
+      "subCategory": {
+        "en": "Tender System",
+        "ar": "نظام المناقصات"
+      },
+      "question": {
+        "en": "What is the tender system?",
+        "ar": "ما نظام المناقصات؟"
+      },
+      "answer": {
+        "en": "Tender posting - receiving offers - identity concealment - evaluation and comparison - awarding the bid.",
+        "ar": "طرح المناقصات – استقبال العروض – إخفاء الهوية – تقييم ومقارنة – ترسية العطاء."
+      }
+    },
+    {
+      "category": {
+        "en": "Experts & Freelancers",
+        "ar": "المندوبين و الخبراء"
+      },
+      "subCategory": {
+        "en": "Getting Started",
+        "ar": "البدء كخبير"
+      },
+      "question": {
+        "en": "How do I start as an expert?",
+        "ar": "كيف أبدأ كخبير؟"
+      },
+      "answer": {
+        "en": "Register an account - add experience - receive projects - follow the dashboard.",
+        "ar": "تسجيل حساب – إضافة الخبرة – استقبال المشاريع – متابعة لوحة التحكم."
+      }
+    },
+    {
+      "category": {
+        "en": "Experts & Freelancers",
+        "ar": "المندوبين و الخبراء"
+      },
+      "subCategory": {
+        "en": "Business Registration",
+        "ar": "السجل التجاري"
+      },
+      "question": {
+        "en": "Is a commercial register required?",
+        "ar": "هل يجب سجل تجاري؟"
+      },
+      "answer": {
+        "en": "Not required, you can work as an independent accredited expert.",
+        "ar": "لا يشترط، يمكن العمل كخبير مستقل معتمد."
+      }
+    },
+    {
+      "category": {
+        "en": "Experts & Freelancers",
+        "ar": "المندوبين و الخبراء"
+      },
+      "subCategory": {
+        "en": "Available Work Types",
+        "ar": "أنواع الأعمال المتاحة"
+      },
+      "question": {
+        "en": "What types of work are available?",
+        "ar": "ما أنواع الأعمال المتاحة؟"
+      },
+      "answer": {
+        "en": "Design - BIM - Contracts - Due Diligence - Quantity surveying - Project management - Training.",
+        "ar": "تصميم – BIM – عقود – Due Diligence – حصر كميات – إدارة مشاريع – تدريب."
+      }
+    },
+    {
+      "category": {
+        "en": "Experts & Freelancers",
+        "ar": "المندوبين و الخبراء"
+      },
+      "subCategory": {
+        "en": "Commission System",
+        "ar": "نظام العمولة"
+      },
+      "question": {
+        "en": "What is the commission system?",
+        "ar": "ما نظام العمولة؟"
+      },
+      "answer": {
+        "en": "Based on the expert's role: Introduction - Implementation - Supervision, with rewards and promotions.",
+        "ar": "حسب دور الخبير: استقدام – تنفيذ – إشراف، مع مكافآت وترقيات."
+      }
+    },
+    {
+      "category": {
+        "en": "Clients & Projects",
+        "ar": "العملاء وأصحاب المشاريع"
+      },
+      "subCategory": {
+        "en": "Posting New Projects",
+        "ar": "طرح مشروع جديد"
+      },
+      "question": {
+        "en": "How do I post a new project?",
+        "ar": "كيف أطرح مشروع جديد؟"
+      },
+      "answer": {
+        "en": "By clicking on \"Post Project\" and uploading files, the best suitable companies will be automatically recommended.",
+        "ar": "عبر الضغط على \"طرح مشروع\" ورفع الملفات وسيتم ترشيح أفضل الشركات المناسبة تلقائيًا."
+      }
+    },
+    {
+      "category": {
+        "en": "Clients & Projects",
+        "ar": "العملاء وأصحاب المشاريع"
+      },
+      "subCategory": {
+        "en": "Design Services",
+        "ar": "خدمات التصميم"
+      },
+      "question": {
+        "en": "Can I request design only?",
+        "ar": "هل يمكن طلب تصميم فقط؟"
+      },
+      "answer": {
+        "en": "Yes, architectural - structural - MEP - interior - implementation drawings.",
+        "ar": "نعم، تصميم معماري – إنشائي – MEP – داخلي – مخططات تنفيذية."
+      }
+    },
+    {
+      "category": {
+        "en": "Clients & Projects",
+        "ar": "العملاء وأصحاب المشاريع"
+      },
+      "subCategory": {
+        "en": "Project Progress Tracking",
+        "ar": "متابعة تقدم المشروع"
+      },
+      "question": {
+        "en": "Is there project progress tracking?",
+        "ar": "هل توجد متابعة تقدم مشروع؟"
+      },
+      "answer": {
+        "en": "Yes, through an execution dashboard containing reports - stages - documents - alerts.",
+        "ar": "نعم عبر لوحة تنفيذ تحتوي تقارير – مراحل – مستندات – تنبيهات."
+      }
+    }
+  ]
+}

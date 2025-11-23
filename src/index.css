@@ -56,19 +56,19 @@ All colors MUST be HSL.
     --glass-bg: 240 5% 8%;
     
     /* Engineering platform colors */
-    --cyan: 180 100% 35%;
-    --cyan-light: 180 100% 45%;
-    --cyan-dark: 180 100% 25%;
+    --cyan: 210 12% 74%;
+    --cyan-light: 210 15% 84%;
+    --cyan-dark: 210 10% 64%;
     
     /* Gradients */
     --gradient-gold: linear-gradient(135deg, hsl(45 75% 62%) 0%, hsl(45 65% 52%) 100%);
     --gradient-dark: linear-gradient(180deg, hsl(240 5% 6%) 0%, hsl(240 5% 4%) 100%);
-    --gradient-cyan: linear-gradient(135deg, hsl(180 100% 45%) 0%, hsl(180 100% 35%) 100%);
+    --gradient-cyan: linear-gradient(135deg, hsl(210 15% 84%) 0%, hsl(210 12% 74%) 100%);
     
     /* Shadows */
     --shadow-gold: 0 10px 40px -10px hsl(45 65% 52% / 0.3);
     --shadow-card: 0 4px 20px hsl(240 5% 2% / 0.5);
-    --shadow-cyan: 0 10px 40px -10px hsl(180 100% 35% / 0.3);
+    --shadow-cyan: 0 10px 40px -10px hsl(210 12% 74% / 0.3);
     
     /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -219,5 +219,34 @@ All colors MUST be HSL.
       opacity: 1;
       transform: translateY(0);
     }
+  }
+
+  /* Platform-specific visual highlighting styles */
+  .platform-badge {
+    @apply inline-flex items-center gap-2 px-4 py-2 bg-gold/20 border border-gold/40 rounded-full;
+  }
+
+  .platform-badge-pulse {
+    @apply w-2 h-2 bg-gold rounded-full animate-pulse;
+  }
+
+  .platform-text {
+    @apply text-gold font-semibold;
+  }
+
+  .platform-label {
+    @apply text-sm font-semibold text-gold;
+  }
+
+  .platform-highlight {
+    @apply border-gold/20;
+  }
+
+  .platform-slogan {
+    @apply font-semibold text-muted-foreground;
+  }
+
+  .platform-heading {
+    @apply text-gold;
   }
 }

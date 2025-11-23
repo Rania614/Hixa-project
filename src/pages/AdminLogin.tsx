@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,7 @@ import { HexagonIcon } from '@/components/ui/hexagon-icon';
 import { useNavigate } from 'react-router-dom';
 
 const AdminLogin = () => {
-  const { setIsAuthenticated } = useApp();
+  const { setIsAuthenticated, isAuthenticated } = useApp();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
@@ -18,9 +18,15 @@ const AdminLogin = () => {
     // Simple mock authentication - just redirect
     if (username && password) {
       setIsAuthenticated(true);
-      navigate('/admin/dashboard');
     }
   };
+
+  // Redirect to dashboard when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/admin/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden">

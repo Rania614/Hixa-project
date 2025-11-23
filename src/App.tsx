@@ -9,6 +9,7 @@ import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import ContentManagement from "./pages/ContentManagement";
 import NotFound from "./pages/NotFound";
+import CompanyLanding from "./pages/CompanyLanding";
 
 const queryClient = new QueryClient();
 
@@ -22,7 +23,8 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-      <Route path="/" element={isAuthenticated ? <Navigate to="/admin/dashboard" /> : <Landing />} />
+      <Route path="/" element={<CompanyLanding />} />
+      <Route path="/platform" element={isAuthenticated ? <Navigate to="/admin/dashboard" /> : <Landing />} />
       <Route path="/admin/login" element={isAuthenticated ? <Navigate to="/admin/dashboard" /> : <AdminLogin />} />
       <Route
         path="/admin/dashboard"
