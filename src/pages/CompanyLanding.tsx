@@ -28,7 +28,7 @@ const CompanyLanding = () => {
         {/* Background image with dark overlay */}
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: "url('/src/assets/images/heero.jpg')" }}
+          style={{ backgroundImage: "url('/images/heero.jpg')" }}
         >
           <div className="absolute inset-0 bg-black bg-opacity-70"></div>
         </div>

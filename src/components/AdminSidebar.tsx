@@ -7,7 +7,8 @@ import {
   BarChart3, 
   // Settings,
   LogOut,
-  FileEdit
+  FileEdit,
+  Mail
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useApp } from '@/context/AppContext';
@@ -37,30 +38,35 @@ export const AdminSidebar = () => {
       label: language === 'en' ? 'Landing Page Content' : 'تحكم محتوى الصفحة الرئيسية'
     },
     {
-      to: "/admin/users",
-      icon: Users,
-      label: language === 'en' ? 'User Management' : 'إدارة المستخدمين'
+      to: "/admin/subscribers",
+      icon: Mail,
+      label: language === 'en' ? 'Subscribers' : 'المشتركون'
     },
-    {
-      to: "/admin/projects",
-      icon: Briefcase,
-      label: language === 'en' ? 'Project Management' : 'إدارة المشاريع'
-    },
-    {
-      to: "/admin/documents",
-      icon: FileText,
-      label: language === 'en' ? 'Document Management' : 'إدارة المستندات'
-    },
-    {
-      to: "/admin/communication",
-      icon: MessageSquare,
-      label: language === 'en' ? 'Communication' : 'التواصل'
-    },
-    {
-      to: "/admin/reports",
-      icon: BarChart3,
-      label: language === 'en' ? 'Reports & Analytics' : 'التقارير والتحليلات'
-    },
+    // {
+    //   to: "/admin/users",
+    //   icon: Users,
+    //   label: language === 'en' ? 'User Management' : 'إدارة المستخدمين'
+    // },
+    // {
+    //   to: "/admin/projects",
+    //   icon: Briefcase,
+    //   label: language === 'en' ? 'Project Management' : 'إدارة المشاريع'
+    // },
+    // {
+    //   to: "/admin/documents",
+    //   icon: FileText,
+    //   label: language === 'en' ? 'Document Management' : 'إدارة المستندات'
+    // },
+    // {
+    //   to: "/admin/communication",
+    //   icon: MessageSquare,
+    //   label: language === 'en' ? 'Communication' : 'التواصل'
+    // },
+    // {
+    //   to: "/admin/reports",
+    //   icon: BarChart3,
+    //   label: language === 'en' ? 'Reports & Analytics' : 'التقارير والتحليلات'
+    // },
     // {
     //   to: "/admin/settings",
     //   icon: Settings,

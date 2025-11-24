@@ -1,5 +1,5 @@
 import { Header } from '@/components/Header';
-import { Hero } from '@/components/Hero';
+import { PlatformHero } from '@/components/PlatformHero';
 import { About } from '@/components/About';
 import { CTA } from '@/components/CTA';
 import { Footer } from '@/components/Footer';
@@ -9,7 +9,7 @@ const Landing = () => {
   return (
     <div className="min-h-screen">
       <Header />
-      <Hero />
+      <PlatformHero />
       <About />
       <CTA />
       <Footer />

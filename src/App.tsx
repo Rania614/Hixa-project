@@ -8,8 +8,10 @@ import Landing from "./pages/Landing";
 import AdminLogin from "./pages/admin-dashboard/AdminLogin";
 import AdminDashboard from "./pages/admin-dashboard/AdminDashboard";
 import ContentManagement from "./pages/admin-dashboard/ContentManagement";
+import Subscribers from "./pages/admin-dashboard/Subscribers";
 import NotFound from "./pages/NotFound";
 import CompanyLanding from "./pages/CompanyLanding";
+import AuthPage from "./pages/AuthPage";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +27,7 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/" element={<CompanyLanding />} />
       <Route path="/platform" element={isAuthenticated ? <Navigate to="/admin/dashboard" /> : <Landing />} />
+      <Route path="/auth/:role" element={<AuthPage />} />
       <Route path="/admin/login" element={isAuthenticated ? <Navigate to="/admin/dashboard" /> : <AdminLogin />} />
       <Route
         path="/admin/dashboard"
@@ -39,6 +42,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <ContentManagement />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/subscribers"
+        element={
+          <ProtectedRoute>
+            <Subscribers />
           </ProtectedRoute>
         }
       />

@@ -1,7 +1,7 @@
 // Mock data for initial content
 const mockData = {
   header: {
-    logoImage: "src/assets/images/update logo.png",
+    logoImage: "/images/logo.jpg",
   },
   hero: {
     title: {

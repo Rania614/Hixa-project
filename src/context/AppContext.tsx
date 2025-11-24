@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import logo from '@/assets/images/update logo.png';
+// Image paths updated to use public directory
+const logo = '/images/logo.jpg';
 import * as api from '@/services/api';
 
 interface ContentData {
@@ -90,6 +91,18 @@ interface ContentData {
     status: 'active' | 'inactive';
     applicationLink?: string; // Optional application link field
   }>;
+  subscribers: Array<{
+    id: string;
+    email?: string;
+    phone?: string;
+    joinDate: string;
+  }>;
+  emailBroadcasts: Array<{
+    id: string;
+    subject: { en: string; ar: string };
+    message: { en: string; ar: string };
+    sendDate: string;
+  }>;
 }
 
 interface AppContextType {
@@ -99,13 +112,15 @@ interface AppContextType {
   setIsAuthenticated: (value: boolean) => void;
   content: ContentData;
   updateContent: (newContent: Partial<ContentData>) => Promise<void>;
+  addSubscriber: (subscriber: { email?: string; phone?: string }) => Promise<void>;
+  sendEmailBroadcast: (broadcast: { subject: { en: string; ar: string }; message: { en: string; ar: string } }) => Promise<void>;
 }
 
 const defaultContent: ContentData = { 
   ...api.getInitialContentSnapshot(),
   header: {
     logo: '',
-    logoImage: 'src/assets/images/update logo.png',
+    logoImage: '/images/updateLogo.png',
   },
   hero: {
     title: {
@@ -367,28 +382,28 @@ const defaultContent: ContentData = {
     {
       id: '1',
       name: { en: 'TechCorp', ar: 'شركة التقنية' },
-      logo: '/src/assets/images/partner.jpg',
+      logo: '/images/partner.jpg',
       order: 1,
       active: true,
     },
     {
       id: '2',
       name: { en: 'InnovateX', ar: 'ابتكار إكس' },
-      logo: '/src/assets/images/partner.jpg',
+      logo: '/images/partner.jpg',
       order: 2,
       active: true,
     },
     {
       id: '3',
       name: { en: 'BuildMaster', ar: 'ماستر البناء' },
-      logo: '/src/assets/images/partner.jpg',
+      logo: '/images/partner.jpg',
       order: 3,
       active: true,
     },
     {
       id: '4',
       name: { en: 'DesignPro', ar: 'برو التصميم' },
-      logo: '/src/assets/images/partner.jpg',
+      logo: '/images/partner.jpg',
       order: 4,
       active: true,
     },
@@ -420,6 +435,26 @@ const defaultContent: ContentData = {
         ar: 'أنشئ تجارب مستخدم جميلة وبديهية لعملائنا.',
       },
       status: 'active',
+    },
+  ],
+  subscribers: [
+    {
+      id: '1',
+      email: 'user1@example.com',
+      joinDate: '2023-01-15',
+    },
+    {
+      id: '2',
+      phone: '+1234567890',
+      joinDate: '2023-02-20',
+    },
+  ],
+  emailBroadcasts: [
+    {
+      id: '1',
+      subject: { en: 'Welcome to our Platform!', ar: 'مرحبا بك في منصتنا!' },
+      message: { en: 'Thank you for joining our community. Stay tuned for updates!', ar: 'شكرا لانضمامك إلى مجتمعنا. ترقب التحديثات!' },
+      sendDate: '2023-01-16',
     },
   ],
 };
@@ -474,10 +509,43 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (newContent.footer) {
         await api.updateFooterContent(newContent.footer);
       }
+      if (newContent.subscribers) {
+        // In a real app, you would save to a database here
+        console.log('Subscribers updated:', newContent.subscribers);
+      }
+      if (newContent.emailBroadcasts) {
+        // In a real app, you would save to a database here
+        console.log('Email broadcasts updated:', newContent.emailBroadcasts);
+      }
     } catch (error) {
       console.error('Failed to save content:', error);
       // Optionally revert the local state if API call fails
     }
+  };
+
+  const addSubscriber = async (subscriber: { email?: string; phone?: string }) => {
+    const newSubscriber = {
+      id: Date.now().toString(),
+      ...subscriber,
+      joinDate: new Date().toISOString().split('T')[0],
+    };
+    
+    const updatedSubscribers = [...content.subscribers, newSubscriber];
+    await updateContent({ subscribers: updatedSubscribers });
+  };
+
+  const sendEmailBroadcast = async (broadcast: { subject: { en: string; ar: string }; message: { en: string; ar: string } }) => {
+    const newBroadcast = {
+      id: Date.now().toString(),
+      ...broadcast,
+      sendDate: new Date().toISOString().split('T')[0],
+    };
+    
+    const updatedBroadcasts = [...content.emailBroadcasts, newBroadcast];
+    await updateContent({ emailBroadcasts: updatedBroadcasts });
+    
+    // In a real app, you would send the emails here
+    console.log('Broadcast sent to subscribers:', broadcast);
   };
 
   return (
@@ -489,6 +557,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setIsAuthenticated,
         content,
         updateContent,
+        addSubscriber,
+        sendEmailBroadcast,
       }}
     >
       {children}

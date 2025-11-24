@@ -6,7 +6,8 @@ import { HexagonIcon } from '@/components/ui/hexagon-icon';
 import { Send, MessageCircle, X, Bot, User } from 'lucide-react';
 // Import the FAQ knowledge base
 import faqData from '@/data/faq-knowledge-base.json';
-import roboticIcon from '@/assets/images/robotic.png';
+// Using direct path to public images directory
+const roboticIcon = '/images/robotic.png';
 
 interface Message {
   id: string;

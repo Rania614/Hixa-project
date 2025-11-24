@@ -18,12 +18,14 @@ export const Header = () => {
   };
 
   const handleClientLogin = () => {
-    setIsAuthenticated(true);
+    // Navigate to the client authentication page
+    navigate('/auth/client');
     setShowDropdown(false);
   };
 
   const handlePartnerLogin = () => {
-    setIsAuthenticated(true);
+    // Navigate to the partner authentication page
+    navigate('/auth/partner');
     setShowDropdown(false);
   };
 
@@ -141,33 +143,31 @@ export const Header = () => {
             {/* Dropdown for platform page, regular button for others */}
             {isPlatformPage ? (
               <div className="dropdown-container relative hidden sm:flex">
-                <Button
+                <button
                   onClick={() => setShowDropdown(!showDropdown)}
-                  className="bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold px-6 flex items-center gap-2"
+                  className="justify-center whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary hover:bg-primary/90 h-10 py-2 bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold px-6 flex items-center gap-2"
                 >
                   {content.hero.cta[language]}
                   <ChevronDown className={`h-4 w-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
-                </Button>
+                </button>
                 
                 {showDropdown && (
                   <div className="absolute top-full right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-lg z-50 animate-fade-in">
                     <div className="p-2">
-                      <Button
+                      <button
                         onClick={handleClientLogin}
-                        variant="ghost"
-                        className="w-full justify-start font-medium mb-1 flex items-center gap-2 text-foreground hover:bg-gold/10"
+                        className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium mb-1 flex items-center gap-2 text-foreground hover:bg-gold/10"
                       >
                         <User className="h-4 w-4" />
                         {language === 'en' ? 'Enter as Client' : 'ادخل كعميل'}
-                      </Button>
-                      <Button
+                      </button>
+                      <button
                         onClick={handlePartnerLogin}
-                        variant="ghost"
-                        className="w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10"
+                        className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10"
                       >
                         <Handshake className="h-4 w-4" />
                         {language === 'en' ? 'Enter as Partner' : 'ادخل كشريك'}
-                      </Button>
+                      </button>
                     </div>
                   </div>
                 )}
@@ -209,33 +209,31 @@ export const Header = () => {
               {/* Mobile dropdown for platform page, regular button for others */}
               {isPlatformPage ? (
                 <div className="dropdown-container">
-                  <Button
+                  <button
                     onClick={() => setShowDropdown(!showDropdown)}
-                    className="mt-2 bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold w-full flex items-center justify-between"
+                    className="justify-center whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary hover:bg-primary/90 h-10 py-2 bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold w-full flex items-center justify-between"
                   >
                     {content.hero.cta[language]}
                     <ChevronDown className={`h-4 w-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
-                  </Button>
+                  </button>
                             
                   {showDropdown && (
                     <div className="mt-2 bg-card border border-border rounded-lg shadow-lg animate-fade-in">
                       <div className="p-2">
-                        <Button
+                        <button
                           onClick={handleClientLogin}
-                          variant="ghost"
-                          className="w-full justify-start font-medium mb-1 flex items-center gap-2 text-foreground hover:bg-gold/10"
+                          className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium mb-1 flex items-center gap-2 text-foreground hover:bg-gold/10"
                         >
                           <User className="h-4 w-4" />
                           {language === 'en' ? 'Enter as Client' : 'ادخل كعميل'}
-                        </Button>
-                        <Button
+                        </button>
+                        <button
                           onClick={handlePartnerLogin}
-                          variant="ghost"
-                          className="w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10"
+                          className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10"
                         >
                           <Handshake className="h-4 w-4" />
                           {language === 'en' ? 'Enter as Partner' : 'ادخل كشريك'}
-                        </Button>
+                        </button>
                       </div>
                     </div>
                   )}

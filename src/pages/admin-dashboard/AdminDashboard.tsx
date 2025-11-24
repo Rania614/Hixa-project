@@ -18,108 +18,108 @@ const AdminDashboard = () => {
   const { language } = useApp();
 
   // Overview metrics
-  const metrics = [
-    {
-      title: language === 'en' ? 'New Users' : 'مستخدمون جدد',
-      value: '24',
-      change: '+12%',
-      icon: Users,
-      color: 'text-cyan',
-    },
-    {
-      title: language === 'en' ? 'Active Projects' : 'مشاريع نشطة',
-      value: '18',
-      change: '+5%',
-      icon: Briefcase,
-      color: 'text-cyan',
-    },
-    {
-      title: language === 'en' ? 'Documents Uploaded' : 'مستندات مرفوعة',
-      value: '142',
-      change: '+8%',
-      icon: FileText,
-      color: 'text-cyan',
-    },
-    {
-      title: language === 'en' ? 'Pending Reviews' : 'قيد المراجعة',
-      value: '7',
-      change: '-2%',
-      icon: Clock,
-      color: 'text-cyan',
-    },
-  ];
+  // const metrics = [
+  //   {
+  //     title: language === 'en' ? 'New Users' : 'مستخدمون جدد',
+  //     value: '24',
+  //     change: '+12%',
+  //     icon: Users,
+  //     color: 'text-cyan',
+  //   },
+  //   {
+  //     title: language === 'en' ? 'Active Projects' : 'مشاريع نشطة',
+  //     value: '18',
+  //     change: '+5%',
+  //     icon: Briefcase,
+  //     color: 'text-cyan',
+  //   },
+  //   {
+  //     title: language === 'en' ? 'Documents Uploaded' : 'مستندات مرفوعة',
+  //     value: '142',
+  //     change: '+8%',
+  //     icon: FileText,
+  //     color: 'text-cyan',
+  //   },
+  //   {
+  //     title: language === 'en' ? 'Pending Reviews' : 'قيد المراجعة',
+  //     value: '7',
+  //     change: '-2%',
+  //     icon: Clock,
+  //     color: 'text-cyan',
+  //   },
+  // ];
 
-  // User management data
-  const userStats = [
-    { status: language === 'en' ? 'Active Engineers' : 'مهندسين نشطين', count: 42, icon: CheckCircle, color: 'text-green-500' },
-    { status: language === 'en' ? 'Active Clients' : 'عملاء نشطين', count: 28, icon: CheckCircle, color: 'text-green-500' },
-    { status: language === 'en' ? 'Pending Verification' : 'قيد التحقق', count: 5, icon: Clock, color: 'text-yellow-500' },
-    { status: language === 'en' ? 'Suspended' : 'معلقين', count: 2, icon: AlertCircle, color: 'text-red-500' },
-  ];
+  // // User management data
+  // const userStats = [
+  //   { status: language === 'en' ? 'Active Engineers' : 'مهندسين نشطين', count: 42, icon: CheckCircle, color: 'text-green-500' },
+  //   { status: language === 'en' ? 'Active Clients' : 'عملاء نشطين', count: 28, icon: CheckCircle, color: 'text-green-500' },
+  //   { status: language === 'en' ? 'Pending Verification' : 'قيد التحقق', count: 5, icon: Clock, color: 'text-yellow-500' },
+  //   { status: language === 'en' ? 'Suspended' : 'معلقين', count: 2, icon: AlertCircle, color: 'text-red-500' },
+  // ];
 
-  // Recent projects data
-  const recentProjects = [
-    { 
-      id: '1', 
-      name: language === 'en' ? 'Bridge Construction' : 'بناء الجسر', 
-      client: 'ABC Corp', 
-      status: language === 'en' ? 'In Progress' : 'قيد التنفيذ',
-      progress: 75 
-    },
-    { 
-      id: '2', 
-      name: language === 'en' ? 'HVAC System Design' : 'تصميم نظام التكييف', 
-      client: 'XYZ Ltd', 
-      status: language === 'en' ? 'Review' : 'مراجعة',
-      progress: 90 
-    },
-    { 
-      id: '3', 
-      name: language === 'en' ? 'Structural Analysis' : 'تحليل هيكلي', 
-      client: 'DEF Inc', 
-      status: language === 'en' ? 'Completed' : 'مكتمل',
-      progress: 100 
-    },
-    { 
-      id: '4', 
-      name: language === 'en' ? 'Electrical Plan' : 'خطة كهربائية', 
-      client: 'GHI Co', 
-      status: language === 'en' ? 'In Progress' : 'قيد التنفيذ',
-      progress: 40 
-    },
-  ];
+  // // Recent projects data
+  // const recentProjects = [
+  //   { 
+  //     id: '1', 
+  //     name: language === 'en' ? 'Bridge Construction' : 'بناء الجسر', 
+  //     client: 'ABC Corp', 
+  //     status: language === 'en' ? 'In Progress' : 'قيد التنفيذ',
+  //     progress: 75 
+  //   },
+  //   { 
+  //     id: '2', 
+  //     name: language === 'en' ? 'HVAC System Design' : 'تصميم نظام التكييف', 
+  //     client: 'XYZ Ltd', 
+  //     status: language === 'en' ? 'Review' : 'مراجعة',
+  //     progress: 90 
+  //   },
+  //   { 
+  //     id: '3', 
+  //     name: language === 'en' ? 'Structural Analysis' : 'تحليل هيكلي', 
+  //     client: 'DEF Inc', 
+  //     status: language === 'en' ? 'Completed' : 'مكتمل',
+  //     progress: 100 
+  //   },
+  //   { 
+  //     id: '4', 
+  //     name: language === 'en' ? 'Electrical Plan' : 'خطة كهربائية', 
+  //     client: 'GHI Co', 
+  //     status: language === 'en' ? 'In Progress' : 'قيد التنفيذ',
+  //     progress: 40 
+  //   },
+  // ];
 
-  // Recent documents
-  const recentDocuments = [
-    { 
-      id: '1', 
-      name: language === 'en' ? 'Project Specification.pdf' : 'مواصفات المشروع.pdf', 
-      type: 'PDF', 
-      uploader: 'John Smith',
-      time: language === 'en' ? '2 hours ago' : 'منذ ساعتين'
-    },
-    { 
-      id: '2', 
-      name: language === 'en' ? 'Blueprints.zip' : 'المخططات.zip', 
-      type: 'ZIP', 
-      uploader: 'Sarah Johnson',
-      time: language === 'en' ? '4 hours ago' : 'منذ 4 ساعات'
-    },
-    { 
-      id: '3', 
-      name: language === 'en' ? 'Calculations.xlsx' : 'الحسابات.xlsx', 
-      type: 'XLSX', 
-      uploader: 'Mike Chen',
-      time: language === 'en' ? '1 day ago' : 'منذ يوم'
-    },
-    { 
-      id: '4', 
-      name: language === 'en' ? 'Safety Report.docx' : 'تقرير السلامة.docx', 
-      type: 'DOCX', 
-      uploader: 'Emma Wilson',
-      time: language === 'en' ? '2 days ago' : 'منذ يومين'
-    },
-  ];
+  // // Recent documents
+  // const recentDocuments = [
+  //   { 
+  //     id: '1', 
+  //     name: language === 'en' ? 'Project Specification.pdf' : 'مواصفات المشروع.pdf', 
+  //     type: 'PDF', 
+  //     uploader: 'John Smith',
+  //     time: language === 'en' ? '2 hours ago' : 'منذ ساعتين'
+  //   },
+  //   { 
+  //     id: '2', 
+  //     name: language === 'en' ? 'Blueprints.zip' : 'المخططات.zip', 
+  //     type: 'ZIP', 
+  //     uploader: 'Sarah Johnson',
+  //     time: language === 'en' ? '4 hours ago' : 'منذ 4 ساعات'
+  //   },
+  //   { 
+  //     id: '3', 
+  //     name: language === 'en' ? 'Calculations.xlsx' : 'الحسابات.xlsx', 
+  //     type: 'XLSX', 
+  //     uploader: 'Mike Chen',
+  //     time: language === 'en' ? '1 day ago' : 'منذ يوم'
+  //   },
+  //   { 
+  //     id: '4', 
+  //     name: language === 'en' ? 'Safety Report.docx' : 'تقرير السلامة.docx', 
+  //     type: 'DOCX', 
+  //     uploader: 'Emma Wilson',
+  //     time: language === 'en' ? '2 days ago' : 'منذ يومين'
+  //   },
+  // ];
 
   return (
     <div className="flex min-h-screen">
@@ -141,7 +141,7 @@ const AdminDashboard = () => {
           </div>
 
           {/* Overview Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {metrics.map((metric, index) => (
               <Card key={index} className="glass-card">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -158,12 +158,12 @@ const AdminDashboard = () => {
                 </CardContent>
               </Card>
             ))}
-          </div>
+          </div> */}
 
           {/* User Management and Project Status */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             {/* User Management */}
-            <Card className="glass-card">
+            {/* <Card className="glass-card">
               <CardHeader>
                 <CardTitle>
                   {language === 'en' ? 'User Management' : 'إدارة المستخدمين'}
@@ -184,10 +184,10 @@ const AdminDashboard = () => {
                   ))}
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
 
             {/* Project Status */}
-            <Card className="glass-card">
+            {/* <Card className="glass-card">
               <CardHeader>
                 <CardTitle>
                   {language === 'en' ? 'Project Status' : 'حالة المشاريع'}
@@ -217,13 +217,13 @@ const AdminDashboard = () => {
                   ))}
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
 
           {/* Recent Documents and Communication */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Recent Documents */}
-            <Card className="glass-card">
+            {/* <Card className="glass-card">
               <CardHeader>
                 <CardTitle>
                   {language === 'en' ? 'Recent Document Uploads' : 'أحدث المستندات المرفوعة'}
@@ -244,10 +244,10 @@ const AdminDashboard = () => {
                   ))}
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
 
             {/* Communication Overview */}
-            <Card className="glass-card">
+            {/* <Card className="glass-card">
               <CardHeader>
                 <CardTitle>
                   {language === 'en' ? 'Communication Overview' : 'نظرة عامة على التواصل'}
@@ -307,7 +307,7 @@ const AdminDashboard = () => {
                   </div>
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
         </main>
       </div>

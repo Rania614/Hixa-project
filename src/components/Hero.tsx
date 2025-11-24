@@ -1,27 +1,20 @@
 import { useApp } from '@/context/AppContext';
 import { Button } from './ui/button';
 import { ArrowRight, User, Handshake } from 'lucide-react';
-import { useState } from 'react';
-import { AuthModal } from '@/components/auth/AuthModal';
+import { useNavigate } from 'react-router-dom';
 
 export const Hero = () => {
   const { content, language } = useApp();
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authRole, setAuthRole] = useState<'client' | 'partner' | null>(null);
+  const navigate = useNavigate();
 
   const handleClientLogin = () => {
-    setAuthRole('client');
-    setShowAuthModal(true);
+    // Navigate to the client authentication page
+    navigate('/auth/client');
   };
 
   const handlePartnerLogin = () => {
-    setAuthRole('partner');
-    setShowAuthModal(true);
-  };
-
-  const handleAuthSuccess = () => {
-    // Authentication successful - could redirect to dashboard
-    console.log('Authentication successful for role:', authRole);
+    // Navigate to the partner authentication page
+    navigate('/auth/partner');
   };
 
   return (
@@ -64,13 +57,6 @@ export const Hero = () => {
           </Button>
         </div>
       </div>
-      
-      <AuthModal 
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onAuthSuccess={handleAuthSuccess}
-        role={authRole}
-      />
     </section>
   );
 };

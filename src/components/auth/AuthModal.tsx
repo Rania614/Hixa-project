@@ -3,7 +3,7 @@ import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { User, Handshake, X, Wrench, Building } from 'lucide-react';
+import { User, Handshake, X, Wrench, Building, ArrowLeft } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -45,6 +45,19 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role }: AuthModalPro
     setPartnerType(type);
   };
 
+  const handleBack = () => {
+    if (!isLogin && role === 'partner' && !partnerType) {
+      // If on partner type selection, go back to login/register choice
+      setIsLogin(true);
+    } else if (!isLogin && partnerType) {
+      // If on registration form, go back to partner type selection
+      setPartnerType(null);
+    } else {
+      // Otherwise, close the modal
+      onClose();
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -57,6 +70,14 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role }: AuthModalPro
           className="absolute top-4 right-4"
         >
           <X className="h-4 w-4" />
+        </Button>
+        
+        <Button
+          onClick={handleBack}
+          variant="ghost"
+          className="absolute top-4 left-4 flex items-center gap-1"
+        >
+          <ArrowLeft className="h-4 w-4" />
         </Button>
         
         <CardHeader className="text-center">
@@ -265,32 +286,32 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role }: AuthModalPro
                     </div>
                     
                     <div>
-                      <label htmlFor="companySpecialization" className="block text-sm font-medium mb-2">
-                        Business Specialization
+                      <label htmlFor="contactName" className="block text-sm font-medium mb-2">
+                        Contact Person Name
                       </label>
                       <Input
-                        id="companySpecialization"
+                        id="contactName"
                         type="text"
-                        value={specialization}
-                        onChange={(e) => setSpecialization(e.target.value)}
-                        placeholder="e.g., Construction, Architecture, Engineering Services"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Full name of contact person"
                         className="bg-secondary/50"
                         required
                       />
                     </div>
                   </>
                 ) : (
-                  // Client or general partner registration
+                  // Client registration form
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium mb-2">
-                      {role === 'client' ? 'Full Name' : 'Name'}
+                    <label htmlFor="clientName" className="block text-sm font-medium mb-2">
+                      Full Name
                     </label>
                     <Input
-                      id="name"
+                      id="clientName"
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder={role === 'client' ? "Your full name" : "Company/Organization name"}
+                      placeholder="Your full name"
                       className="bg-secondary/50"
                       required
                     />
@@ -321,7 +342,7 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role }: AuthModalPro
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder="Create a password"
                     className="bg-secondary/50"
                     required
                   />
@@ -336,7 +357,7 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role }: AuthModalPro
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder="Confirm your password"
                     className="bg-secondary/50"
                     required
                   />
@@ -350,36 +371,6 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role }: AuthModalPro
                 </Button>
               </form>
             </>
-          )}
-          
-          <div className="mt-4 text-center text-sm text-muted-foreground">
-            {isLogin ? "Don't have an account? " : "Already have an account? "}
-            <Button
-              variant="link"
-              className="p-0 h-auto font-semibold text-gold hover:text-gold-dark"
-              onClick={() => {
-                if (isLogin) {
-                  handleRegisterClick();
-                } else {
-                  setIsLogin(true);
-                  setPartnerType(null);
-                }
-              }}
-            >
-              {isLogin ? 'Register' : 'Sign in'}
-            </Button>
-          </div>
-          
-          {role === 'partner' && !isLogin && partnerType && (
-            <div className="mt-2 text-center text-sm text-muted-foreground">
-              <Button
-                variant="link"
-                className="p-0 h-auto font-semibold text-gold hover:text-gold-dark"
-                onClick={() => setPartnerType(null)}
-              >
-                Change partner type
-              </Button>
-            </div>
           )}
         </CardContent>
       </Card>
