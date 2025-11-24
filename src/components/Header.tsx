@@ -1,14 +1,15 @@
 import { useApp } from '@/context/AppContext';
 import { LanguageToggle } from './LanguageToggle';
 import { Button } from './ui/button';
-import { Menu, X } from 'lucide-react';
-import { useState } from 'react';
+import { Menu, X, User, Handshake, ChevronDown } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { HexagonIcon } from './ui/hexagon-icon';
 import { useNavigate } from 'react-router-dom';
 
 export const Header = () => {
   const { content, language, setIsAuthenticated } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
   const navigate = useNavigate();
 
   const handleGetStarted = () => {
@@ -16,6 +17,35 @@ export const Header = () => {
     navigate('/platform');
   };
 
+  const handleClientLogin = () => {
+    setIsAuthenticated(true);
+    setShowDropdown(false);
+  };
+
+  const handlePartnerLogin = () => {
+    setIsAuthenticated(true);
+    setShowDropdown(false);
+  };
+
+  // Close dropdown when clicking outside
+  const handleClickOutside = (e: MouseEvent) => {
+    if (showDropdown && !(e.target as Element).closest('.dropdown-container')) {
+      setShowDropdown(false);
+    }
+  };
+
+  // Add event listener for closing dropdown
+  useEffect(() => {
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showDropdown]);
+
+  // Check if we're on the platform page
+  const isPlatformPage = window.location.pathname === '/platform';
+  
+  // Filter out certain links for the platform page
   const navLinks = [
     { id: 'hero', label: { en: 'Home', ar: 'الرئيسية' } },
     { id: 'about', label: { en: 'About', ar: 'عن الشركة' } },
@@ -24,7 +54,14 @@ export const Header = () => {
     { id: 'partners', label: { en: 'Partners', ar: 'الشركاء' } },
     { id: 'jobs', label: { en: 'Jobs', ar: 'الوظائف' } },
     { id: 'contact', label: { en: 'Contact', ar: 'اتصل بنا' } },
-  ];
+  ].filter(link => {
+    // On platform page, hide services, projects, partners, and jobs
+    if (isPlatformPage) {
+      return !['services', 'projects', 'partners', 'jobs'].includes(link.id);
+    }
+    // On other pages, show all links
+    return true;
+  });
 
   const scrollToSection = (sectionId: string) => {
     // Check if we're on the platform page or the company landing page
@@ -60,8 +97,8 @@ export const Header = () => {
         setMobileMenuOpen(false);
       }
     } else {
-      // Navigate to platform page with hash
-      navigate(`/platform#${sectionId}`);
+      // Navigate to company landing page with hash
+      navigate(`/#${sectionId}`);
       setMobileMenuOpen(false);
     }
   };
@@ -101,12 +138,48 @@ export const Header = () => {
           
           <div className="flex items-center gap-4">
             <LanguageToggle />
-            <Button
-              onClick={handleGetStarted}
-              className="hidden sm:flex bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold px-6"
-            >
-              {content.hero.cta[language]}
-            </Button>
+            {/* Dropdown for platform page, regular button for others */}
+            {isPlatformPage ? (
+              <div className="dropdown-container relative hidden sm:flex">
+                <Button
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  className="bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold px-6 flex items-center gap-2"
+                >
+                  {content.hero.cta[language]}
+                  <ChevronDown className={`h-4 w-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
+                </Button>
+                
+                {showDropdown && (
+                  <div className="absolute top-full right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-lg z-50 animate-fade-in">
+                    <div className="p-2">
+                      <Button
+                        onClick={handleClientLogin}
+                        variant="ghost"
+                        className="w-full justify-start font-medium mb-1 flex items-center gap-2 text-foreground hover:bg-gold/10"
+                      >
+                        <User className="h-4 w-4" />
+                        {language === 'en' ? 'Enter as Client' : 'ادخل كعميل'}
+                      </Button>
+                      <Button
+                        onClick={handlePartnerLogin}
+                        variant="ghost"
+                        className="w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10"
+                      >
+                        <Handshake className="h-4 w-4" />
+                        {language === 'en' ? 'Enter as Partner' : 'ادخل كشريك'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Button
+                onClick={handleGetStarted}
+                className="hidden sm:flex bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold px-6"
+              >
+                {content.hero.cta[language]}
+              </Button>
+            )}
             
             {/* Mobile Menu Toggle */}
             <button
@@ -133,12 +206,48 @@ export const Header = () => {
                   {link.label[language]}
                 </button>
               ))}
-              <Button
-                onClick={handleGetStarted}
-                className="mt-2 bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold"
-              >
-                {content.hero.cta[language]}
-              </Button>
+              {/* Mobile dropdown for platform page, regular button for others */}
+              {isPlatformPage ? (
+                <div className="dropdown-container">
+                  <Button
+                    onClick={() => setShowDropdown(!showDropdown)}
+                    className="mt-2 bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold w-full flex items-center justify-between"
+                  >
+                    {content.hero.cta[language]}
+                    <ChevronDown className={`h-4 w-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
+                  </Button>
+                            
+                  {showDropdown && (
+                    <div className="mt-2 bg-card border border-border rounded-lg shadow-lg animate-fade-in">
+                      <div className="p-2">
+                        <Button
+                          onClick={handleClientLogin}
+                          variant="ghost"
+                          className="w-full justify-start font-medium mb-1 flex items-center gap-2 text-foreground hover:bg-gold/10"
+                        >
+                          <User className="h-4 w-4" />
+                          {language === 'en' ? 'Enter as Client' : 'ادخل كعميل'}
+                        </Button>
+                        <Button
+                          onClick={handlePartnerLogin}
+                          variant="ghost"
+                          className="w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10"
+                        >
+                          <Handshake className="h-4 w-4" />
+                          {language === 'en' ? 'Enter as Partner' : 'ادخل كشريك'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Button
+                  onClick={handleGetStarted}
+                  className="mt-2 bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold"
+                >
+                  {content.hero.cta[language]}
+                </Button>
+              )}
             </div>
           </nav>
         )}

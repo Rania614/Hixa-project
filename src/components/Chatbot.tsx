@@ -6,6 +6,7 @@ import { HexagonIcon } from '@/components/ui/hexagon-icon';
 import { Send, MessageCircle, X, Bot, User } from 'lucide-react';
 // Import the FAQ knowledge base
 import faqData from '@/data/faq-knowledge-base.json';
+import roboticIcon from '@/assets/images/robotic.png';
 
 interface Message {
   id: string;
@@ -13,14 +14,6 @@ interface Message {
   sender: 'user' | 'bot';
   timestamp: Date;
 }
-
-interface CardItem {
-  id: string;
-  title: { en: string; ar: string };
-  icon: string;
-  cta: { en: string; ar: string };
-}
-
 export const Chatbot = () => {
   const { language } = useApp();
   const [isOpen, setIsOpen] = useState(false);
@@ -29,14 +22,6 @@ export const Chatbot = () => {
   const [isOnline, setIsOnline] = useState(true);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
-  // Card data for different categories
-  const cardData: CardItem[] = [
-    { id: 'partners', title: { en: 'Partners', ar: 'الشركاء' }, icon: '🧱', cta: { en: 'Join the Platform', ar: 'انضم للمنصة' } },
-    { id: 'experts', title: { en: 'Experts & Freelancers', ar: 'الخبراء والمندوبون' }, icon: '🎓', cta: { en: 'Join the Platform', ar: 'انضم للمنصة' } },
-    { id: 'clients', title: { en: 'Clients', ar: 'العملاء' }, icon: '👥', cta: { en: 'Join the Platform', ar: 'انضم للمنصة' } },
-    { id: 'post-project', title: { en: 'Post Project', ar: 'اطرح مشروع' }, icon: '📂', cta: { en: 'Post Project', ar: 'اطرح مشروع' } },
-    { id: 'marketplace', title: { en: 'Marketplace', ar: 'Marketplace' }, icon: '🛒', cta: { en: 'Marketplace', ar: 'Marketplace' } },
-  ];
 
   // Initialize with welcome message
   useEffect(() => {
@@ -97,46 +82,6 @@ export const Chatbot = () => {
     }, 1000);
   };
 
-  const handleCardCTA = (cardId: string) => {
-    const cardLabel = cardData.find(card => card.id === cardId)?.title[language] || '';
-    const ctaLabel = cardData.find(card => card.id === cardId)?.cta[language] || '';
-    
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: `${cardLabel} (${ctaLabel})`,
-      sender: 'user',
-      timestamp: new Date(),
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-
-    // Simulate bot response
-    setTimeout(() => {
-      let response = '';
-      if (cardId === 'partners' || cardId === 'experts' || cardId === 'clients') {
-        response = language === 'en' 
-          ? 'Great! Thank you for your interest. Please fill out the registration form and our team will contact you shortly.' 
-          : 'رائع! شكرًا لاهتمامك. يرجى تعبئة نموذج التسجيل وسوف يتواصل معك فريقنا قريبًا.';
-      } else if (cardId === 'post-project') {
-        response = language === 'en' 
-          ? 'Perfect! Please provide details about your project and our team will help you find the right partners.' 
-          : 'ممتاز! يرجى تقديم تفاصيل حول مشروعك وسوف يساعدك فريقنا في العثور على الشركاء المناسبين.';
-      } else {
-        response = language === 'en' 
-          ? 'Wonderful! How can I assist you further?' 
-          : 'رائع! كيف يمكنني مساعدتك أكثر؟';
-      }
-
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: response,
-        sender: 'bot',
-        timestamp: new Date(),
-      };
-
-      setMessages(prev => [...prev, botMessage]);
-    }, 1000);
-  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -150,12 +95,14 @@ export const Chatbot = () => {
       {/* Chatbot Toggle Button */}
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 rounded-full w-14 h-14 p-0 shadow-lg z-50 bg-gradient-to-r from-cyan to-cyan-light hover:from-cyan-dark hover:to-cyan"
+        className="fixed bottom-6 right-6 rounded-full w-14 h-14 p-0 shadow-lg z-50 bg-gradient-to-r from-cyan to-cyan-light hover:from-cyan-dark hover:to-cyan hover:scale-110 transition-transform duration-200"
         aria-label={language === 'en' ? "Open chat" : "فتح الدردشة"}
       >
-        <HexagonIcon size="lg" className="text-white">
-          <MessageCircle className="h-6 w-6" />
-        </HexagonIcon>
+        <img 
+          src={roboticIcon} 
+          alt={language === 'en' ? "Chatbot" : "الدردشة الآلية"}
+          className="w-10 h-10 object-contain"
+        />
       </Button>
 
       {/* Chatbot Window */}
@@ -167,9 +114,11 @@ export const Chatbot = () => {
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border bg-secondary">
             <div className="flex items-center gap-3">
-              <HexagonIcon size="md" className="text-cyan">
-                <Bot className="h-5 w-5" />
-              </HexagonIcon>
+              <img 
+                src={roboticIcon} 
+                alt={language === 'en' ? "Chatbot" : "الدردشة الآلية"}
+                className="w-8 h-8 object-contain"
+              />
               <div>
                 <h3 className="font-semibold">
                   {language === 'en' ? 'HIXA Assistant' : 'مساعد HIXA'}
@@ -220,9 +169,11 @@ export const Chatbot = () => {
                         >
                           <div className={`flex items-start gap-2 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                             {message.sender === 'bot' && (
-                              <HexagonIcon size="sm" className="text-cyan mt-0.5 flex-shrink-0">
-                                <Bot className="h-3 w-3" />
-                              </HexagonIcon>
+                              <img 
+                                src={roboticIcon} 
+                                alt={language === 'en' ? "Bot" : "الروبوت"}
+                                className="w-5 h-5 object-contain mt-0.5 flex-shrink-0"
+                              />
                             )}
                             <div>
                               <p className="text-sm">{message.text}</p>

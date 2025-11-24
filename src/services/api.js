@@ -1,11 +1,12 @@
+// Mock data for initial content
 const mockData = {
   header: {
     logoImage: "src/assets/images/update logo.png",
   },
   hero: {
     title: {
-      en: "High Xpert ARTBUILD",
-      ar: "بناء التميز الرقمي",
+      en: " High Xpert ARTBUILD",
+      ar:" لكل مشروع لا ينسى",
     },
     subtitle: {
       en: "Connecting expertise and High Xpert ART BUILD opportunities… with no spatial limits",
@@ -187,8 +188,8 @@ const mockData = {
       ar: "ربطك بالخبرات وفرص المشاريع عالية الجودة... بلا حدود مكانية",
     },
     heading: {
-      en: "HIXA Platform",
-      ar: "منصة هيكسا",
+      en: "HIXA",
+      ar: "هيكسا",
     },
     platformLabel: {
       en: "Platform-specific",
@@ -222,6 +223,35 @@ const mockData = {
   },
 };
 
+// API base URL - adjust this to your actual API endpoint
+const API_BASE_URL = '/api';
+
+// Helper function to make HTTP requests
+const apiRequest = async (endpoint, options = {}) => {
+  const url = `${API_BASE_URL}${endpoint}`;
+  const defaultOptions = {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  };
+  
+  const config = {
+    ...defaultOptions,
+    ...options,
+  };
+  
+  try {
+    const response = await fetch(url, config);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error(`API request failed for ${url}:`, error);
+    throw error;
+  }
+};
+
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
 const simulateRequest = (resolveValue) =>
@@ -233,9 +263,27 @@ export const getInitialContentSnapshot = () => clone(mockData);
 
 export const getHeaderContent = async () => simulateRequest(() => mockData.header);
 
-export const getHeroContent = async () => simulateRequest(() => mockData.hero);
+export const getHeroContent = async () => {
+  try {
+    // Try to fetch from API first
+    return await apiRequest('/content/hero');
+  } catch (error) {
+    // Fallback to mock data if API fails
+    console.warn('Failed to fetch hero content from API, using mock data');
+    return simulateRequest(() => mockData.hero);
+  }
+};
 
-export const getAboutContent = async () => simulateRequest(() => mockData.about);
+export const getAboutContent = async () => {
+  try {
+    // Try to fetch from API first
+    return await apiRequest('/content/about');
+  } catch (error) {
+    // Fallback to mock data if API fails
+    console.warn('Failed to fetch about content from API, using mock data');
+    return simulateRequest(() => mockData.about);
+  }
+};
 
 export const getServices = async () => simulateRequest(() => mockData.services);
 
@@ -254,17 +302,41 @@ export const updateHeaderContent = async (payload) =>
     return mockData.header;
   });
 
-export const updateHeroContent = async (payload) =>
-  simulateRequest(() => {
+export const updateHeroContent = async (payload) => {
+  try {
+    // Try to update via API first
+    const response = await apiRequest('/content/hero', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    // Update mock data as well for consistency
     mockData.hero = { ...mockData.hero, ...payload };
-    return mockData.hero;
-  });
+    return response;
+  } catch (error) {
+    // Fallback to mock data update if API fails
+    console.warn('Failed to update hero content via API, updating mock data only');
+    mockData.hero = { ...mockData.hero, ...payload };
+    return simulateRequest(() => mockData.hero);
+  }
+};
 
-export const updateAboutContent = async (payload) =>
-  simulateRequest(() => {
+export const updateAboutContent = async (payload) => {
+  try {
+    // Try to update via API first
+    const response = await apiRequest('/content/about', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    // Update mock data as well for consistency
     mockData.about = { ...mockData.about, ...payload };
-    return mockData.about;
-  });
+    return response;
+  } catch (error) {
+    // Fallback to mock data update if API fails
+    console.warn('Failed to update about content via API, updating mock data only');
+    mockData.about = { ...mockData.about, ...payload };
+    return simulateRequest(() => mockData.about);
+  }
+};
 
 export const updateServices = async (services = []) =>
   simulateRequest(() => {
@@ -294,5 +366,11 @@ export const updateFooterContent = async (payload) =>
   simulateRequest(() => {
     mockData.footer = { ...mockData.footer, ...payload };
     return mockData.footer;
+  });
+
+export const updatePlatformContent = async (payload) =>
+  simulateRequest(() => {
+    mockData.platformContent = { ...mockData.platformContent, ...payload };
+    return mockData.platformContent;
   });
 

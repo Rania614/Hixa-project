@@ -2,94 +2,60 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
-    --background: 240 5% 4%;
-    --foreground: 0 0% 100%;
-
-    --card: 240 5% 6%;
-    --card-foreground: 0 0% 100%;
-
-    --popover: 240 5% 6%;
-    --popover-foreground: 0 0% 100%;
-
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
     --primary: 45 65% 52%;
-    --primary-foreground: 240 5% 4%;
-
-    --secondary: 240 5% 10%;
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 240 5% 15%;
-    --muted-foreground: 0 0% 70%;
-
-    --accent: 45 65% 52%;
-    --accent-foreground: 240 5% 4%;
-
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 240 5% 15%;
-    --input: 240 5% 15%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
     --ring: 45 65% 52%;
-
-    --radius: 0.75rem;
-
-    --sidebar-background: 240 5% 5%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 45 65% 52%;
-    --sidebar-primary-foreground: 240 5% 4%;
-    --sidebar-accent: 240 5% 10%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 240 5% 15%;
-    --sidebar-ring: 45 65% 52%;
-
-    /* HIXA custom tokens */
+    --radius: 0.5rem;
+    
+    /* Custom colors */
     --gold: 45 65% 52%;
-    --gold-dark: 45 55% 42%;
-    --gold-light: 45 75% 62%;
-    --dark-bg: 240 5% 4%;
-    --dark-card: 240 5% 6%;
-    --glass-bg: 240 5% 8%;
-    
-    /* Engineering platform colors */
-    --cyan: 210 12% 74%;
-    --cyan-light: 210 15% 84%;
-    --cyan-dark: 210 10% 64%;
-    
-    /* Gradients */
-    --gradient-gold: linear-gradient(135deg, hsl(45 75% 62%) 0%, hsl(45 65% 52%) 100%);
-    --gradient-dark: linear-gradient(180deg, hsl(240 5% 6%) 0%, hsl(240 5% 4%) 100%);
-    --gradient-cyan: linear-gradient(135deg, hsl(210 15% 84%) 0%, hsl(210 12% 74%) 100%);
-    
-    /* Shadows */
-    --shadow-gold: 0 10px 40px -10px hsl(45 65% 52% / 0.3);
-    --shadow-card: 0 4px 20px hsl(240 5% 2% / 0.5);
-    --shadow-cyan: 0 10px 40px -10px hsl(210 12% 74% / 0.3);
-    
-    /* Transitions */
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --gold-light: 45 65% 65%;
+    --gold-dark: 45 65% 40%;
+    --cyan: 187 75% 55%;
+    --cyan-light: 187 75% 70%;
+    --cyan-dark: 187 75% 40%;
+    --glass-bg: 0 0% 100% / 0.7;
   }
 
-  .light {
-    --background: 0 0% 100%;
-    --foreground: 240 5% 10%;
-    --card: 0 0% 98%;
-    --card-foreground: 240 5% 10%;
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
     --primary: 45 65% 52%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 5% 96%;
-    --secondary-foreground: 240 5% 10%;
-    --muted: 240 5% 96%;
-    --muted-foreground: 240 5% 40%;
-    --accent: 45 65% 52%;
-    --accent-foreground: 0 0% 100%;
-    --border: 240 5% 90%;
-    --input: 240 5% 90%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
     --ring: 45 65% 52%;
+    --glass-bg: 240 10% 3.9% / 0.7;
   }
 }
 
@@ -143,6 +109,39 @@ All colors MUST be HSL.
     animation: slideUp 0.6s ease-out forwards;
   }
 
+  /* Hide scrollbar utility */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
+  }
+
+  .scrollbar-hide {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar-thumb {
+    background: transparent;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
   /* Custom color utilities */
   .bg-cyan {
     background-color: hsl(var(--cyan));
@@ -168,85 +167,80 @@ All colors MUST be HSL.
     color: hsl(var(--cyan-dark));
   }
 
-  .hover\:bg-cyan:hover {
-    background-color: hsl(var(--cyan));
+  .bg-gold {
+    background-color: hsl(var(--gold));
   }
 
-  .hover\:text-cyan:hover {
-    color: hsl(var(--cyan));
+  .text-gold {
+    color: hsl(var(--gold));
   }
 
-  .hover\:bg-cyan-light:hover {
-    background-color: hsl(var(--cyan-light));
+  .bg-gold-light {
+    background-color: hsl(var(--gold-light));
   }
 
-  .hover\:text-cyan-light:hover {
-    color: hsl(var(--cyan-light));
+  .text-gold-light {
+    color: hsl(var(--gold-light));
   }
 
-  .hover\:bg-cyan-dark:hover {
-    background-color: hsl(var(--cyan-dark));
+  .bg-gold-dark {
+    background-color: hsl(var(--gold-dark));
   }
 
-  .hover\:text-cyan-dark:hover {
-    color: hsl(var(--cyan-dark));
+  .text-gold-dark {
+    color: hsl(var(--gold-dark));
   }
 
-  @keyframes float {
-    0%, 100% {
-      transform: translateY(0px);
-    }
-    50% {
-      transform: translateY(-20px);
-    }
+  .bg-glass-bg {
+    background-color: hsl(var(--glass-bg));
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-gold hover:bg-gold-dark text-primary-foreground font-semibold py-2 px-4 rounded-md transition-colors;
   }
 
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 font-medium py-2 px-4 rounded-md transition-colors;
   }
 
-  @keyframes slideUp {
-    from {
-      opacity: 0;
-      transform: translateY(30px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  .btn-outline {
+    @apply border border-input bg-background hover:bg-accent hover:text-accent-foreground font-medium py-2 px-4 rounded-md transition-colors;
   }
+}
 
-  /* Platform-specific visual highlighting styles */
-  .platform-badge {
-    @apply inline-flex items-center gap-2 px-4 py-2 bg-gold/20 border border-gold/40 rounded-full;
+/* Animations */
+@keyframes float {
+  0% {
+    transform: translateY(0px);
   }
-
-  .platform-badge-pulse {
-    @apply w-2 h-2 bg-gold rounded-full animate-pulse;
+  50% {
+    transform: translateY(-20px);
   }
-
-  .platform-text {
-    @apply text-gold font-semibold;
+  100% {
+    transform: translateY(0px);
   }
+}
 
-  .platform-label {
-    @apply text-sm font-semibold text-gold;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
   }
-
-  .platform-highlight {
-    @apply border-gold/20;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
+}
 
-  .platform-slogan {
-    @apply font-semibold text-muted-foreground;
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
   }
-
-  .platform-heading {
-    @apply text-gold;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

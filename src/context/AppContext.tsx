@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import logo from '@/assets/images/update logo.png';
+import * as api from '@/services/api';
 
 interface ContentData {
   header: {
@@ -10,16 +11,32 @@ interface ContentData {
     title: { en: string; ar: string };
     subtitle: { en: string; ar: string };
     cta: { en: string; ar: string };
+    caption?: { en: string; ar: string };
+    button?: { en: string; ar: string };
+    captionBelow?: { en: string; ar: string };
+  };
+  navigation?: {
+    business?: { en: string; ar: string };
+    services?: { en: string; ar: string };
+    company?: { en: string; ar: string };
+    about?: { en: string; ar: string };
+    quote?: { en: string; ar: string };
   };
   about: {
     title: { en: string; ar: string };
     subtitle: { en: string; ar: string };
-    values: Array<{
-      id: string;
-      icon: string;
+    card1: {
       title: { en: string; ar: string };
-      description: { en: string; ar: string };
-    }>;
+      text: { en: string; ar: string };
+    };
+    card2: {
+      title: { en: string; ar: string };
+      text: { en: string; ar: string };
+    };
+    card3: {
+      title: { en: string; ar: string };
+      text: { en: string; ar: string };
+    };
   };
   services: Array<{
     id: string;
@@ -34,6 +51,7 @@ interface ContentData {
     title: { en: string; ar: string };
     description: { en: string; ar: string };
     image: string;
+    active?: boolean;
   }>;
   platformFeatures: Array<{
     id: string;
@@ -70,6 +88,7 @@ interface ContentData {
     title: { en: string; ar: string };
     description: { en: string; ar: string };
     status: 'active' | 'inactive';
+    applicationLink?: string; // Optional application link field
   }>;
 }
 
@@ -79,10 +98,11 @@ interface AppContextType {
   isAuthenticated: boolean;
   setIsAuthenticated: (value: boolean) => void;
   content: ContentData;
-  updateContent: (newContent: Partial<ContentData>) => void;
+  updateContent: (newContent: Partial<ContentData>) => Promise<void>;
 }
 
-const defaultContent: ContentData = {
+const defaultContent: ContentData = { 
+  ...api.getInitialContentSnapshot(),
   header: {
     logo: '',
     logoImage: 'src/assets/images/update logo.png',
@@ -90,7 +110,7 @@ const defaultContent: ContentData = {
   hero: {
     title: {
       en: ' High Xpert ARTBUILD ',
-      ar: 'بناء التميز الرقمي',
+      ar: ' لكل مشروع لا ينسى ',
     },
     subtitle: {
       en: 'Connecting expertise and High Xpert ART BUILD opportunities… with no spatial limits',
@@ -100,45 +120,80 @@ const defaultContent: ContentData = {
       en: 'Join Platform',
       ar: 'ابدأ الآن',
     },
+    caption: {
+      en: 'Transforming ideas into experiences that leave a lasting impact.',
+      ar: 'نحول الأفكار إلى تجارب تترك أثراً دائماً.',
+    },
+    button: {
+      en: 'Join the Platform',
+      ar: 'انضم للمنصة',
+    },
+    captionBelow: {
+      en: 'A platform that connects clients with engineers to execute engineering projects professionally.',
+      ar: 'منصة تربط العملاء بالمهندسين لتنفيذ المشاريع الهندسية باحترافية.',
+    },
+  },
+  navigation: {
+    business: {
+      en: 'Business',
+      ar: 'الأعمال',
+    },
+    services: {
+      en: 'Services',
+      ar: 'الخدمات',
+    },
+    company: {
+      en: 'Company',
+      ar: 'الشركة',
+    },
+    about: {
+      en: 'About Us',
+      ar: 'عنا',
+    },
+    quote: {
+      en: 'Get a Quote',
+      ar: 'احصل على عرض سعر',
+    },
   },
   about: {
     title: {
-      en: 'About HIXA',
-      ar: 'عن هيكسا',
+      en: 'About Our Company',
+      ar: 'عن شركتنا',
     },
     subtitle: {
-      en: 'We deliver innovative solutions that drive business growth',
-      ar: 'نقدم حلولًا مبتكرة تدفع نمو الأعمال',
+      en: 'We\'re revolutionizing how engineering projects are executed and managed.',
+      ar: 'نحن نحدث ثورة في كيفية تنفيذ وإدارة المشاريع الهندسية.',
     },
-    values: [
-      {
-        id: '1',
-        icon: 'Zap',
-        title: { en: 'Innovation', ar: 'الابتكار' },
-        description: {
-          en: 'Cutting-edge solutions for modern challenges',
-          ar: 'حلول متطورة للتحديات الحديثة',
-        },
+    card1: {
+      title: {
+        en: 'Our Mission',
+        ar: 'مهمتنا',
       },
-      {
-        id: '2',
-        icon: 'Shield',
-        title: { en: 'Quality', ar: 'الجودة' },
-        description: {
-          en: 'Excellence in every detail we deliver',
-          ar: 'التميز في كل تفصيلة نقدمها',
-        },
+      text: {
+        en: 'To connect exceptional engineering talent with groundbreaking projects, fostering innovation and excellence in every collaboration.',
+        ar: 'ربط المواهب الهندسية الاستثنائية بالمشاريع الرائدة، وتعزيز الابتكار والتميز في كل تعاون.',
       },
-      {
-        id: '3',
-        icon: 'Rocket',
-        title: { en: 'Growth', ar: 'النمو' },
-        description: {
-          en: 'Scalable solutions that grow with you',
-          ar: 'حلول قابلة للتوسع تنمو معك',
-        },
+    },
+    card2: {
+      title: {
+        en: 'Our Vision',
+        ar: 'رؤيتنا',
       },
-    ],
+      text: {
+        en: 'To become the world\'s leading platform for engineering collaboration, where innovation meets execution seamlessly.',
+        ar: 'أن نصبح المنصة الرائدة عالمياً في مجال التعاون الهندسي، حيث يلتقي الابتكار بالتنفيذ بسلاسة.',
+      },
+    },
+    card3: {
+      title: {
+        en: 'Our Values',
+        ar: 'قيمنا',
+      },
+      text: {
+        en: 'Excellence, integrity, collaboration, and innovation drive everything we do to ensure success for our partners and clients.',
+        ar: 'التميز، النزاهة، التعاون، والابتكار تقود كل ما نقوم به لضمان النجاح لشركائنا وعملائنا.',
+      },
+    },
   },
   services: [
     {
@@ -192,6 +247,7 @@ const defaultContent: ContentData = {
         ar: 'تجربة تسوق حديثة مع دفع سلس',
       },
       image: '/placeholder.svg',
+      active: true,
     },
     {
       id: '2',
@@ -202,6 +258,7 @@ const defaultContent: ContentData = {
         ar: 'نظام تحليلات وتقارير في الوقت الفعلي',
       },
       image: '/placeholder.svg',
+      active: true,
     },
     {
       id: '3',
@@ -212,6 +269,7 @@ const defaultContent: ContentData = {
         ar: 'منصة إدارة المرضى والطب عن بعد',
       },
       image: '/placeholder.svg',
+      active: true,
     },
   ],
   platformFeatures: [
@@ -258,8 +316,8 @@ const defaultContent: ContentData = {
       ar: 'ربطك بالخبرات وفرص المشاريع عالية الجودة... بلا حدود مكانية',
     },
     heading: {
-      en: 'HIXA Platform',
-      ar: 'منصة هيكسا',
+      en: 'HIXA',
+      ar: 'هيكسا',
     },
     platformLabel: {
       en: 'Platform-specific',
@@ -309,28 +367,28 @@ const defaultContent: ContentData = {
     {
       id: '1',
       name: { en: 'TechCorp', ar: 'شركة التقنية' },
-      logo: '/placeholder.svg',
+      logo: '/src/assets/images/partner.jpg',
       order: 1,
       active: true,
     },
     {
       id: '2',
       name: { en: 'InnovateX', ar: 'ابتكار إكس' },
-      logo: '/placeholder.svg',
+      logo: '/src/assets/images/partner.jpg',
       order: 2,
       active: true,
     },
     {
       id: '3',
       name: { en: 'BuildMaster', ar: 'ماستر البناء' },
-      logo: '/placeholder.svg',
+      logo: '/src/assets/images/partner.jpg',
       order: 3,
       active: true,
     },
     {
       id: '4',
       name: { en: 'DesignPro', ar: 'برو التصميم' },
-      logo: '/placeholder.svg',
+      logo: '/src/assets/images/partner.jpg',
       order: 4,
       active: true,
     },
@@ -379,8 +437,47 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     console.log('Authentication state changed:', isAuthenticated);
   }, [isAuthenticated]);
 
-  const updateContent = (newContent: Partial<ContentData>) => {
+  const updateContent = async (newContent: Partial<ContentData>) => {
+    // Update local state immediately for responsive UI
     setContent((prev) => ({ ...prev, ...newContent }));
+    
+    // Save to API
+    try {
+      // Update each section separately
+      if (newContent.header) {
+        await api.updateHeaderContent(newContent.header);
+      }
+      if (newContent.hero) {
+        await api.updateHeroContent(newContent.hero);
+      }
+      if (newContent.navigation) {
+        // We'll need to add this to the API
+      }
+      if (newContent.about) {
+        await api.updateAboutContent(newContent.about);
+      }
+      if (newContent.services) {
+        await api.updateServices(newContent.services);
+      }
+      if (newContent.projects) {
+        await api.updateProjects(newContent.projects);
+      }
+      if (newContent.platformFeatures) {
+        await api.updatePlatformFeatures(newContent.platformFeatures);
+      }
+      if (newContent.platformContent) {
+        await api.updatePlatformContent(newContent.platformContent);
+      }
+      if (newContent.cta) {
+        await api.updateHeroContent({ ctaSection: newContent.cta });
+      }
+      if (newContent.footer) {
+        await api.updateFooterContent(newContent.footer);
+      }
+    } catch (error) {
+      console.error('Failed to save content:', error);
+      // Optionally revert the local state if API call fails
+    }
   };
 
   return (

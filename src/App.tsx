@@ -5,9 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppProvider, useApp } from "./context/AppContext";
 import Landing from "./pages/Landing";
-import AdminLogin from "./pages/AdminLogin";
-import AdminDashboard from "./pages/AdminDashboard";
-import ContentManagement from "./pages/ContentManagement";
+import AdminLogin from "./pages/admin-dashboard/AdminLogin";
+import AdminDashboard from "./pages/admin-dashboard/AdminDashboard";
+import ContentManagement from "./pages/admin-dashboard/ContentManagement";
 import NotFound from "./pages/NotFound";
 import CompanyLanding from "./pages/CompanyLanding";
 

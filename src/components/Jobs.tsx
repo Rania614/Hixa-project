@@ -2,64 +2,53 @@ import { useApp } from '@/context/AppContext';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { HexagonIcon } from './ui/hexagon-icon';
+import { ChevronRight } from 'lucide-react';
 
 export const Jobs = () => {
   const { content, language } = useApp();
   const activeJobs = content.jobs.filter(job => job.status === 'active');
 
-  return (
-    <section id="jobs" className="py-24">
-      <div className="container mx-auto px-6">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            {language === 'en' ? 'Join Our Team' : 'انضم إلى فريقنا'}
-          </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            {language === 'en' 
-              ? 'Explore career opportunities with our innovative company' 
-              : 'استكشف فرص العمل مع شركتنا المبتكرة'}
-          </p>
-        </div>
+  const handleApply = (jobId: string, applicationLink?: string) => {
+    if (applicationLink) {
+      window.open(applicationLink, '_blank');
+    } else {
+      // Default behavior if no link is provided
+      console.log(`Apply for job ${jobId}`);
+      // You can implement default application logic here
+    }
+  };
 
-        {activeJobs.length > 0 ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {activeJobs.map((job, index) => (
-              <Card
-                key={job.id}
-                className="glass-card hover:border-gold/50 transition-all duration-300 group animate-slide-up"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <CardContent className="p-6">
-                  <div className="mb-4">
-                    <HexagonIcon size="md" className="text-gold mb-3">
-                      <div className="w-6 h-6 flex items-center justify-center text-xs font-bold">
-                        {job.title[language].charAt(0)}
-                      </div>
-                    </HexagonIcon>
-                    <h3 className="text-xl font-bold mb-2">
-                      {job.title[language]}
-                    </h3>
-                    <p className="text-muted-foreground">
-                      {job.description[language]}
-                    </p>
-                  </div>
-                  <Button className="w-full bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold">
-                    {language === 'en' ? 'Apply Now' : 'تقدم الآن'}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">
+  return (
+     <section id="jobs" className="py-20 px-6 bg-secondary/30">
+        <div className="container mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold mb-4">{language === 'en' ? 'Jobs' : 'الوظائف'}</h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
               {language === 'en' 
-                ? 'No job openings available at the moment. Check back later!' 
-                : 'لا توجد وظائف شاغرة في الوقت الحالي. تحقق لاحقًا!'}
+                ? 'Join our team of talented professionals.' 
+                : 'انضم إلى فريقنا من المحترفين الموهوبين.'}
             </p>
           </div>
-        )}
-      </div>
-    </section>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {activeJobs.map((job) => (
+              <div key={job.id} className="glass-card p-8 rounded-xl">
+                <h3 className="text-2xl font-bold mb-4">{job.title[language]}</h3>
+                <p className="text-muted-foreground mb-4">
+                  {job.description[language]}
+                </p>
+                <Button 
+                  variant="link" 
+                  className="p-0 text-gold hover:text-gold-dark"
+                  onClick={() => handleApply(job.id, job.applicationLink)}
+                >
+                  {language === 'en' ? 'Apply Now' : 'تقدم الآن'}
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
   );
 };

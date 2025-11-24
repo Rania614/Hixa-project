@@ -64,8 +64,8 @@ export const Footer = () => {
                 <HexagonIcon size="sm" className="text-cyan">
                   <Mail className="h-4 w-4" />
                 </HexagonIcon>
-                <a href="mailto:info@hixa.com" className="text-muted-foreground hover:text-cyan transition-colors">
-                  info@hixa.com
+                <a href="mailto:hixagp@gmail.com" className="text-muted-foreground hover:text-cyan transition-colors">
+                  hixagp@gmail.com
                 </a>
               </div>
               <div className="flex items-center gap-3">

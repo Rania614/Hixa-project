@@ -1,12 +1,27 @@
 import { useApp } from '@/context/AppContext';
 import { Button } from './ui/button';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, User, Handshake } from 'lucide-react';
+import { useState } from 'react';
+import { AuthModal } from '@/components/auth/AuthModal';
 
 export const Hero = () => {
-  const { content, language, setIsAuthenticated } = useApp();
+  const { content, language } = useApp();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authRole, setAuthRole] = useState<'client' | 'partner' | null>(null);
 
-  const handleGetStarted = () => {
-    setIsAuthenticated(true);
+  const handleClientLogin = () => {
+    setAuthRole('client');
+    setShowAuthModal(true);
+  };
+
+  const handlePartnerLogin = () => {
+    setAuthRole('partner');
+    setShowAuthModal(true);
+  };
+
+  const handleAuthSuccess = () => {
+    // Authentication successful - could redirect to dashboard
+    console.log('Authentication successful for role:', authRole);
   };
 
   return (
@@ -19,22 +34,43 @@ export const Hero = () => {
       </div>
 
       <div className="container mx-auto px-6 text-center relative z-10">
+        {/* HIXA Logo Text */}
+        <div className="mb-8 animate-slide-up">
+          <h1 className="text-6xl md:text-8xl font-bold mb-2">
+            <span className="block text-gold">{content.platformContent.heading[language]}</span>
+          </h1>
+        </div>
+        
         <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-slide-up">
           {content.hero.title[language]}
         </h1>
         <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto animate-slide-up" style={{ animationDelay: '0.2s' }}>
           {content.hero.subtitle[language]}
         </p>
-        <Button
-          onClick={handleGetStarted}
-          size="lg"
-          className="bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold px-8 py-6 text-lg group animate-slide-up"
-          style={{ animationDelay: '0.4s' }}
-        >
-          {content.hero.cta[language]}
-          <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up" style={{ animationDelay: '0.4s' }}>
+          <Button
+            onClick={handleClientLogin}
+            className="bg-transparent border-2 border-gold text-gold hover:bg-gold hover:text-black font-semibold px-6 py-3 text-base flex items-center gap-2"
+          >
+            <User className="h-4 w-4" />
+            {language === 'en' ? 'Enter as Client' : 'ادخل كعميل'}
+          </Button>
+          <Button
+            onClick={handlePartnerLogin}
+            className="bg-gold hover:bg-gold-dark text-black font-semibold px-6 py-3 text-base flex items-center gap-2"
+          >
+            <Handshake className="h-4 w-4" />
+            {language === 'en' ? 'Enter as Partner' : 'ادخل كشريك'}
+          </Button>
+        </div>
       </div>
+      
+      <AuthModal 
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onAuthSuccess={handleAuthSuccess}
+        role={authRole}
+      />
     </section>
   );
 };
