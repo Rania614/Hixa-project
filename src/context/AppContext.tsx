@@ -62,13 +62,14 @@ const AppContext = createContext<AppContextProps | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [language, setLanguage] = useState<"ar" | "en">("en");
-  const [content, setContent] = useState<LandingContent | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Initialize with fallback data immediately to prevent blank screen
+  const [content, setContent] = useState<LandingContent | null>(getInitialContentSnapshot());
+  const [loading, setLoading] = useState(false); // Start with false since we have fallback data
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
   const fetchLandingContent = async () => {
     try {
-      setLoading(true);
+      // Don't set loading to true - keep showing fallback data
       // Use mock data instead of trying to fetch from a non-existent API
       const data = getInitialContentSnapshot();
       setContent(data);

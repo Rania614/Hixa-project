@@ -111,31 +111,26 @@ const mapPayload = (payload: any) => {
   };
 };
 
-// Initialize with fallback data immediately for faster loading
-const initialFallback = getInitialContentSnapshot();
-const initialMapped = mapPayload(initialFallback);
-
 export const useLandingStore = create<LandingState>((set) => ({
-  loading: false,
+  loading: true, // Start with loading true to fetch real data first
   error: null,
 
-  // Start with fallback data so page renders immediately
-  hero: initialMapped.hero,
-  about: initialMapped.about,
-  services: initialMapped.services,
-  projects: initialMapped.projects,
-  partners: initialMapped.partners,
-  jobs: initialMapped.jobs,
-  cta: initialMapped.cta,
+  // Start with empty/null data - will be populated from API
+  hero: null,
+  about: null,
+  services: [],
+  projects: [],
+  partners: [],
+  jobs: [],
+  cta: null,
 
   fetchLandingData: async () => {
-    // Don't set loading to true - keep showing fallback data
-    // This way page renders immediately while fetching in background
+    set({ loading: true });
     try {
       const response = await http.get("/content");
       const mapped = mapPayload(response.data);
 
-      // Update with real data (silently, no loading state)
+      // Update with real data from API
       set({
         ...mapped,
         loading: false,
@@ -143,8 +138,11 @@ export const useLandingStore = create<LandingState>((set) => ({
       });
     } catch (err) {
       console.error("Failed to fetch landing content:", err);
-      // Keep fallback data, just log error
+      // Only use fallback data if API fails
+      const fallback = getInitialContentSnapshot();
+      const fallbackMapped = mapPayload(fallback);
       set({
+        ...fallbackMapped,
         loading: false,
         error: err,
       });

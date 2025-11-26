@@ -9,6 +9,7 @@ import { Partners } from "@/components/Partners";
 import { Services } from "@/components/Services";
 import { FeaturedProjects } from "@/components/FeaturedProjects";
 import { Jobs } from "@/components/Jobs";
+import { SkeletonCard } from "@/components/SkeletonCard";
 import { useLandingStore } from "@/stores/landingStore";
 import { useShallow } from "zustand/react/shallow";
 import { useApp } from "@/context/AppContext";
@@ -30,13 +31,14 @@ const CompanyLanding = () => {
   const fetchLandingData = useLandingStore((state) => state.fetchLandingData);
 
   useEffect(() => {
-    // Fetch data in background - page already shows fallback data
+    // Fetch real data from API immediately
     fetchLandingData();
   }, [fetchLandingData]);
 
-  // Remove loading check - page shows immediately with fallback data
-  // if (loading)
-  //   return <div className="p-10 text-center text-xl font-semibold">Loading...</div>;
+  // Show skeleton loading while fetching data
+  if (loading && !hero && !about) {
+    return <SkeletonCard />;
+  }
 
   const getFieldValue = (entity: any, field: string, lang: "en" | "ar" = "en") => {
     if (!entity) return undefined;
@@ -168,16 +170,16 @@ const CompanyLanding = () => {
           )}
 
           <div className="flex-grow flex flex-col items-center justify-center px-4 sm:px-6 text-center">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold uppercase mb-4 sm:mb-6 text-gold">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold uppercase mb-4 sm:mb-6 text-gold transition-all duration-300">
               {heroTitle}
             </h1>
-            <p className="text-white text-lg sm:text-xl md:text-2xl lg:text-3xl max-w-2xl sm:max-w-3xl mx-auto opacity-90">
+            <p className="text-white text-lg sm:text-xl md:text-2xl lg:text-3xl max-w-2xl sm:max-w-3xl mx-auto opacity-90 transition-all duration-300">
               {heroSubtitle}
             </p>
             
             {/* Static Sub-section - Engineering Identity */}
-            <div className="mt-8 sm:mt-10 md:mt-12 max-w-3xl mx-auto px-4 space-y-3 sm:space-y-4">
-              <p className="text-white text-sm sm:text-base md:text-lg lg:text-xl font-normal opacity-90 text-center leading-relaxed">
+            <div className="mt-8 sm:mt-10 md:mt-12 max-w-3xl mx-auto px-4 space-y-3 sm:space-y-4 transition-all duration-300">
+              <p className="text-white text-sm sm:text-base md:text-lg lg:text-xl font-normal text-center leading-relaxed opacity-90">
                 {language === 'en' 
                   ? 'Transforming ideas into experiences that leave a lasting impact.' 
                   : 'تحويل الأفكار إلى تجارب تترك أثراً دائماً.'}
@@ -185,7 +187,7 @@ const CompanyLanding = () => {
             </div>
 
             <Button 
-              className="mt-8 sm:mt-10 hexagon bg-transparent border-2 border-gold text-gold hover:bg-gold hover:text-black font-bold px-12 py-6 text-xl rounded-lg transition-all duration-300" 
+              className="mt-8 sm:mt-10 hexagon bg-transparent border-2 border-gold text-gold hover:bg-gold hover:text-black font-bold px-12 py-6 text-xl rounded-lg transition-all duration-300"
               onClick={handleGetStarted}
             >
               {language === 'en' ? 'Join Platform' : 'انضم إلى المنصة'}
@@ -198,8 +200,8 @@ const CompanyLanding = () => {
       <section id="about" className="py-16 sm:py-20 px-4 sm:px-6 bg-secondary/30">
         <div className="container mx-auto">
           <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">{aboutTitle}</h2>
-            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl sm:max-w-3xl mx-auto">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4 transition-all duration-300">{aboutTitle}</h2>
+            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl sm:max-w-3xl mx-auto transition-all duration-300">
               {aboutSubtitle}
             </p>
           </div>
