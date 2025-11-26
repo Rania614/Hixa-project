@@ -17,6 +17,7 @@ http.interceptors.request.use((config) => {
 });
 
 // Handle 401 errors - redirect to login if token is invalid
+// Suppress 404 errors from console (they're expected for optional endpoints)
 http.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -26,6 +27,18 @@ http.interceptors.response.use(
       // Redirect to login page
       if (window.location.pathname.startsWith('/admin')) {
         window.location.href = '/admin/login';
+      }
+    }
+    // Suppress 404 errors from console for optional endpoints (auth/verify, admin/me)
+    // These endpoints may not be implemented yet
+    if (error.response?.status === 404) {
+      const url = error.config?.url || '';
+      if (url.includes('/auth/verify') || url.includes('/admin/me')) {
+        // Silently handle 404 for these optional endpoints
+        // Don't log to console as they're expected
+      } else {
+        // Log other 404 errors normally
+        console.error('404 Error:', error.config?.url);
       }
     }
     return Promise.reject(error);

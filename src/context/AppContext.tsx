@@ -99,12 +99,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 await http.get('/admin/me');
                 setIsAuthenticated(true);
               } catch (meError: any) {
-                // If both fail, token is invalid
-                if (meError.response?.status === 401 || meError.response?.status === 403) {
+                // If both endpoints don't exist (404), keep token (fallback for development)
+                if (meError.response?.status === 404) {
+                  // Endpoints don't exist - keep token for development
+                  // Silently handle 404 - endpoints may not be implemented yet
+                  setIsAuthenticated(true);
+                } else if (meError.response?.status === 401 || meError.response?.status === 403) {
+                  // Token is invalid
                   localStorage.removeItem("token");
                   setIsAuthenticated(false);
                 } else {
-                  // If endpoint doesn't exist, keep token (fallback for development)
+                  // Other error, keep token (fallback)
                   setIsAuthenticated(true);
                 }
               }
@@ -117,10 +122,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               setIsAuthenticated(true);
             }
           }
-        } catch (error) {
-          // Network error or other issue - keep token for now
-          console.warn('Auth check failed:', error);
-          setIsAuthenticated(true);
+        } catch (error: any) {
+          // Network error or other issue - check if it's a 404 (endpoint doesn't exist)
+          if (error.response?.status === 404) {
+            // Endpoint doesn't exist - keep token for development
+            // Silently handle 404 - endpoints may not be implemented yet
+            setIsAuthenticated(true);
+          } else {
+            // Other network error - keep token for now
+            // Only log non-404 errors
+            if (error.response?.status !== 404) {
+              console.warn('Auth check failed:', error.message || error);
+            }
+            setIsAuthenticated(true);
+          }
         }
       } else {
         setIsAuthenticated(false);

@@ -18,10 +18,12 @@ import AuthPage from "./pages/AuthPage";
 const queryClient = new QueryClient();
 
 // ProtectedRoute component - checks both authentication state and token
+// Redirects to login if not authenticated
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useApp();
   const location = useLocation();
   const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
+  const [isChecking, setIsChecking] = useState(true);
   
   // Update token when localStorage changes
   useEffect(() => {
@@ -40,10 +42,58 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     };
   }, [isAuthenticated]);
   
+  // Verify token is valid on mount and when dependencies change
+  useEffect(() => {
+    const verifyToken = () => {
+      const currentToken = localStorage.getItem("token");
+      
+      // If no token, not authorized - redirect immediately
+      if (!currentToken) {
+        setIsChecking(false);
+        // Clear authentication state if no token
+        if (isAuthenticated) {
+          // This shouldn't happen, but clear it just in case
+        }
+        return;
+      }
+      
+      // Update token state
+      setToken(currentToken);
+      
+      // CRITICAL: Must have both token AND isAuthenticated to be authorized
+      // If token exists but isAuthenticated is false, token is invalid
+      if (!isAuthenticated) {
+        // Token exists but user is not authenticated - clear token and redirect
+        localStorage.removeItem("token");
+        setToken(null);
+        setIsChecking(false);
+        return;
+      }
+      
+      // Both token and isAuthenticated exist - allow access
+      setIsChecking(false);
+    };
+    
+    verifyToken();
+  }, [isAuthenticated, location.pathname]);
+  
   // Use useMemo to prevent unnecessary re-renders
   const isAuthorized = useMemo(() => {
+    // Must have both authentication state and valid token
     return isAuthenticated && !!token;
   }, [isAuthenticated, token]);
+  
+  // Show loading while checking
+  if (isChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-xl font-semibold text-muted-foreground">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
   
   // Must have both authentication state and valid token
   if (!isAuthorized) {
@@ -53,25 +103,69 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// PublicRoute component - redirects to dashboard if already authenticated
+// Used for login and auth pages
+const PublicRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated } = useApp();
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
+  
+  // Update token when localStorage changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setToken(localStorage.getItem("token"));
+    };
+    
+    handleStorageChange();
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [isAuthenticated]);
+  
+  // If already authenticated, redirect to dashboard
+  const isAuthorized = useMemo(() => {
+    return isAuthenticated && !!token;
+  }, [isAuthenticated, token]);
+  
+  if (isAuthorized) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
 const AppRoutes = () => {
   const { isAuthenticated } = useApp();
   const location = useLocation();
 
-  // Memoize route elements to prevent unnecessary re-renders
-  const platformElement = useMemo(() => {
-    return isAuthenticated ? <Navigate to="/admin/dashboard" replace /> : <Landing />;
-  }, [isAuthenticated]);
-
-  const loginElement = useMemo(() => {
-    return isAuthenticated ? <Navigate to="/admin/dashboard" replace /> : <AdminLogin />;
-  }, [isAuthenticated]);
-
   return (
     <Routes location={location}>
       <Route path="/" element={<CompanyLanding />} />
-      <Route path="/platform" element={platformElement} />
-      <Route path="/auth/:role" element={<AuthPage />} />
-      <Route path="/admin/login" element={loginElement} />
+      <Route 
+        path="/platform" 
+        element={
+          <PublicRoute>
+            <Landing />
+          </PublicRoute>
+        } 
+      />
+      <Route 
+        path="/auth/:role" 
+        element={
+          <PublicRoute>
+            <AuthPage />
+          </PublicRoute>
+        } 
+      />
+      <Route 
+        path="/admin/login" 
+        element={
+          <PublicRoute>
+            <AdminLogin />
+          </PublicRoute>
+        } 
+      />
       <Route
         path="/admin/dashboard"
         element={

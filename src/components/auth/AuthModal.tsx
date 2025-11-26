@@ -163,6 +163,7 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
                     className="bg-secondary/50"
+                    autoComplete="email"
                     required
                   />
                 </div>
@@ -178,6 +179,7 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     className="bg-secondary/50"
+                    autoComplete="current-password"
                     required
                   />
                 </div>
@@ -351,6 +353,7 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="you@example.com"
                       className="bg-secondary/50"
+                      autoComplete="email"
                       required
                     />
                   </div>
@@ -366,6 +369,7 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Create a password"
                       className="bg-secondary/50"
+                      autoComplete="new-password"
                       required
                     />
                   </div>
@@ -381,6 +385,7 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Confirm your password"
                       className="bg-secondary/50"
+                      autoComplete="new-password"
                       required
                     />
                   </div>
