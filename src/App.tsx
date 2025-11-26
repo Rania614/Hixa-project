@@ -105,8 +105,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 // PublicRoute component - redirects to dashboard if already authenticated
 // Used for login and auth pages
-const PublicRoute = ({ children }: { children: React.ReactNode }) => {
+// BUT: /platform should be accessible even if authenticated
+const PublicRoute = ({ children, allowWhenAuthenticated = false }: { children: React.ReactNode; allowWhenAuthenticated?: boolean }) => {
   const { isAuthenticated } = useApp();
+  const location = useLocation();
   const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
   
   // Update token when localStorage changes
@@ -123,11 +125,17 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
     };
   }, [isAuthenticated]);
   
-  // If already authenticated, redirect to dashboard
+  // If already authenticated, redirect to dashboard (unless allowWhenAuthenticated is true)
   const isAuthorized = useMemo(() => {
     return isAuthenticated && !!token;
   }, [isAuthenticated, token]);
   
+  // If allowWhenAuthenticated is true (e.g., for /platform), allow access even if authenticated
+  if (allowWhenAuthenticated) {
+    return <>{children}</>;
+  }
+  
+  // For login/auth pages, redirect to dashboard if already authenticated
   if (isAuthorized) {
     return <Navigate to="/admin/dashboard" replace />;
   }
@@ -145,7 +153,7 @@ const AppRoutes = () => {
       <Route 
         path="/platform" 
         element={
-          <PublicRoute>
+          <PublicRoute allowWhenAuthenticated={true}>
             <Landing />
           </PublicRoute>
         } 
@@ -153,7 +161,7 @@ const AppRoutes = () => {
       <Route 
         path="/auth/:role" 
         element={
-          <PublicRoute>
+          <PublicRoute allowWhenAuthenticated={true}>
             <AuthPage />
           </PublicRoute>
         } 
@@ -161,8 +169,8 @@ const AppRoutes = () => {
       <Route 
         path="/admin/login" 
         element={
-          <PublicRoute>
-            <AdminLogin />
+          <PublicRoute allowWhenAuthenticated={true}>
+            <AuthPage />
           </PublicRoute>
         } 
       />

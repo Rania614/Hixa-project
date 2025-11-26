@@ -6,7 +6,7 @@ import { About } from '@/components/About';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
-import { User, Handshake, UserPlus, ChevronDown } from 'lucide-react';
+import { User, ChevronDown } from 'lucide-react';
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -19,21 +19,6 @@ const Landing = () => {
     if (subscriptionSection) {
       subscriptionSection.scrollIntoView({ behavior: 'smooth' });
     }
-  };
-
-  const handleClientLogin = () => {
-    navigate('/auth/client');
-    setShowDropdown(false);
-  };
-
-  const handlePartnerLogin = () => {
-    navigate('/auth/partner');
-    setShowDropdown(false);
-  };
-
-  const handleSignUp = () => {
-    navigate('/auth/client?mode=register');
-    setShowDropdown(false);
   };
 
   // Close dropdown when clicking outside
@@ -94,27 +79,15 @@ const Landing = () => {
               {showDropdown && (
                 <div className="absolute top-full right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-lg z-50 animate-fade-in">
                   <div className="p-2">
-                    {/* <button
-                      onClick={handleClientLogin}
-                      className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium mb-1 flex items-center gap-2 text-foreground hover:bg-gold/10"
-                    >
-                      <User className="h-4 w-4" />
-                      {language === 'en' ? 'Enter as Client' : 'ادخل كعميل'}
-                    </button>
                     <button
-                      onClick={handlePartnerLogin}
-                      className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium mb-1 flex items-center gap-2 text-foreground hover:bg-gold/10"
-                    >
-                      <Handshake className="h-4 w-4" />
-                      {language === 'en' ? 'Enter as Partner' : 'ادخل كشريك'}
-                    </button> */}
-                    {/* <div className="border-t border-border my-1"></div> */}
-                    <button
-                      onClick={handleSignUp}
+                      onClick={() => {
+                        navigate('/auth/client');
+                        setShowDropdown(false);
+                      }}
                       className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10"
                     >
-                      <UserPlus className="h-4 w-4" />
-                      {language === 'en' ? 'Sign Up' : 'تسجيل'}
+                      <User className="h-4 w-4" />
+                      {language === 'en' ? 'Log In' : 'تسجيل الدخول'}
                     </button>
                   </div>
                 </div>

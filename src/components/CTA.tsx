@@ -9,7 +9,7 @@ export const CTA = () => {
   const navigate = useNavigate();
 
   const handleGetStarted = () => {
-    navigate('/admin/login');
+    navigate('/platform');
   };
 
   return (
