@@ -169,8 +169,8 @@ const AppRoutes = () => {
       <Route 
         path="/admin/login" 
         element={
-          <PublicRoute allowWhenAuthenticated={true}>
-            <AuthPage />
+          <PublicRoute>
+            <AdminLogin />
           </PublicRoute>
         } 
       />
