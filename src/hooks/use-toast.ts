@@ -3,7 +3,7 @@ import * as React from "react";
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
 
 const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 1000000;
+const TOAST_REMOVE_DELAY = 5000; // 5 seconds
 
 type ToasterToast = ToastProps & {
   id: string;
@@ -85,27 +85,32 @@ export const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action;
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
+      // Clear timeout if exists
       if (toastId) {
-        addToRemoveQueue(toastId);
+        const timeout = toastTimeouts.get(toastId);
+        if (timeout) {
+          clearTimeout(timeout);
+          toastTimeouts.delete(toastId);
+        }
+        // Remove toast immediately
+        return {
+          ...state,
+          toasts: state.toasts.filter((t) => t.id !== toastId),
+        };
       } else {
+        // Dismiss all toasts
         state.toasts.forEach((toast) => {
-          addToRemoveQueue(toast.id);
+          const timeout = toastTimeouts.get(toast.id);
+          if (timeout) {
+            clearTimeout(timeout);
+            toastTimeouts.delete(toast.id);
+          }
         });
+        return {
+          ...state,
+          toasts: [],
+        };
       }
-
-      return {
-        ...state,
-        toasts: state.toasts.map((t) =>
-          t.id === toastId || toastId === undefined
-            ? {
-                ...t,
-                open: false,
-              }
-            : t,
-        ),
-      };
     }
     case "REMOVE_TOAST":
       if (action.toastId === undefined) {

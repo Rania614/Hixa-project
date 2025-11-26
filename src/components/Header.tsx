@@ -1,7 +1,7 @@
 import { useApp } from '@/context/AppContext';
 import { LanguageToggle } from './LanguageToggle';
 import { Button } from './ui/button';
-import { Menu, X, User, Handshake, ChevronDown } from 'lucide-react';
+import { Menu, X, User, Handshake, ChevronDown, UserPlus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { HexagonIcon } from './ui/hexagon-icon';
 import { useNavigate } from 'react-router-dom';
@@ -26,6 +26,12 @@ export const Header = () => {
   const handlePartnerLogin = () => {
     // Navigate to the partner authentication page
     navigate('/auth/partner');
+    setShowDropdown(false);
+  };
+
+  const handleSignUp = () => {
+    // Navigate to sign up page (client registration)
+    navigate('/auth/client?mode=register');
     setShowDropdown(false);
   };
 
@@ -105,6 +111,11 @@ export const Header = () => {
     }
   };
 
+  // Render nothing if content is not loaded yet
+  if (!content) {
+    return null;
+  }
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg">
       <div className="container mx-auto px-6 py-4">
@@ -114,12 +125,12 @@ export const Header = () => {
             onClick={() => navigate('/')}
           >
             <img
-              src={content.header.logoImage}
+              src={content.header?.logoImage}
               alt="Company logo"
               className="w-16 h-16"
               loading="lazy"
             />
-            {content.header.logo && (
+            {content.header?.logo && (
               <span>{content.header.logo}</span>
             )}
           </div>
@@ -147,7 +158,7 @@ export const Header = () => {
                   onClick={() => setShowDropdown(!showDropdown)}
                   className="justify-center whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary hover:bg-primary/90 h-10 py-2 bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold px-6 flex items-center gap-2"
                 >
-                  {content.hero.cta[language]}
+                  {content.hero?.cta?.[language] || (language === 'en' ? 'Get Started' : 'ابدأ الآن')}
                   <ChevronDown className={`h-4 w-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
                 </button>
                 
@@ -163,10 +174,18 @@ export const Header = () => {
                       </button>
                       <button
                         onClick={handlePartnerLogin}
-                        className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10"
+                        className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium mb-1 flex items-center gap-2 text-foreground hover:bg-gold/10"
                       >
                         <Handshake className="h-4 w-4" />
                         {language === 'en' ? 'Enter as Partner' : 'ادخل كشريك'}
+                      </button>
+                      <div className="border-t border-border my-1"></div>
+                      <button
+                        onClick={handleSignUp}
+                        className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10"
+                      >
+                        <UserPlus className="h-4 w-4" />
+                        {language === 'en' ? 'Sign Up' : 'تسجيل'}
                       </button>
                     </div>
                   </div>
@@ -177,7 +196,7 @@ export const Header = () => {
                 onClick={handleGetStarted}
                 className="hidden sm:flex bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold px-6"
               >
-                {content.hero.cta[language]}
+                {language === 'en' ? 'Join Platform' : 'انضم إلى المنصة'}
               </Button>
             )}
             
@@ -213,7 +232,7 @@ export const Header = () => {
                     onClick={() => setShowDropdown(!showDropdown)}
                     className="justify-center whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary hover:bg-primary/90 h-10 py-2 bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold w-full flex items-center justify-between"
                   >
-                    {content.hero.cta[language]}
+                    {content.hero?.cta?.[language] || (language === 'en' ? 'Get Started' : 'ابدأ الآن')}
                     <ChevronDown className={`h-4 w-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
                   </button>
                             
@@ -229,10 +248,18 @@ export const Header = () => {
                         </button>
                         <button
                           onClick={handlePartnerLogin}
-                          className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10"
+                          className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium mb-1 flex items-center gap-2 text-foreground hover:bg-gold/10"
                         >
                           <Handshake className="h-4 w-4" />
                           {language === 'en' ? 'Enter as Partner' : 'ادخل كشريك'}
+                        </button>
+                        <div className="border-t border-border my-1"></div>
+                        <button
+                          onClick={handleSignUp}
+                          className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10"
+                        >
+                          <UserPlus className="h-4 w-4" />
+                          {language === 'en' ? 'Sign Up' : 'تسجيل'}
                         </button>
                       </div>
                     </div>
@@ -243,7 +270,7 @@ export const Header = () => {
                   onClick={handleGetStarted}
                   className="mt-2 bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold"
                 >
-                  {content.hero.cta[language]}
+                  {language === 'en' ? 'Join Platform' : 'انضم إلى المنصة'}
                 </Button>
               )}
             </div>

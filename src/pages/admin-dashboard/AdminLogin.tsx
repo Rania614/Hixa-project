@@ -6,22 +6,80 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Lock } from 'lucide-react';
 import { HexagonIcon } from '@/components/ui/hexagon-icon';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+
+// ---------- AXIOS INSTANCE WITH INTERCEPTOR ----------
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// ------------------------------------------------------
 
 const AdminLogin = () => {
   const { setIsAuthenticated, isAuthenticated } = useApp();
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simple mock authentication - just redirect
-    if (username && password) {
-      setIsAuthenticated(true);
+    setError('');
+
+    if (!email || !password) {
+      setError('Please enter email and password');
+      return;
+    }
+
+    try {
+      // Only allow admin login - verify credentials with API
+      const res = await api.post('/auth/login', { email, password });
+
+      // Check if response has token and user is admin
+      if (res.data && res.data.token) {
+        // Verify user is admin (check role or isAdmin flag)
+        const isAdmin = res.data.user?.role === 'admin' || 
+                       res.data.user?.isAdmin === true || 
+                       res.data.isAdmin === true ||
+                       res.data.role === 'admin';
+
+        if (!isAdmin) {
+          setError('Access denied. Admin credentials required.');
+          return;
+        }
+
+        console.log('Admin login success:', res.data);
+
+        // Save token
+        localStorage.setItem("token", res.data.token);
+
+        // Set authenticated
+        setIsAuthenticated(true);
+
+        navigate('/admin/dashboard');
+      } else {
+        setError('Invalid response from server.');
+      }
+    } catch (err: any) {
+      console.error('Login failed:', err.response || err.message);
+      const errorMessage = err.response?.data?.message || 
+                          err.response?.data?.error || 
+                          'Login failed. Please check your credentials.';
+      setError(errorMessage);
     }
   };
 
-  // Redirect to dashboard when authenticated
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/admin/dashboard');
@@ -30,12 +88,6 @@ const AdminLogin = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-20 left-10 w-64 h-64 bg-gold/10 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-gold/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
-      </div>
-
       <Card className="w-full max-w-md glass-card relative z-10">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 w-16 h-16 bg-gold/10 flex items-center justify-center hexagon">
@@ -48,40 +100,12 @@ const AdminLogin = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium mb-2">
-                Username
-              </label>
-              <Input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="admin"
-                className="bg-secondary/50"
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium mb-2">
-                Password
-              </label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="bg-secondary/50"
-                required
-              />
-            </div>
-            <Button
-              type="submit"
-              className="w-full bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold"
-            >
-              Sign In
-            </Button>
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@example.com" required />
+            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
+
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+
+            <Button type="submit" className="w-full bg-gold">Sign In</Button>
           </form>
         </CardContent>
       </Card>

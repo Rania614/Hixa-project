@@ -17,8 +17,11 @@ export const Subscribers = () => {
   const [isSending, setIsSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
 
+  // Safe access to subscribers with fallback to empty array
+  const subscribers = content?.subscribers || [];
+
   const handleDeleteSubscriber = async (id: string) => {
-    const updatedSubscribers = content.subscribers.filter(subscriber => subscriber.id !== id);
+    const updatedSubscribers = subscribers.filter(subscriber => subscriber.id !== id);
     await updateContent({ subscribers: updatedSubscribers });
   };
 
@@ -50,7 +53,7 @@ export const Subscribers = () => {
     }
   };
 
-  const totalSubscribers = content.subscribers.length;
+  const totalSubscribers = subscribers.length;
 
   return (
     <div className="flex min-h-screen">
@@ -88,7 +91,7 @@ export const Subscribers = () => {
                 </div>
                 <div className="bg-secondary/30 p-4 rounded-lg">
                   <h3 className="text-2xl font-bold">
-                    {content.subscribers.filter(s => s.email).length}
+                    {subscribers.filter(s => s.email).length}
                   </h3>
                   <p className="text-muted-foreground">
                     {language === 'en' ? 'Email Subscribers' : 'المشتركون عبر البريد الإلكتروني'}
@@ -96,7 +99,7 @@ export const Subscribers = () => {
                 </div>
                 <div className="bg-secondary/30 p-4 rounded-lg">
                   <h3 className="text-2xl font-bold">
-                    {content.subscribers.filter(s => s.phone).length}
+                    {subscribers.filter(s => s.phone).length}
                   </h3>
                   <p className="text-muted-foreground">
                     {language === 'en' ? 'Phone Subscribers' : 'المشتركون عبر الهاتف'}
@@ -139,8 +142,8 @@ export const Subscribers = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {content.subscribers.length > 0 ? (
-                      content.subscribers.map((subscriber) => (
+                    {subscribers.length > 0 ? (
+                      subscribers.map((subscriber) => (
                         <tr key={subscriber.id} className="border-b border-border hover:bg-secondary/30">
                           <td className="p-4">
                             {subscriber.email ? subscriber.email : subscriber.phone}

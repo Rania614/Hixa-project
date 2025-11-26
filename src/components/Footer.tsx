@@ -1,172 +1,73 @@
 import { useApp } from '@/context/AppContext';
-import { Mail, Phone, Linkedin, Youtube, Twitter } from 'lucide-react';
-import { HexagonIcon } from './ui/hexagon-icon';
-import { useState } from 'react';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-
-const socialIconMap = {
-  LinkedIn: Linkedin,
-  YouTube: Youtube,
-  Twitter: Twitter,
-};
 
 export const Footer = () => {
   const { content, language } = useApp();
-  const [email, setEmail] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Handle newsletter subscription
-    console.log('Subscribed with email:', email);
-    setEmail('');
-  };
-
-  // Engineer Resources links
-  const engineerResources = [
-    { id: '1', label: { en: 'Support Center', ar: 'مركز الدعم' }, url: '#' },
-    { id: '2', label: { en: 'Technical Documents', ar: 'الوثائق التقنية' }, url: '#' },
-    { id: '3', label: { en: 'Blog', ar: 'المدونة' }, url: '#' },
-    { id: '4', label: { en: 'Case Studies', ar: 'دراسات الحالة' }, url: '#' },
-  ];
-
-  // Quick Links
-  const quickLinks = [
-    { id: '1', label: { en: 'Home', ar: 'الرئيسية' }, url: '/' },
-    { id: '2', label: { en: 'Services', ar: 'الخدمات' }, url: '#services' },
-    { id: '3', label: { en: 'FAQ', ar: 'الأسئلة الشائعة' }, url: '#' },
-    { id: '4', label: { en: 'Privacy Policy', ar: 'سياسة الخصوصية' }, url: '#' },
-  ];
 
   return (
-    <footer className="border-t border-border/50 py-12 bg-secondary/30" dir="rtl">
-      <div className="container mx-auto px-6">
-        {/* Main Footer Content - 4 Columns */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-          {/* Column 1: Logo, Description, Contact Info */}
-          <div className="lg:order-4">
-            <div className="text-2xl font-bold text-gradient mb-4">
-              {content.header.logo}
-            </div>
-            <p className="text-muted-foreground mb-6">
-              {language === 'en'
-                ? 'Professional engineering services platform connecting experts with clients for innovative solutions.'
-                : 'منصة خدمات هندسية احترافية تربط الخبراء بالعملاء لتقديم حلول مبتكرة.'}
-            </p>
-            {/* Platform Label in Footer */}
-            <div className="mb-4 inline-flex items-center gap-2 px-3 py-1 bg-gold/20 border border-gold/40 rounded-full">
-              <span className="text-xs font-semibold text-gold">
-                {content.platformContent.platformLabel[language]}
-              </span>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <HexagonIcon size="sm" className="text-cyan">
-                  <Mail className="h-4 w-4" />
-                </HexagonIcon>
-                <a href="mailto:hixagp@gmail.com" className="text-muted-foreground hover:text-cyan transition-colors">
-                  hixagp@gmail.com
-                </a>
-              </div>
-              <div className="flex items-center gap-3">
-                <HexagonIcon size="sm" className="text-cyan">
-                  <Phone className="h-4 w-4" />
-                </HexagonIcon>
-                <a href="tel:+1234567890" className="text-muted-foreground hover:text-cyan transition-colors">
-                  +1 (234) 567-890
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* Column 2: Quick Links */}
-          <div className="lg:order-3">
-            <h3 className="text-lg font-semibold mb-4 text-foreground">
-              {language === 'en' ? 'Quick Links' : 'روابط سريعة'}
-            </h3>
-            <ul className="space-y-3">
-              {quickLinks.map((link) => (
-                <li key={link.id}>
-                  <a
-                    href={link.url}
-                    className="text-muted-foreground hover:text-cyan transition-colors"
-                  >
-                    {link.label[language]}
-                  </a>
-                </li>
-              ))}
+    <footer className="bg-[#0B0B0EB2] text-white py-12 px-6" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-12">
+          <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
+            <img 
+              src="/images/updateLogo.png " 
+              alt="HIXA Logo" 
+              className="h-8 md:h-10 w-auto"
+            />
+            HIXA
+          </h2>
+          <p className="text-[#cfcfd6] text-base md:text-lg max-w-2xl mx-auto leading-relaxed mb-8">
+            {language === 'en'
+              ? 'Professional engineering services platform connecting experts with clients for innovative solutions.'
+              : 'منصة خدمات هندسية احترافية تربط الخبراء بالعملاء لتقديم حلول مبتكرة.'}
+          </p>
+          
+          <nav className="mb-10" aria-label="Footer navigation">
+            <ul className="flex flex-wrap justify-center gap-6 md:gap-8 lg:gap-12">
+              <li><a href="/" className="text-white text-base md:text-lg font-medium hover:text-[#D4AC35] transition-colors duration-200 focus:outline focus:outline-2 focus:outline-[#D4AC35] focus:rounded">{language === 'en' ? 'Home' : 'الرئيسية'}</a></li>
+              <li><a href="#about" className="text-white text-base md:text-lg font-medium hover:text-[#D4AC35] transition-colors duration-200 focus:outline focus:outline-2 focus:outline-[#D4AC35] focus:rounded">{language === 'en' ? 'About Us' : 'عنا'}</a></li>
+              <li><a href="#services" className="text-white text-base md:text-lg font-medium hover:text-[#D4AC35] transition-colors duration-200 focus:outline focus:outline-2 focus:outline-[#D4AC35] focus:rounded">{language === 'en' ? 'Services' : 'الخدمات'}</a></li>
+              <li><a href="#contact" className="text-white text-base md:text-lg font-medium hover:text-[#D4AC35] transition-colors duration-200 focus:outline focus:outline-2 focus:outline-[#D4AC35] focus:rounded">{language === 'en' ? 'Contact Us' : 'اتصل بنا'}</a></li>
             </ul>
-          </div>
-
-          {/* Column 3: Engineer Resources */}
-          <div className="lg:order-2">
-            <h3 className="text-lg font-semibold mb-4 text-foreground">
-              {language === 'en' ? 'Engineer Resources' : 'موارد المهندسين'}
-            </h3>
-            <ul className="space-y-3">
-              {engineerResources.map((resource) => (
-                <li key={resource.id}>
-                  <a
-                    href={resource.url}
-                    className="text-muted-foreground hover:text-cyan transition-colors"
-                  >
-                    {resource.label[language]}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Column 4: Newsletter Signup */}
-          <div className="lg:order-1">
-            <h3 className="text-lg font-semibold mb-4 text-foreground">
-              {language === 'en' ? 'Newsletter' : 'النشرة الإخبارية'}
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              {language === 'en' 
-                ? 'Subscribe to get the latest updates and news.' 
-                : 'اشترك لتستلم آخر التحديثات والأخبار.'}
-            </p>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <Input
-                type="email"
-                placeholder={language === 'en' ? 'Your email address' : 'عنوان بريدك الإلكتروني'}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="bg-background border-border"
-                required
-              />
-              <Button 
-                type="submit" 
-                variant="cyan"
-                className="w-full"
-              >
-                {language === 'en' ? 'Subscribe' : 'اشتراك'}
-              </Button>
-            </form>
-          </div>
-        </div>
-
-        {/* Social Media Icons */}
-        <div className="flex justify-center gap-6 mb-8">
-          {Object.entries(socialIconMap).map(([platform, Icon]) => (
-            <a
-              key={platform}
-              href="#"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-3 bg-muted hover:bg-cyan hover:text-white transition-colors hexagon"
+          </nav>
+          
+          <div className="flex justify-center gap-4 md:gap-6 mb-12">
+            <a 
+              href="#" 
+              className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
+              aria-label="Facebook"
             >
-              <HexagonIcon size="sm" className="text-current">
-                <Icon className="h-5 w-5" />
-              </HexagonIcon>
+              <span className="text-xs font-bold">f</span>
             </a>
-          ))}
+            <a 
+              href="#" 
+              className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
+              aria-label="Twitter"
+            >
+              <span className="text-xs font-bold">t</span>
+            </a>
+            <a 
+              href="#" 
+              className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
+              aria-label="Instagram"
+            >
+              <span className="text-xs font-bold">ig</span>
+            </a>
+            <a 
+              href="#" 
+              className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
+              aria-label="LinkedIn"
+            >
+              <span className="text-xs font-bold">in</span>
+            </a>
+          </div>
         </div>
-
-        {/* Sub-Footer with Copyright */}
-        <div className="border-t border-border/50 pt-8 text-center text-muted-foreground text-sm">
-          <p>© {new Date().getFullYear()} HIXA. {language === 'en' ? 'All rights reserved.' : 'جميع الحقوق محفوظة.'}</p>
+        
+        <div className="border-t border-white/10 pt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-xs md:text-sm">
+          <p className="text-[#cfcfd6]">&copy; {new Date().getFullYear()} HIXA. {language === 'en' ? 'All rights reserved.' : 'جميع الحقوق محفوظة.'}</p>
+          <div className="flex gap-6">
+            <a href="#" className="text-[#cfcfd6] hover:text-[#D4AC35] transition-colors duration-200 focus:outline focus:outline-2 focus:outline-[#D4AC35] focus:rounded">{language === 'en' ? 'Privacy' : 'الخصوصية'}</a>
+            <a href="#" className="text-[#cfcfd6] hover:text-[#D4AC35] transition-colors duration-200 focus:outline focus:outline-2 focus:outline-[#D4AC35] focus:rounded">{language === 'en' ? 'Terms and Conditions' : 'الشروط والأحكام'}</a>
+          </div>
         </div>
       </div>
     </footer>

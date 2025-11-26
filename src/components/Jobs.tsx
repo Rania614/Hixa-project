@@ -1,12 +1,41 @@
+import { useLandingStore } from '@/stores/landingStore';
 import { useApp } from '@/context/AppContext';
-import { Card, CardContent } from './ui/card';
+import { useShallow } from 'zustand/react/shallow';
 import { Button } from './ui/button';
-import { HexagonIcon } from './ui/hexagon-icon';
 import { ChevronRight } from 'lucide-react';
 
 export const Jobs = () => {
-  const { content, language } = useApp();
-  const activeJobs = content.jobs.filter(job => job.status === 'active');
+  const { language } = useApp();
+  const { jobs, loading } = useLandingStore(
+    useShallow((state) => ({
+      jobs: state.jobs,
+      loading: state.loading,
+    }))
+  );
+  
+  // Render nothing if content is not loaded yet
+  if (loading || !jobs || jobs.length === 0) {
+    return null;
+  }
+  
+  // Filter active jobs and handle both isActive and status fields
+  const activeJobs = jobs.filter((job: any) => 
+    (job.isActive !== false && job.active !== false) || job.status === 'active'
+  );
+
+  const getJobTitle = (job: any) => {
+    if (job.title_en && language === 'en') return job.title_en;
+    if (job.title_ar && language === 'ar') return job.title_ar;
+    if (job.title?.[language]) return job.title[language];
+    return job.title_en || job.title_ar || job.title?.en || 'Job';
+  };
+
+  const getJobDescription = (job: any) => {
+    if (job.description_en && language === 'en') return job.description_en;
+    if (job.description_ar && language === 'ar') return job.description_ar;
+    if (job.description?.[language]) return job.description[language];
+    return job.description_en || job.description_ar || job.description?.en || '';
+  };
 
   const handleApply = (jobId: string, applicationLink?: string) => {
     if (applicationLink) {
@@ -30,25 +59,33 @@ export const Jobs = () => {
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {activeJobs.map((job) => (
-              <div key={job.id} className="glass-card p-8 rounded-xl">
-                <h3 className="text-2xl font-bold mb-4">{job.title[language]}</h3>
-                <p className="text-muted-foreground mb-4">
-                  {job.description[language]}
-                </p>
-                <Button 
-                  variant="link" 
-                  className="p-0 text-gold hover:text-gold-dark"
-                  onClick={() => handleApply(job.id, job.applicationLink)}
-                >
-                  {language === 'en' ? 'Apply Now' : 'تقدم الآن'}
-                  <ChevronRight className="ml-1 h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+            {activeJobs.map((job: any) => {
+              const jobId = job._id || job.id;
+              const jobTitle = getJobTitle(job);
+              const jobDescription = getJobDescription(job);
+              const applicationLink = job.link || job.applicationLink;
+              
+              return (
+                <div key={jobId} className="glass-card p-8 rounded-xl">
+                  <h3 className="text-2xl font-bold mb-4">{jobTitle}</h3>
+                  <p className="text-muted-foreground mb-4">
+                    {jobDescription}
+                  </p>
+                  {applicationLink && (
+                    <Button 
+                      variant="link" 
+                      className="p-0 text-gold hover:text-gold-dark"
+                      onClick={() => handleApply(jobId, applicationLink)}
+                    >
+                      {language === 'en' ? 'Apply Now' : 'تقدم الآن'}
+                      <ChevronRight className="ml-1 h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
-
   );
 };

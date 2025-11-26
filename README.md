@@ -35,7 +35,7 @@ The app will be available at `http://localhost:8080`
 The project uses a comprehensive design system defined in `src/index.css` and `tailwind.config.ts`:
 
 ### Color Palette
-- **Primary**: Gold (#D4AF36) - `hsl(45, 65%, 52%)`
+- **Primary**: Gold (AF36) - `hsl(45, 65%, 52%)`
 - **Background**: Dark (#0b0b0c) - `hsl(240, 5%, 4%)`
 - **Foreground**: White - `hsl(0, 0%, 100%)`
 

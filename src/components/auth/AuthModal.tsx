@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,11 +10,29 @@ interface AuthModalProps {
   onClose: () => void;
   onAuthSuccess: () => void;
   role: 'client' | 'partner' | null;
+  initialMode?: 'login' | 'register';
 }
 
-export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role }: AuthModalProps) => {
+export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 'login' }: AuthModalProps) => {
   const { setIsAuthenticated } = useApp();
+  // Always start with login mode, regardless of initialMode
   const [isLogin, setIsLogin] = useState(true);
+  
+  // Reset to login when modal opens (ignore initialMode for now)
+  useEffect(() => {
+    if (isOpen) {
+      setIsLogin(true);
+      // Reset form fields
+      setEmail('');
+      setPassword('');
+      setConfirmPassword('');
+      setName('');
+      setCompanyName('');
+      setSpecialization('');
+      setLicenseNumber('');
+      setPartnerType(null);
+    }
+  }, [isOpen]);
   const [partnerType, setPartnerType] = useState<'engineer' | 'company' | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,11 +44,11 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role }: AuthModalPro
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simple mock authentication
+    // Simple mock authentication - just check if email and password are filled
     if (email && password) {
-      setIsAuthenticated(true);
+      // Call onAuthSuccess which will set authenticated and navigate to dashboard
+      // Don't call onClose() here - navigation will happen automatically
       onAuthSuccess();
-      onClose();
     }
   };
 

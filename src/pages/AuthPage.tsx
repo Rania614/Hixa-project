@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -9,8 +9,13 @@ const AuthPage = () => {
   const { setIsAuthenticated } = useApp();
   const navigate = useNavigate();
   const { role } = useParams<{ role: 'client' | 'partner' }>();
+  const [searchParams] = useSearchParams();
   
   const [authRole] = useState<'client' | 'partner'>(role === 'client' || role === 'partner' ? role : 'client');
+  
+  // Check if mode=register is in URL, default to 'login'
+  const mode = searchParams.get('mode');
+  const initialMode = mode === 'register' ? 'register' : 'login';
 
   const handleAuthSuccess = () => {
     // Authentication successful - redirect to dashboard
@@ -39,6 +44,7 @@ const AuthPage = () => {
           onClose={handleClose}
           onAuthSuccess={handleAuthSuccess}
           role={authRole}
+          initialMode={initialMode}
         />
       </div>
     </div>

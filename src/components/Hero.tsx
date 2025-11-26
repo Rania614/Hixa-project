@@ -1,61 +1,35 @@
-import { useApp } from '@/context/AppContext';
-import { Button } from './ui/button';
-import { ArrowRight, User, Handshake } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useApp } from "@/context/AppContext";
+import { Button } from "./ui/button";
+import { Handshake, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export const Hero = () => {
-  const { content, language } = useApp();
+  const { content, language, loading } = useApp();
   const navigate = useNavigate();
 
-  const handleClientLogin = () => {
-    // Navigate to the client authentication page
-    navigate('/auth/client');
-  };
-
-  const handlePartnerLogin = () => {
-    // Navigate to the partner authentication page
-    navigate('/auth/partner');
-  };
+  if (loading) return <div className="text-center py-20">Loading...</div>;
+  if (!content) return <div className="text-center py-20">No Data Found</div>;
 
   return (
-    <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
-      {/* Geometric background shapes */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-20 left-10 w-64 h-64 bg-gold/10 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-gold/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
-        <div className="absolute top-1/2 left-1/3 w-32 h-32 border border-gold/20 rotate-45 animate-float" style={{ animationDelay: '1s' }} />
-      </div>
+    <section id="hero" className="min-h-screen flex flex-col justify-center items-center text-center">
+      <h1 className="text-5xl font-bold mb-4">
+        {language === "ar" ? content.hero.title_ar : content.hero.title_en}
+      </h1>
 
-      <div className="container mx-auto px-6 text-center relative z-10">
-        {/* HIXA Logo Text */}
-        <div className="mb-8 animate-slide-up">
-          <h1 className="text-6xl md:text-8xl font-bold mb-2">
-            <span className="block text-gold">{content.platformContent.heading[language]}</span>
-          </h1>
-        </div>
-        
-        <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-slide-up">
-          {content.hero.title[language]}
-        </h1>
-        <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto animate-slide-up" style={{ animationDelay: '0.2s' }}>
-          {content.hero.subtitle[language]}
-        </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up" style={{ animationDelay: '0.4s' }}>
-          <Button
-            onClick={handleClientLogin}
-            className="bg-transparent border-2 border-gold text-gold hover:bg-gold hover:text-black font-semibold px-6 py-3 text-base flex items-center gap-2"
-          >
-            <User className="h-4 w-4" />
-            {language === 'en' ? 'Enter as Client' : 'ادخل كعميل'}
-          </Button>
-          <Button
-            onClick={handlePartnerLogin}
-            className="bg-gold hover:bg-gold-dark text-black font-semibold px-6 py-3 text-base flex items-center gap-2"
-          >
-            <Handshake className="h-4 w-4" />
-            {language === 'en' ? 'Enter as Partner' : 'ادخل كشريك'}
-          </Button>
-        </div>
+      <p className="text-xl mb-8 max-w-3xl">
+        {language === "ar" ? content.hero.subtitle_ar : content.hero.subtitle_en}
+      </p>
+
+      <div className="flex gap-4">
+        <Button onClick={() => navigate("/auth/client")}>
+          <User className="mr-2" />
+          {language === "ar" ? "ادخل كعميل" : "Enter as Client"}
+        </Button>
+
+        <Button onClick={() => navigate("/auth/partner")}>
+          <Handshake className="mr-2" />
+          {language === "ar" ? "ادخل كشريك" : "Enter as Partner"}
+        </Button>
       </div>
     </section>
   );

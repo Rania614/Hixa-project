@@ -1,12 +1,12 @@
 // Mock data for initial content
 const mockData = {
   header: {
-    logoImage: "/images/logo.jpg",
+    logoImage: "/images/updateLogo.png",
   },
   hero: {
     title: {
       en: " High Xpert ARTBUILD",
-      ar:" لكل مشروع لا ينسى",
+      ar: " لكل مشروع لا ينسى",
     },
     subtitle: {
       en: "Connecting expertise and High Xpert ART BUILD opportunities… with no spatial limits",
@@ -144,6 +144,63 @@ const mockData = {
       image: "/placeholder.svg",
     },
   ],
+  partners: [
+    {
+      id: "1",
+      name: { en: "Partner 1", ar: "الشريك 1" },
+      logo: "/images/partner1.jpg",
+      active: true,
+    },
+    {
+      id: "2",
+      name: { en: "Partner 2", ar: "الشريك 2" },
+      logo: "/images/partner2.jpg",
+      active: true,
+    },
+    {
+      id: "3",
+      name: { en: "Partner 3", ar: "الشريك 3" },
+      logo: "/images/partner3.jpg",
+      active: true,
+    },
+    {
+      id: "4",
+      name: { en: "Partner 4", ar: "الشريك 4" },
+      logo: "/images/partner4.jpg",
+      active: false,
+    },
+  ],
+  jobs: [
+    {
+      id: "1",
+      title: { en: "Frontend Developer", ar: "مطور واجهات أمامية" },
+      description: {
+        en: "We're looking for a skilled frontend developer with React experience",
+        ar: "نبحث عن مطور واجهات أمامية ماهر بخبرة في React",
+      },
+      status: "active",
+      applicationLink: "https://example.com/apply/frontend",
+    },
+    {
+      id: "2",
+      title: { en: "Backend Engineer", ar: "مهندس خلفية" },
+      description: {
+        en: "Join our backend team to build scalable APIs and services",
+        ar: "انضم إلى فريق الخلفية لبناء واجهات برمجية وخدمات قابلة للتوسع",
+      },
+      status: "active",
+      applicationLink: "https://example.com/apply/backend",
+    },
+    {
+      id: "3",
+      title: { en: "UI/UX Designer", ar: "مصمم واجهات" },
+      description: {
+        en: "Create beautiful and intuitive user experiences for our products",
+        ar: "أنشئ تجارب مستخدم جميلة وبديهية لمنتجاتنا",
+      },
+      status: "inactive",
+    },
+  ],
   features: [
     {
       id: "1",
@@ -184,8 +241,8 @@ const mockData = {
   ],
   platformContent: {
     slogan: {
-      en: "Connecting expertise and High Xpert ART BUILD opportunities with no spatial limits",
-      ar: "ربطك بالخبرات وفرص المشاريع عالية الجودة... بلا حدود مكانية",
+      en: "High Xpert ART BUILD ",
+      ar: "لكل مشروع لا ينسى  ",
     },
     heading: {
       en: "HIXA",
@@ -234,12 +291,12 @@ const apiRequest = async (endpoint, options = {}) => {
       'Content-Type': 'application/json',
     },
   };
-  
+
   const config = {
     ...defaultOptions,
     ...options,
   };
-  
+
   try {
     const response = await fetch(url, config);
     if (!response.ok) {
@@ -291,6 +348,10 @@ export const getProjects = async () =>
   simulateRequest(() =>
     [...mockData.projects].sort((a, b) => (a.order || 0) - (b.order || 0))
   );
+
+export const getPartners = async () => simulateRequest(() => mockData.partners);
+
+export const getJobs = async () => simulateRequest(() => mockData.jobs);
 
 export const getPlatformFeatures = async () => simulateRequest(() => mockData.features);
 
@@ -356,6 +417,18 @@ export const updateProjects = async (projects = []) =>
     return mockData.projects;
   });
 
+export const updatePartners = async (partners = []) =>
+  simulateRequest(() => {
+    mockData.partners = partners;
+    return mockData.partners;
+  });
+
+export const updateJobs = async (jobs = []) =>
+  simulateRequest(() => {
+    mockData.jobs = jobs;
+    return mockData.jobs;
+  });
+
 export const updatePlatformFeatures = async (features = []) =>
   simulateRequest(() => {
     mockData.features = features;
@@ -373,4 +446,3 @@ export const updatePlatformContent = async (payload) =>
     mockData.platformContent = { ...mockData.platformContent, ...payload };
     return mockData.platformContent;
   });
-

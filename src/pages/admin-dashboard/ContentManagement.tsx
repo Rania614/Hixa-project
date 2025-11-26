@@ -1,1063 +1,1301 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AdminSidebar } from '@/components/AdminSidebar';
 import { AdminTopBar } from '@/components/AdminTopBar';
+import { useContentStore } from '@/stores/contentStore';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { HexagonIcon } from '@/components/ui/hexagon-icon';
+import { Plus, Trash2, ChevronUp, ChevronDown, ChevronDown as ChevronDownIcon } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const ContentManagement = () => {
-  const { language, content, updateContent } = useApp();
-  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('hero');
+  const { language } = useApp();
 
-  const handleSave = async () => {
-    // The content is already being saved through the updateContent calls
-    // This function is called to show the success message
-    toast({
-      title: language === 'en' ? 'Saved!' : 'تم الحفظ!',
-      description: language === 'en' ? 'Content updated successfully' : 'تم تحديث المحتوى بنجاح',
-    });
-  };
+  const {
+    hero,
+    about,
+    services,
+    projects,
+    partners,
+    jobs,
+    loading,
+    fetchContent,
+    updateHero,
+    updateAbout,
+    updateServices,
+    addService,
+    deleteService,
+    reorderService,
+    updateProjects,
+    addProject,
+    deleteProject,
+    reorderProject,
+    updatePartners,
+    addPartner,
+    deletePartner,
+    reorderPartner,
+    updateJobs,
+    addJob,
+    deleteJob,
+    setContent,
+  } = useContentStore();
 
-  const addService = async () => {
-    const newService = {
-      id: Date.now().toString(),
-      order: content.services.length + 1,
-      title: { en: 'New Service', ar: 'خدمة جديدة' },
-      description: { en: 'Service description', ar: 'وصف الخدمة' },
-      icon: 'Code',
-    };
-    await updateContent({ services: [...content.services, newService] });
-  };
+  // جلب البيانات عند تحميل الصفحة
+  useEffect(() => {
+    fetchContent();
+  }, []);
 
-  const deleteService = async (id: string) => {
-    await updateContent({
-      services: content.services.filter((s) => s.id !== id),
-    });
-  };
+  // تحديث اتجاه النص عند تغيير اللغة
+  useEffect(() => {
+    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.lang = language;
+  }, [language]);
 
-  const moveService = async (index: number, direction: 'up' | 'down') => {
-    const newServices = [...content.services];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= newServices.length) return;
-    
-    [newServices[index], newServices[targetIndex]] = [newServices[targetIndex], newServices[index]];
-    newServices.forEach((s, i) => s.order = i + 1);
-    await updateContent({ services: newServices });
-  };
-
-  const addProject = async () => {
-    const newProject = {
-      id: Date.now().toString(),
-      order: content.projects.length + 1,
-      title: { en: 'New Project', ar: 'مشروع جديد' },
-      description: { en: 'Project description', ar: 'وصف المشروع' },
-      image: '/placeholder.svg',
-    };
-    await updateContent({ projects: [...content.projects, newProject] });
-  };
-
-  const deleteProject = async (id: string) => {
-    await updateContent({
-      projects: content.projects.filter((p) => p.id !== id),
-    });
-  };
-
-  const moveProject = async (index: number, direction: 'up' | 'down') => {
-    const newProjects = [...content.projects];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= newProjects.length) return;
-    
-    [newProjects[index], newProjects[targetIndex]] = [newProjects[targetIndex], newProjects[index]];
-    newProjects.forEach((p, i) => p.order = i + 1);
-    await updateContent({ projects: newProjects });
-  };
-
-  const addPartner = async () => {
-    const newPartner = {
-      id: Date.now().toString(),
-      name: { en: 'New Partner', ar: 'شريك جديد' },
-      logo: '/placeholder.svg',
-      order: content.partners.length + 1,
-      active: true,
-    };
-    await updateContent({ partners: [...content.partners, newPartner] });
-  };
-
-  const deletePartner = async (id: string) => {
-    await updateContent({
-      partners: content.partners.filter((p) => p.id !== id),
-    });
-  };
-
-  const movePartner = async (index: number, direction: 'up' | 'down') => {
-    const newPartners = [...content.partners];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= newPartners.length) return;
-    
-    [newPartners[index], newPartners[targetIndex]] = [newPartners[targetIndex], newPartners[index]];
-    newPartners.forEach((p, i) => p.order = i + 1);
-    await updateContent({ partners: newPartners });
-  };
-
-  const addJob = async () => {
-    const newJob = {
-      id: Date.now().toString(),
-      title: { en: 'New Job', ar: 'وظيفة جديدة' },
-      description: { en: 'Job description', ar: 'وصف الوظيفة' },
-      status: 'active' as const,
-    };
-    await updateContent({ jobs: [...content.jobs, newJob] });
-  };
-
-  const deleteJob = async (id: string) => {
-    await updateContent({
-      jobs: content.jobs.filter((j) => j.id !== id),
-    });
-  };
+  // Helper لتجنب الأخطاء لو services أو projects أو partners أو jobs مش Array
+  const servicesData = Array.isArray(services) ? { items: services } : (services || { items: [] });
+  const safeServices = Array.isArray(servicesData.items) ? servicesData.items : [];
+  const projectsData = Array.isArray(projects) ? { items: projects } : (projects || { items: [] });
+  const safeProjects = Array.isArray(projectsData.items) ? projectsData.items : [];
+  const partnersData = Array.isArray(partners) ? { items: partners } : (partners || { items: [] });
+  const safePartners = Array.isArray(partnersData.items) ? partnersData.items : [];
+  const jobsData = Array.isArray(jobs) ? { items: jobs } : (jobs || { items: [] });
+  const safeJobs = Array.isArray(jobsData.items) ? jobsData.items : [];
 
   return (
     <div className="flex min-h-screen">
       <AdminSidebar />
-      
       <div className="flex-1">
         <AdminTopBar />
-        
         <main className="p-8">
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold mb-2">
-              {language === 'en' ? 'Content Management' : 'إدارة المحتوى'}
-            </h2>
-            <p className="text-muted-foreground">
-              {language === 'en'
-                ? 'Edit all website content in English and Arabic'
-                : 'تحرير جميع محتوى الموقع بالإنجليزية والعربية'}
-            </p>
-          </div>
+          <h2 className="text-3xl font-bold mb-4">
+            {language === 'en' ? 'Content Management' : 'إدارة المحتوى'}
+          </h2>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid grid-cols-4 lg:grid-cols-9 gap-2">
-              <TabsTrigger value="hero">Hero</TabsTrigger>
-              <TabsTrigger value="about-company">About (C)</TabsTrigger>
-              <TabsTrigger value="about-platform">About (P)</TabsTrigger>
-              <TabsTrigger value="services">Services</TabsTrigger>
-              <TabsTrigger value="projects">Projects</TabsTrigger>
-              <TabsTrigger value="partners">Partners</TabsTrigger>
-              <TabsTrigger value="jobs">Jobs</TabsTrigger>
-              <TabsTrigger value="cta">CTA</TabsTrigger>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+            <TabsList className="grid grid-cols-6 gap-2" style={{ direction: language === 'ar' ? 'rtl' : 'ltr' }}>
+              <TabsTrigger value="hero">{language === 'en' ? 'Hero' : 'البطل'}</TabsTrigger>
+              <TabsTrigger value="about">{language === 'en' ? 'About' : 'حول'}</TabsTrigger>
+              <TabsTrigger value="services">{language === 'en' ? 'Services' : 'الخدمات'}</TabsTrigger>
+              <TabsTrigger value="projects">{language === 'en' ? 'Projects' : 'المشاريع'}</TabsTrigger>
+              <TabsTrigger value="partners">{language === 'en' ? 'Partners' : 'الشركاء'}</TabsTrigger>
+              <TabsTrigger value="jobs">{language === 'en' ? 'Jobs' : 'الوظائف'}</TabsTrigger>
             </TabsList>
 
             {/* Hero Section */}
             <TabsContent value="hero">
-              <Card className="glass-card">
-                <CardHeader>
-                  <CardTitle>Hero Section</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-4">
+  <Card className="p-4">
+    <Input
+      placeholder="Title (English)"
+      value={hero?.title_en || ''}
+      onChange={(e) => setContent({ hero: { ...hero, title_en: e.target.value } })}
+      className="mb-2"
+    />
+    <Input
+      placeholder="Title (Arabic)"
+      value={hero?.title_ar || ''}
+      onChange={(e) => setContent({ hero: { ...hero, title_ar: e.target.value } })}
+      className="mb-2"
+    />
+    <Input
+      placeholder="Subtitle (English)"
+      value={hero?.subtitle_en || ''}
+      onChange={(e) => setContent({ hero: { ...hero, subtitle_en: e.target.value } })}
+      className="mb-2"
+    />
+    <Input
+      placeholder="Subtitle (Arabic)"
+      value={hero?.subtitle_ar || ''}
+      onChange={(e) => setContent({ hero: { ...hero, subtitle_ar: e.target.value } })}
+      className="mb-2"
+    />
+    <Button onClick={() => updateHero(hero)} disabled={loading}>
+      {loading ? (language === 'en' ? 'Saving...' : 'جاري الحفظ...') : (language === 'en' ? 'Save Hero' : 'حفظ البطل')}
+    </Button>
+  </Card>
+</TabsContent>
+
+
+            {/* About Section */}
+            <TabsContent value="about">
+              <Card className="p-6">
+                <div className="mb-6">
+                  <h3 className="text-2xl font-bold mb-4">
+                    {language === 'en' ? 'About Section (Company Landing)' : 'قسم حول (صفحة الشركة)'}
+                  </h3>
+                  
+                  {/* Main Title and Subtitle */}
+                  <div className="grid grid-cols-2 gap-4 mb-6">
                     <div>
-                      <label className="block text-sm font-medium mb-2">Title (English)</label>
+                      <label className="text-sm font-medium mb-1 block">Title (English)</label>
                       <Input
-                        value={content.platformContent.heading.en}
-                        onChange={async (e) =>
-                          await updateContent({
-                            platformContent: { ...content.platformContent, heading: { ...content.platformContent.heading, en: e.target.value } },
+                        placeholder="Title (English)"
+                        value={about?.title_en || ''}
+                        onChange={(e) =>
+                          setContent({
+                            about: {
+                              ...(about || {}),
+                              title_en: e.target.value,
+                            },
                           })
                         }
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">العنوان (العربية)</label>
+                      <label className="text-sm font-medium mb-1 block">العنوان (العربية)</label>
                       <Input
-                        value={content.platformContent.heading.ar}
-                        onChange={async (e) =>
-                          await updateContent({
-                            platformContent: { ...content.platformContent, heading: { ...content.platformContent.heading, ar: e.target.value } },
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Subtitle (English)</label>
-                      <Textarea
-                        value={content.platformContent.slogan.en}
-                        onChange={async (e) =>
-                          await updateContent({
-                            platformContent: { ...content.platformContent, slogan: { ...content.platformContent.slogan, en: e.target.value } },
-                          })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">العنوان الفرعي (العربية)</label>
-                      <Textarea
-                        value={content.platformContent.slogan.ar}
-                        onChange={async (e) =>
-                          await updateContent({
-                            platformContent: { ...content.platformContent, slogan: { ...content.platformContent.slogan, ar: e.target.value } },
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Caption (English)</label>
-                      <Textarea
-                        value={language === 'en' 
-                          ? 'Transforming ideas into experiences that leave a lasting impact.' 
-                          : 'نحول الأفكار إلى تجارب تترك أثراً دائماً.'}
-                        onChange={async (e) => {
-                          // This content is hardcoded in the component, but we can add it to the content management
-                          // For now, we'll note that this is hardcoded
-                        }}
-                        disabled
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">الشرح (العربية)</label>
-                      <Textarea
-                        value={language === 'en' 
-                          ? 'Transforming ideas into experiences that leave a lasting impact.' 
-                          : 'نحول الأفكار إلى تجارب تترك أثراً دائماً.'}
-                        onChange={async (e) => {
-                          // This content is hardcoded in the component, but we can add it to the content management
-                        }}
-                        disabled
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Button Text (English)</label>
-                      <Input
-                        value={language === 'en' ? 'Join the Platform' : 'انضم للمنصة'}
-                        onChange={async (e) => {
-                          // This content is hardcoded in the component, but we can add it to the content management
-                        }}
-                        disabled
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">نص الزر (العربية)</label>
-                      <Input
-                        value={language === 'en' ? 'Join the Platform' : 'انضم للمنصة'}
-                        onChange={async (e) => {
-                          // This content is hardcoded in the component, but we can add it to the content management
-                        }}
-                        disabled
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Caption Below Button (English)</label>
-                      <Textarea
-                        value={language === 'en' 
-                          ? 'A platform that connects clients with engineers to execute engineering projects professionally.' 
-                          : 'منصة تربط العملاء بالمهندسين لتنفيذ المشاريع الهندسية باحترافية.'}
-                        onChange={async (e) => {
-                          // This content is hardcoded in the component, but we can add it to the content management
-                        }}
-                        disabled
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">الشرح تحت الزر (العربية)</label>
-                      <Textarea
-                        value={language === 'en' 
-                          ? 'A platform that connects clients with engineers to execute engineering projects professionally.' 
-                          : 'منصة تربط العملاء بالمهندسين لتنفيذ المشاريع الهندسية باحترافية.'}
-                        onChange={async (e) => {
-                          // This content is hardcoded in the component, but we can add it to the content management
-                        }}
-                        disabled
-                      />
-                    </div>
-                  </div>
-
-                  <Button onClick={handleSave} className="bg-gold hover:bg-gold-dark">
-                    Save Changes
-                  </Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-
-            {/* About Company Section */}
-            <TabsContent value="about-company">
-              <Card className="glass-card">
-                <CardHeader>
-                  <CardTitle>About Section (Company Landing)</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Title (English)</label>
-                      <Input
-                        value={content.about.title.en}
-                        onChange={async (e) =>
-                          await updateContent({
-                            about: { ...content.about, title: { ...content.about.title, en: e.target.value } },
-                          })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">العنوان (العربية)</label>
-                      <Input
-                        value={content.about.title.ar}
-                        onChange={async (e) =>
-                          await updateContent({
-                            about: { ...content.about, title: { ...content.about.title, ar: e.target.value } },
+                        placeholder="Title (Arabic)"
+                        dir="rtl"
+                        value={about?.title_ar || ''}
+                        onChange={(e) =>
+                          setContent({
+                            about: {
+                              ...(about || {}),
+                              title_ar: e.target.value,
+                            },
                           })
                         }
                       />
                     </div>
                   </div>
-
-                  <div className="grid md:grid-cols-2 gap-4">
+                  
+                  <div className="grid grid-cols-2 gap-4 mb-6">
                     <div>
-                      <label className="block text-sm font-medium mb-2">Subtitle (English)</label>
+                      <label className="text-sm font-medium mb-1 block">Subtitle (English)</label>
                       <Textarea
-                        value={content.about.subtitle.en}
-                        onChange={async (e) =>
-                          await updateContent({
-                            about: { ...content.about, subtitle: { ...content.about.subtitle, en: e.target.value } },
+                        placeholder="Subtitle (English)"
+                        value={about?.subtitle_en || about?.description_en || ''}
+                        onChange={(e) =>
+                          setContent({
+                            about: {
+                              ...(about || {}),
+                              subtitle_en: e.target.value,
+                              description_en: e.target.value,
+                            },
                           })
                         }
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">العنوان الفرعي (العربية)</label>
+                      <label className="text-sm font-medium mb-1 block">العنوان الفرعي (العربية)</label>
                       <Textarea
-                        value={content.about.subtitle.ar}
-                        onChange={async (e) =>
-                          await updateContent({
-                            about: { ...content.about, subtitle: { ...content.about.subtitle, ar: e.target.value } },
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  {/* Card 1 - Mission */}
-                  <Card className="p-4 bg-secondary/30">
-                    <h4 className="font-semibold mb-3">Card 1 - Mission</h4>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <Input
-                        placeholder="Title (EN)"
-                        value={content.about.card1.title.en}
-                        onChange={async (e) => {
-                          const newCard1 = { ...content.about.card1, title: { ...content.about.card1.title, en: e.target.value } };
-                          await updateContent({ about: { ...content.about, card1: newCard1 } });
-                        }}
-                      />
-                      <Input
-                        placeholder="العنوان (AR)"
-                        value={content.about.card1.title.ar}
-                        onChange={async (e) => {
-                          const newCard1 = { ...content.about.card1, title: { ...content.about.card1.title, ar: e.target.value } };
-                          await updateContent({ about: { ...content.about, card1: newCard1 } });
-                        }}
-                      />
-                      <Textarea
-                        placeholder="Text (EN)"
-                        value={content.about.card1.text.en}
-                        onChange={async (e) => {
-                          const newCard1 = { ...content.about.card1, text: { ...content.about.card1.text, en: e.target.value } };
-                          await updateContent({ about: { ...content.about, card1: newCard1 } });
-                        }}
-                      />
-                      <Textarea
-                        placeholder="النص (AR)"
-                        value={content.about.card1.text.ar}
-                        onChange={async (e) => {
-                          const newCard1 = { ...content.about.card1, text: { ...content.about.card1.text, ar: e.target.value } };
-                          await updateContent({ about: { ...content.about, card1: newCard1 } });
-                        }}
-                      />
-                    </div>
-                  </Card>
-
-                  {/* Card 2 - Vision */}
-                  <Card className="p-4 bg-secondary/30">
-                    <h4 className="font-semibold mb-3">Card 2 - Vision</h4>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <Input
-                        placeholder="Title (EN)"
-                        value={content.about.card2.title.en}
-                        onChange={async (e) => {
-                          const newCard2 = { ...content.about.card2, title: { ...content.about.card2.title, en: e.target.value } };
-                          await updateContent({ about: { ...content.about, card2: newCard2 } });
-                        }}
-                      />
-                      <Input
-                        placeholder="العنوان (AR)"
-                        value={content.about.card2.title.ar}
-                        onChange={async (e) => {
-                          const newCard2 = { ...content.about.card2, title: { ...content.about.card2.title, ar: e.target.value } };
-                          await updateContent({ about: { ...content.about, card2: newCard2 } });
-                        }}
-                      />
-                      <Textarea
-                        placeholder="Text (EN)"
-                        value={content.about.card2.text.en}
-                        onChange={async (e) => {
-                          const newCard2 = { ...content.about.card2, text: { ...content.about.card2.text, en: e.target.value } };
-                          await updateContent({ about: { ...content.about, card2: newCard2 } });
-                        }}
-                      />
-                      <Textarea
-                        placeholder="النص (AR)"
-                        value={content.about.card2.text.ar}
-                        onChange={async (e) => {
-                          const newCard2 = { ...content.about.card2, text: { ...content.about.card2.text, ar: e.target.value } };
-                          await updateContent({ about: { ...content.about, card2: newCard2 } });
-                        }}
-                      />
-                    </div>
-                  </Card>
-
-                  {/* Card 3 - Values */}
-                  <Card className="p-4 bg-secondary/30">
-                    <h4 className="font-semibold mb-3">Card 3 - Values</h4>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <Input
-                        placeholder="Title (EN)"
-                        value={content.about.card3.title.en}
-                        onChange={async (e) => {
-                          const newCard3 = { ...content.about.card3, title: { ...content.about.card3.title, en: e.target.value } };
-                          await updateContent({ about: { ...content.about, card3: newCard3 } });
-                        }}
-                      />
-                      <Input
-                        placeholder="العنوان (AR)"
-                        value={content.about.card3.title.ar}
-                        onChange={async (e) => {
-                          const newCard3 = { ...content.about.card3, title: { ...content.about.card3.title, ar: e.target.value } };
-                          await updateContent({ about: { ...content.about, card3: newCard3 } });
-                        }}
-                      />
-                      <Textarea
-                        placeholder="Text (EN)"
-                        value={content.about.card3.text.en}
-                        onChange={async (e) => {
-                          const newCard3 = { ...content.about.card3, text: { ...content.about.card3.text, en: e.target.value } };
-                          await updateContent({ about: { ...content.about, card3: newCard3 } });
-                        }}
-                      />
-                      <Textarea
-                        placeholder="النص (AR)"
-                        value={content.about.card3.text.ar}
-                        onChange={async (e) => {
-                          const newCard3 = { ...content.about.card3, text: { ...content.about.card3.text, ar: e.target.value } };
-                          await updateContent({ about: { ...content.about, card3: newCard3 } });
-                        }}
-                      />
-                    </div>
-                  </Card>
-
-                  <Button onClick={handleSave} className="bg-gold hover:bg-gold-dark">
-                    Save Changes
-                  </Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* About Platform Section */}
-            <TabsContent value="about-platform">
-              <Card className="glass-card">
-                <CardHeader>
-                  <CardTitle>About Section (Platform)</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Title (English)</label>
-                      <Input
-                        value={content.platformContent.heading.en}
-                        onChange={async (e) =>
-                          await updateContent({
-                            platformContent: { ...content.platformContent, heading: { ...content.platformContent.heading, en: e.target.value } },
-                          })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">العنوان (العربية)</label>
-                      <Input
-                        value={content.platformContent.heading.ar}
-                        onChange={async (e) =>
-                          await updateContent({
-                            platformContent: { ...content.platformContent, heading: { ...content.platformContent.heading, ar: e.target.value } },
+                        placeholder="Subtitle (Arabic)"
+                        dir="rtl"
+                        value={about?.subtitle_ar || about?.description_ar || ''}
+                        onChange={(e) =>
+                          setContent({
+                            about: {
+                              ...(about || {}),
+                              subtitle_ar: e.target.value,
+                              description_ar: e.target.value,
+                            },
                           })
                         }
                       />
                     </div>
                   </div>
-
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Subtitle (English)</label>
-                      <Textarea
-                        value={content.platformContent.slogan.en}
-                        onChange={async (e) =>
-                          await updateContent({
-                            platformContent: { ...content.platformContent, slogan: { ...content.platformContent.slogan, en: e.target.value } },
-                          })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">العنوان الفرعي (العربية)</label>
-                      <Textarea
-                        value={content.platformContent.slogan.ar}
-                        onChange={async (e) =>
-                          await updateContent({
-                            platformContent: { ...content.platformContent, slogan: { ...content.platformContent.slogan, ar: e.target.value } },
-                          })
-                        }
-                      />
-                    </div>
+                  
+                  <div className="border-t pt-4 mb-4">
+                    <h4 className="text-lg font-semibold mb-4">About Cards</h4>
+                    <Button
+                      onClick={() => {
+                        const currentAbout = about || {};
+                        const currentValues = Array.isArray(currentAbout.values) ? currentAbout.values : [];
+                        setContent({
+                          about: {
+                            ...currentAbout,
+                            values: [
+                              ...currentValues,
+                              {
+                                title_en: 'New Card',
+                                title_ar: 'كارد جديد',
+                                description_en: 'Card description',
+                                description_ar: 'وصف الكارد',
+                              },
+                            ],
+                          },
+                        });
+                      }}
+                      disabled={loading}
+                      className="bg-gold hover:bg-gold-dark text-black font-semibold"
+                    >
+                      <HexagonIcon size="sm" className="mr-2">
+                        <Plus className="h-4 w-4" />
+                      </HexagonIcon>
+                      {language === 'en' ? 'Add Card' : 'إضافة كارد'}
+                    </Button>
                   </div>
+                </div>
 
-                  <Button onClick={handleSave} className="bg-gold hover:bg-gold-dark">
-                    Save Changes
-                  </Button>
-                </CardContent>
+                <div className="space-y-4">
+                  {Array.isArray(about?.values) && about.values.map((value: any, index: number) => {
+                    const valueId = value._id || value.id || `value-${index}`;
+                    return (
+                      <Collapsible key={valueId} defaultOpen={index === 0}>
+                        <Card className="border-2">
+                          <CollapsibleTrigger asChild>
+                            <CardHeader className="cursor-pointer hover:bg-secondary/50 transition-colors">
+                              <div className="flex items-center justify-between">
+                                <CardTitle>
+                                  Card {index + 1} - {value.title_en || value.title?.['en'] || 'Untitled'}
+                                </CardTitle>
+                                <div className="flex items-center gap-2">
+                                  {index > 0 && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const currentAbout = about || {};
+                                        const currentValues = Array.isArray(currentAbout.values) ? [...currentAbout.values] : [];
+                                        [currentValues[index], currentValues[index - 1]] = [currentValues[index - 1], currentValues[index]];
+                                        setContent({
+                                          about: {
+                                            ...currentAbout,
+                                            values: currentValues,
+                                          },
+                                        });
+                                      }}
+                                      disabled={loading}
+                                    >
+                                      <ChevronUp className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  {index < (about?.values?.length || 0) - 1 && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const currentAbout = about || {};
+                                        const currentValues = Array.isArray(currentAbout.values) ? [...currentAbout.values] : [];
+                                        [currentValues[index], currentValues[index + 1]] = [currentValues[index + 1], currentValues[index]];
+                                        setContent({
+                                          about: {
+                                            ...currentAbout,
+                                            values: currentValues,
+                                          },
+                                        });
+                                      }}
+                                      disabled={loading}
+                                    >
+                                      <ChevronDown className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const currentAbout = about || {};
+                                      const currentValues = Array.isArray(currentAbout.values) ? currentAbout.values : [];
+                                      setContent({
+                                        about: {
+                                          ...currentAbout,
+                                          values: currentValues.filter((v: any, i: number) => i !== index),
+                                        },
+                                      });
+                                    }}
+                                    disabled={loading}
+                                  >
+                                    <HexagonIcon size="sm">
+                                      <Trash2 className="h-4 w-4" />
+                                    </HexagonIcon>
+                                  </Button>
+                                  <ChevronDownIcon className="h-5 w-5 shrink-0 transition-transform duration-200 data-[state=open]:rotate-180" />
+                                </div>
+                              </div>
+                            </CardHeader>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <CardContent className="pt-4 space-y-4">
+                              {/* Title Row - English and Arabic */}
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="text-sm font-medium mb-1 block">
+                                    {index === 0 ? 'Our Mission' : index === 1 ? 'Our Vision' : `Card ${index + 1} Title`} (English)
+                                  </label>
+                                  <Input
+                                    placeholder="Card Title (English)"
+                                    value={value.title_en || value.title?.['en'] || ''}
+                                    onChange={(e) => {
+                                      const currentAbout = about || {};
+                                      const currentValues = Array.isArray(currentAbout.values) ? [...currentAbout.values] : [];
+                                      currentValues[index] = {
+                                        ...value,
+                                        title_en: e.target.value,
+                                        title: { ...(typeof value.title === 'object' ? value.title : {}), en: e.target.value },
+                                      };
+                                      setContent({
+                                        about: {
+                                          ...currentAbout,
+                                          values: currentValues,
+                                        },
+                                      });
+                                    }}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium mb-1 block">
+                                    {index === 0 ? 'مهمتنا' : index === 1 ? 'رؤيتنا' : `عنوان الكارد ${index + 1}`} (العربية)
+                                  </label>
+                                  <Input
+                                    placeholder="Card Title (Arabic)"
+                                    dir="rtl"
+                                    value={value.title_ar || value.title?.['ar'] || ''}
+                                    onChange={(e) => {
+                                      const currentAbout = about || {};
+                                      const currentValues = Array.isArray(currentAbout.values) ? [...currentAbout.values] : [];
+                                      currentValues[index] = {
+                                        ...value,
+                                        title_ar: e.target.value,
+                                        title: { ...(typeof value.title === 'object' ? value.title : {}), ar: e.target.value },
+                                      };
+                                      setContent({
+                                        about: {
+                                          ...currentAbout,
+                                          values: currentValues,
+                                        },
+                                      });
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                              
+                              {/* Description Row - English and Arabic */}
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="text-sm font-medium mb-1 block">Description (English)</label>
+                                  <Textarea
+                                    placeholder="Card Description (English)"
+                                    value={value.description_en || value.description?.['en'] || ''}
+                                    onChange={(e) => {
+                                      const currentAbout = about || {};
+                                      const currentValues = Array.isArray(currentAbout.values) ? [...currentAbout.values] : [];
+                                      currentValues[index] = {
+                                        ...value,
+                                        description_en: e.target.value,
+                                        description: { ...(typeof value.description === 'object' ? value.description : {}), en: e.target.value },
+                                      };
+                                      setContent({
+                                        about: {
+                                          ...currentAbout,
+                                          values: currentValues,
+                                        },
+                                      });
+                                    }}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium mb-1 block">الوصف (العربية)</label>
+                <Textarea
+                                    placeholder="Card Description (Arabic)"
+                                    dir="rtl"
+                                    value={value.description_ar || value.description?.['ar'] || ''}
+                                    onChange={(e) => {
+                                      const currentAbout = about || {};
+                                      const currentValues = Array.isArray(currentAbout.values) ? [...currentAbout.values] : [];
+                                      currentValues[index] = {
+                                        ...value,
+                                        description_ar: e.target.value,
+                                        description: { ...(typeof value.description === 'object' ? value.description : {}), ar: e.target.value },
+                                      };
+                                      setContent({
+                                        about: {
+                                          ...currentAbout,
+                                          values: currentValues,
+                                        },
+                                      });
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            </CardContent>
+                          </CollapsibleContent>
+                        </Card>
+                      </Collapsible>
+                    );
+                  })}
+                </div>
+                
+                <div className="mt-6">
+                  <Button
+                    onClick={() => updateAbout(about)}
+                    disabled={loading}
+                    className="w-full"
+                  >
+                    {loading ? (language === 'en' ? 'Saving...' : 'جاري الحفظ...') : (language === 'en' ? 'Save All About Content' : 'حفظ كل محتوى حول')}
+                </Button>
+                </div>
               </Card>
             </TabsContent>
 
             {/* Services Section */}
             <TabsContent value="services">
-              <Card className="glass-card">
-                <CardHeader>
-                  <CardTitle>Services Section</CardTitle>
-                  <Button onClick={addService} className="w-fit bg-gold hover:bg-gold-dark">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Service
-                  </Button>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {[...content.services].sort((a, b) => a.order - b.order).map((service, index) => (
-                    <Card key={service.id} className="p-4 bg-secondary/30">
-                      <div className="flex justify-between items-center mb-3">
-                        <h4 className="font-semibold">Service {index + 1}</h4>
-                        <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => moveService(index, 'up')}
-                            disabled={index === 0}
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => moveService(index, 'down')}
-                            disabled={index === content.services.length - 1}
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => deleteService(service.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <Input
-                          placeholder="Title (EN)"
-                          value={service.title.en}
-                          onChange={async (e) => {
-                            const newServices = [...content.services];
-                            const serviceIndex = newServices.findIndex(s => s.id === service.id);
-                            newServices[serviceIndex].title.en = e.target.value;
-                            await updateContent({ services: newServices });
-                          }}
-                        />
-                        <Input
-                          placeholder="العنوان (AR)"
-                          value={service.title.ar}
-                          onChange={async (e) => {
-                            const newServices = [...content.services];
-                            const serviceIndex = newServices.findIndex(s => s.id === service.id);
-                            newServices[serviceIndex].title.ar = e.target.value;
-                            await updateContent({ services: newServices });
-                          }}
-                        />
-                        <Textarea
-                          placeholder="Description (EN)"
-                          value={service.description.en}
-                          onChange={async (e) => {
-                            const newServices = [...content.services];
-                            const serviceIndex = newServices.findIndex(s => s.id === service.id);
-                            newServices[serviceIndex].description.en = e.target.value;
-                            await updateContent({ services: newServices });
-                          }}
-                        />
-                        <Textarea
-                          placeholder="الوصف (AR)"
-                          value={service.description.ar}
-                          onChange={async (e) => {
-                            const newServices = [...content.services];
-                            const serviceIndex = newServices.findIndex(s => s.id === service.id);
-                            newServices[serviceIndex].description.ar = e.target.value;
-                            await updateContent({ services: newServices });
-                          }}
-                        />
-                        <Input
-                          placeholder="Icon (e.g., Code, Smartphone)"
-                          value={service.icon}
-                          onChange={async (e) => {
-                            const newServices = [...content.services];
-                            const serviceIndex = newServices.findIndex(s => s.id === service.id);
-                            newServices[serviceIndex].icon = e.target.value;
-                            await updateContent({ services: newServices });
-                          }}
-                        />
-                      </div>
-                    </Card>
-                  ))}
+              <Card className="p-6">
+                <div className="mb-6">
+                  <h3 className="text-2xl font-bold mb-4">
+                    {language === 'en' ? 'Services Section' : 'قسم الخدمات'}
+                  </h3>
+                </div>
 
-                  <Button onClick={handleSave} className="bg-gold hover:bg-gold-dark">
-                    Save Changes
-                  </Button>
-                </CardContent>
+                <div className="space-y-4">
+                  {safeServices.map((s, index) => {
+                    const serviceId = s._id || s.id;
+                    return (
+                      <Collapsible key={serviceId} defaultOpen={index === 0}>
+                        <Card className="border-2">
+                          <CollapsibleTrigger asChild>
+                            <CardHeader className="cursor-pointer hover:bg-secondary/50 transition-colors">
+                              <div className="flex items-center justify-between">
+                                <CardTitle>
+                                  Service {index + 1}
+                                </CardTitle>
+                                <ChevronDownIcon className="h-5 w-5 transition-transform duration-200 data-[state=open]:rotate-180" />
+                              </div>
+                            </CardHeader>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <CardContent className="pt-4 space-y-4">
+                              {/* Title Row - English and Arabic */}
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="text-sm font-medium mb-1 block">Title (English)</label>
+                                  <Input
+                                    placeholder="Service Title (English)"
+                                    value={s.title_en || ''}
+                                    onChange={(e) =>
+                                      setContent({
+                                        services: {
+                                          ...servicesData,
+                                          items: safeServices.map((srv) =>
+                                            (srv._id === serviceId || srv.id === serviceId)
+                                              ? { ...srv, title_en: e.target.value }
+                                              : srv
+                                          ),
+                                        },
+                                      })
+                                    }
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium mb-1 block">Title (Arabic)</label>
+                    <Input
+                                    placeholder="عنوان الخدمة (عربي)"
+                                    dir="rtl"
+                                    value={s.title_ar || ''}
+                                    onChange={(e) =>
+                                      setContent({
+                                        services: {
+                                          ...servicesData,
+                                          items: safeServices.map((srv) =>
+                                            (srv._id === serviceId || srv.id === serviceId)
+                                              ? { ...srv, title_ar: e.target.value }
+                                              : srv
+                                          ),
+                                        },
+                                      })
+                                    }
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Description Row - English and Arabic */}
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="text-sm font-medium mb-1 block">Description (English)</label>
+                                  <Textarea
+                                    placeholder="Service description in English"
+                                    value={s.description_en || ''}
+                      onChange={(e) =>
+                        setContent({
+                                        services: {
+                                          ...servicesData,
+                                          items: safeServices.map((srv) =>
+                                            (srv._id === serviceId || srv.id === serviceId)
+                                              ? { ...srv, description_en: e.target.value }
+                                              : srv
+                                          ),
+                                        },
+                                      })
+                                    }
+                                    rows={4}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium mb-1 block">Description (Arabic)</label>
+                    <Textarea
+                                    placeholder="وصف الخدمة بالعربية"
+                                    dir="rtl"
+                                    value={s.description_ar || ''}
+                                    onChange={(e) =>
+                                      setContent({
+                                        services: {
+                                          ...servicesData,
+                                          items: safeServices.map((srv) =>
+                                            (srv._id === serviceId || srv.id === serviceId)
+                                              ? { ...srv, description_ar: e.target.value }
+                                              : srv
+                                          ),
+                                        },
+                                      })
+                                    }
+                                    rows={4}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Code Field */}
+                              <div>
+                                <label className="text-sm font-medium mb-1 block">Code</label>
+                                <Input
+                                  placeholder="Service Code"
+                                  value={s.code || ''}
+                      onChange={(e) =>
+                        setContent({
+                                      services: {
+                                        ...servicesData,
+                                        items: safeServices.map((srv) =>
+                                          (srv._id === serviceId || srv.id === serviceId)
+                                            ? { ...srv, code: e.target.value }
+                                            : srv
+                                        ),
+                                      },
+                                    })
+                                  }
+                                />
+                              </div>
+                            </CardContent>
+                          </CollapsibleContent>
+                  </Card>
+                      </Collapsible>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-6">
+                  <Button
+                    onClick={() => updateServices(servicesData)}
+                    disabled={loading}
+                    className="w-full"
+                  >
+                    {loading ? (language === 'en' ? 'Saving...' : 'جاري الحفظ...') : (language === 'en' ? 'Save All Services' : 'حفظ كل الخدمات')}
+                </Button>
+                </div>
               </Card>
             </TabsContent>
 
             {/* Projects Section */}
             <TabsContent value="projects">
-              <Card className="glass-card">
-                <CardHeader>
-                  <CardTitle>Projects Section</CardTitle>
-                  <Button onClick={addProject} className="w-fit bg-gold hover:bg-gold-dark">
-                    <Plus className="h-4 w-4 mr-2" />
+              <Card className="p-6">
+                <div className="mb-6">
+                  <h3 className="text-2xl font-bold mb-4">
+                    {language === 'en' ? 'Projects Section' : 'قسم المشاريع'}
+                  </h3>
+                  <Button
+                    onClick={() =>
+                      addProject({
+                        title_en: 'New Project',
+                        title_ar: 'مشروع جديد',
+                        description_en: 'Project description',
+                        description_ar: 'وصف المشروع',
+                        image: '',
+                        link: '',
+                      })
+                    }
+                    disabled={loading}
+                    className="bg-gold hover:bg-gold-dark text-black font-semibold"
+                  >
+                    <HexagonIcon size="sm" className="mr-2">
+                      <Plus className="h-4 w-4" />
+                    </HexagonIcon>
                     Add Project
                   </Button>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {[...content.projects].sort((a, b) => a.order - b.order).map((project, index) => (
-                    <Card key={project.id} className="p-4 bg-secondary/30">
-                      <div className="flex justify-between items-center mb-3">
-                        <h4 className="font-semibold">Project {index + 1}</h4>
-                        <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => moveProject(index, 'up')}
-                            disabled={index === 0}
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => moveProject(index, 'down')}
-                            disabled={index === content.projects.length - 1}
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => deleteProject(project.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <Input
-                          placeholder="Title (EN)"
-                          value={project.title.en}
-                          onChange={async (e) => {
-                            const newProjects = [...content.projects];
-                            const projectIndex = newProjects.findIndex(p => p.id === project.id);
-                            newProjects[projectIndex].title.en = e.target.value;
-                            await updateContent({ projects: newProjects });
-                          }}
-                        />
-                        <Input
-                          placeholder="العنوان (AR)"
-                          value={project.title.ar}
-                          onChange={async (e) => {
-                            const newProjects = [...content.projects];
-                            const projectIndex = newProjects.findIndex(p => p.id === project.id);
-                            newProjects[projectIndex].title.ar = e.target.value;
-                            await updateContent({ projects: newProjects });
-                          }}
-                        />
-                        <Textarea
-                          placeholder="Description (EN)"
-                          value={project.description.en}
-                          onChange={async (e) => {
-                            const newProjects = [...content.projects];
-                            const projectIndex = newProjects.findIndex(p => p.id === project.id);
-                            newProjects[projectIndex].description.en = e.target.value;
-                            await updateContent({ projects: newProjects });
-                          }}
-                        />
-                        <Textarea
-                          placeholder="الوصف (AR)"
-                          value={project.description.ar}
-                          onChange={async (e) => {
-                            const newProjects = [...content.projects];
-                            const projectIndex = newProjects.findIndex(p => p.id === project.id);
-                            newProjects[projectIndex].description.ar = e.target.value;
-                            await updateContent({ projects: newProjects });
-                          }}
-                        />
-                        <Input
-                          placeholder="Image URL"
-                          value={project.image}
-                          onChange={async (e) => {
-                            const newProjects = [...content.projects];
-                            const projectIndex = newProjects.findIndex(p => p.id === project.id);
-                            newProjects[projectIndex].image = e.target.value;
-                            await updateContent({ projects: newProjects });
-                          }}
-                        />
-                      </div>
-                    </Card>
-                  ))}
+                </div>
 
-                  <Button onClick={handleSave} className="bg-gold hover:bg-gold-dark">
-                    Save Changes
-                  </Button>
-                </CardContent>
-              </Card>
+                <div className="space-y-4">
+                  {safeProjects.map((p, index) => {
+                    const projectId = p._id || p.id || `project-${index}`;
+                    return (
+                      <Collapsible key={projectId} defaultOpen={index === 0}>
+                        <Card className="border-2">
+                          <CollapsibleTrigger asChild>
+                            <CardHeader className="cursor-pointer hover:bg-secondary/50 transition-colors">
+                              <div className="flex items-center justify-between">
+                                <CardTitle>
+                                  Project {index + 1}
+                                </CardTitle>
+                                <ChevronDownIcon className="h-5 w-5 transition-transform duration-200 data-[state=open]:rotate-180" />
+                              </div>
+                            </CardHeader>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <CardContent className="pt-4 space-y-4">
+                              {/* Title Row - English and Arabic */}
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="text-sm font-medium mb-1 block">Title (English)</label>
+                                  <Input
+                                    placeholder="Project Title (English)"
+                                    value={p.title_en || ''}
+                                    onChange={(e) =>
+                                      setContent({
+                                        projects: {
+                                          ...projectsData,
+                                          items: safeProjects.map((proj, idx) => {
+                                            const projId = proj._id || proj.id || `project-${idx}`;
+                                            return projId === projectId
+                                              ? { ...proj, title_en: e.target.value }
+                                              : proj;
+                                          }),
+                                        },
+                                      })
+                                    }
+                                  />
+                                </div>
+                    <div>
+                                  <label className="text-sm font-medium mb-1 block">Title (Arabic)</label>
+                      <Input
+                                    placeholder="عنوان المشروع (عربي)"
+                                    dir="rtl"
+                                    value={p.title_ar || ''}
+                                    onChange={(e) =>
+                                      setContent({
+                                        projects: {
+                                          ...projectsData,
+                                          items: safeProjects.map((proj, idx) => {
+                                            const projId = proj._id || proj.id || `project-${idx}`;
+                                            return projId === projectId
+                                              ? { ...proj, title_ar: e.target.value }
+                                              : proj;
+                                          }),
+                                        },
+                                      })
+                                    }
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Description Row - English and Arabic */}
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="text-sm font-medium mb-1 block">Description (English)</label>
+                                  <Textarea
+                                    placeholder="Project description in English"
+                                    value={p.description_en || ''}
+                        onChange={(e) =>
+                          setContent({
+                                        projects: {
+                                          ...projectsData,
+                                          items: safeProjects.map((proj, idx) => {
+                                            const projId = proj._id || proj.id || `project-${idx}`;
+                                            return projId === projectId
+                                              ? { ...proj, description_en: e.target.value }
+                                              : proj;
+                                          }),
+                                        },
+                                      })
+                                    }
+                                    rows={4}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium mb-1 block">Description (Arabic)</label>
+                      <Textarea
+                                    placeholder="وصف المشروع بالعربية"
+                                    dir="rtl"
+                                    value={p.description_ar || ''}
+                                    onChange={(e) =>
+                                      setContent({
+                                        projects: {
+                                          ...projectsData,
+                                          items: safeProjects.map((proj, idx) => {
+                                            const projId = proj._id || proj.id || `project-${idx}`;
+                                            return projId === projectId
+                                              ? { ...proj, description_ar: e.target.value }
+                                              : proj;
+                                          }),
+                                        },
+                                      })
+                                    }
+                                    rows={4}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Image and Link Fields */}
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="text-sm font-medium mb-1 block">Image URL</label>
+                                  <Input
+                                    placeholder="https://example.com/image.jpg"
+                                    value={p.image || ''}
+                                    onChange={(e) =>
+                                      setContent({
+                                        projects: {
+                                          ...projectsData,
+                                          items: safeProjects.map((proj, idx) => {
+                                            const projId = proj._id || proj.id || `project-${idx}`;
+                                            return projId === projectId
+                                              ? { ...proj, image: e.target.value }
+                                              : proj;
+                                          }),
+                                        },
+                                      })
+                                    }
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium mb-1 block">Project Link</label>
+                                  <Input
+                                    placeholder="https://example.com/project"
+                                    value={p.link || ''}
+                        onChange={(e) =>
+                          setContent({
+                                        projects: {
+                                          ...projectsData,
+                                          items: safeProjects.map((proj, idx) => {
+                                            const projId = proj._id || proj.id || `project-${idx}`;
+                                            return projId === projectId
+                                              ? { ...proj, link: e.target.value }
+                                              : proj;
+                                          }),
+                                        },
+                          })
+                        }
+                      />
+                    </div>
+                              </div>
+
+                              {/* Action Buttons */}
+                              <div className="flex justify-end gap-2 pt-2">
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => reorderProject(projectId, 'up')}
+                                    disabled={loading || index === 0}
+                                  >
+                                    <HexagonIcon size="sm">
+                                      <ChevronUp className="h-4 w-4" />
+                                    </HexagonIcon>
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => reorderProject(projectId, 'down')}
+                                    disabled={loading || index === safeProjects.length - 1}
+                                  >
+                                    <HexagonIcon size="sm">
+                                      <ChevronDown className="h-4 w-4" />
+                                    </HexagonIcon>
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => deleteProject(projectId)}
+                                    disabled={loading}
+                                  >
+                                    <HexagonIcon size="sm">
+                      <Trash2 className="h-4 w-4" />
+                                    </HexagonIcon>
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </CollapsibleContent>
+                        </Card>
+                      </Collapsible>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-6">
+                  <Button
+                    onClick={() => updateProjects(projectsData)}
+                    disabled={loading}
+                    className="w-full"
+                  >
+                    {loading ? (language === 'en' ? 'Saving...' : 'جاري الحفظ...') : (language === 'en' ? 'Save All Projects' : 'حفظ كل المشاريع')}
+                    </Button>
+                </div>
+                  </Card>
             </TabsContent>
 
             {/* Partners Section */}
             <TabsContent value="partners">
-              <Card className="glass-card">
-                <CardHeader>
-                  <CardTitle>Partners Section</CardTitle>
-                  <Button onClick={addPartner} className="w-fit bg-gold hover:bg-gold-dark">
-                    <Plus className="h-4 w-4 mr-2" />
+              <Card className="p-6">
+                <div className="mb-6">
+                  <h3 className="text-2xl font-bold mb-4">
+                    {language === 'en' ? 'Partners Section' : 'قسم الشركاء'}
+                  </h3>
+                <Button
+                  onClick={() =>
+                      addPartner({
+                        name_en: 'New Partner',
+                        name_ar: 'شريك جديد',
+                        logo: '',
+                        link: '',
+                        isActive: true,
+                      }).catch((err) => {
+                        // Error is already handled in the store
+                        console.error('Failed to add partner:', err);
+                      })
+                    }
+                    disabled={loading}
+                    className="bg-gold hover:bg-gold-dark text-black font-semibold"
+                  >
+                    <HexagonIcon size="sm" className="mr-2">
+                      <Plus className="h-4 w-4" />
+                    </HexagonIcon>
                     Add Partner
                   </Button>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {[...content.partners].sort((a, b) => a.order - b.order).map((partner, index) => (
-                    <Card key={partner.id} className="p-4 bg-secondary/30">
-                      <div className="flex justify-between items-center mb-3">
-                        <h4 className="font-semibold">Partner {index + 1}</h4>
-                        <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => movePartner(index, 'up')}
-                            disabled={index === 0}
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => movePartner(index, 'down')}
-                            disabled={index === content.partners.length - 1}
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => deletePartner(partner.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <Input
-                          placeholder="Name (EN)"
-                          value={partner.name.en}
-                          onChange={async (e) => {
-                            const newPartners = [...content.partners];
-                            const partnerIndex = newPartners.findIndex(p => p.id === partner.id);
-                            newPartners[partnerIndex].name.en = e.target.value;
-                            await updateContent({ partners: newPartners });
-                          }}
-                        />
-                        <Input
-                          placeholder="الاسم (AR)"
-                          value={partner.name.ar}
-                          onChange={async (e) => {
-                            const newPartners = [...content.partners];
-                            const partnerIndex = newPartners.findIndex(p => p.id === partner.id);
-                            newPartners[partnerIndex].name.ar = e.target.value;
-                            await updateContent({ partners: newPartners });
-                          }}
-                        />
-                        
-                      
-                        {/* File upload for logo */}
-                        <div>
-                          <label className="block text-sm font-medium mb-2">
-                            Upload Logo (optional - will override Logo URL)
-                          </label>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={async (e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                // In a real implementation, you would upload the file to a server
-                                // and get a URL back. For now, we'll just show a preview.
-                                const reader = new FileReader();
-                                reader.onload = async (event) => {
-                                  if (event.target?.result) {
-                                    // This is a simplified example - in reality, you would:
-                                    // 1. Upload the file to your server/storage service
-                                    // 2. Get back a URL for the uploaded image
-                                    // 3. Update the partner.logo with that URL
-                                    
-                                    // For demonstration, we'll use the data URL directly
-                                    // Note: This won't persist after refresh in a real app
-                                    const newPartners = [...content.partners];
-                                    const partnerIndex = newPartners.findIndex(p => p.id === partner.id);
-                                    newPartners[partnerIndex].logo = event.target.result as string;
-                                    await updateContent({ partners: newPartners });
-                                  }
-                                };
-                                reader.readAsDataURL(file);
-                              }
-                            }}
-                            className="w-full p-2 border border-border rounded-md bg-background"
-                          />
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id={`active-${partner.id}`}
-                            checked={partner.active}
-                            onChange={async (e) => {
-                              const newPartners = [...content.partners];
-                              const partnerIndex = newPartners.findIndex(p => p.id === partner.id);
-                              newPartners[partnerIndex].active = e.target.checked;
-                              await updateContent({ partners: newPartners });
-                            }}
-                            className="h-4 w-4"
-                          />
-                          <label htmlFor={`active-${partner.id}`}>Active</label>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
+                </div>
 
-                  <Button onClick={handleSave} className="bg-gold hover:bg-gold-dark">
-                    Save Changes
-                  </Button>
-                </CardContent>
+                <div className="space-y-4">
+                  {safePartners.map((p, index) => {
+                    const partnerId = p._id || p.id || `partner-${index}`;
+                    return (
+                      <Collapsible key={partnerId} defaultOpen={index === 0}>
+                        <Card className="border-2">
+                          <CollapsibleTrigger asChild>
+                            <CardHeader className="cursor-pointer hover:bg-secondary/50 transition-colors">
+                              <div className="flex items-center justify-between">
+                                <CardTitle>
+                                  Partner {index + 1}
+                                </CardTitle>
+                                <ChevronDownIcon className="h-5 w-5 transition-transform duration-200 data-[state=open]:rotate-180" />
+                              </div>
+                            </CardHeader>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <CardContent className="pt-4 space-y-4">
+                              {/* Name Row - English and Arabic */}
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="text-sm font-medium mb-1 block">Name (English)</label>
+                                  <Input
+                                    placeholder="Partner Name (English)"
+                                    value={p.name_en || ''}
+                                    onChange={(e) =>
+                                      setContent({
+                                        partners: {
+                                          ...partnersData,
+                                          items: safePartners.map((partner, idx) => {
+                                            const partId = partner._id || partner.id || `partner-${idx}`;
+                                            return partId === partnerId
+                                              ? { ...partner, name_en: e.target.value }
+                                              : partner;
+                                          }),
+                                        },
+                                      })
+                                    }
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium mb-1 block">Name (Arabic)</label>
+                                  <Input
+                                    placeholder="اسم الشريك (عربي)"
+                                    dir="rtl"
+                                    value={p.name_ar || ''}
+                                    onChange={(e) =>
+                                      setContent({
+                                        partners: {
+                                          ...partnersData,
+                                          items: safePartners.map((partner, idx) => {
+                                            const partId = partner._id || partner.id || `partner-${idx}`;
+                                            return partId === partnerId
+                                              ? { ...partner, name_ar: e.target.value }
+                                              : partner;
+                                          }),
+                                        },
+                                      })
+                                    }
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Logo Upload - Disabled for now, use URL instead */}
+                              <div>
+                                <label className="text-sm font-medium mb-1 block">
+                                  Upload Logo (Currently disabled - use Logo URL instead)
+                                </label>
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="file"
+                                    accept="image/*"
+                                    disabled
+                                    className="cursor-not-allowed opacity-50"
+                                  />
+                                  <p className="text-xs text-muted-foreground">
+                                    File upload is disabled. Please upload your image to a hosting service (e.g., Cloudinary, Imgur) and use the Logo URL field below.
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Logo URL */}
+                              <div>
+                                <label className="text-sm font-medium mb-1 block">Logo URL</label>
+                                <Input
+                                  placeholder="https://example.com/logo.png"
+                                  value={p.logo || ''}
+                                  onChange={(e) =>
+                                    setContent({
+                                      partners: {
+                                        ...partnersData,
+                                        items: safePartners.map((partner, idx) => {
+                                          const partId = partner._id || partner.id || `partner-${idx}`;
+                                          return partId === partnerId
+                                            ? { ...partner, logo: e.target.value }
+                                            : partner;
+                                        }),
+                                      },
+                                    })
+                                  }
+                                />
+                              </div>
+
+                              {/* Link */}
+                              <div>
+                                <label className="text-sm font-medium mb-1 block">Partner Link</label>
+                                <Input
+                                  placeholder="https://example.com"
+                                  value={p.link || ''}
+                                  onChange={(e) =>
+                                    setContent({
+                                      partners: {
+                                        ...partnersData,
+                                        items: safePartners.map((partner, idx) => {
+                                          const partId = partner._id || partner.id || `partner-${idx}`;
+                                          return partId === partnerId
+                                            ? { ...partner, link: e.target.value }
+                                            : partner;
+                                        }),
+                                      },
+                                    })
+                                  }
+                                />
+                              </div>
+
+                              {/* Active Checkbox */}
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`active-${partnerId}`}
+                                  checked={p.isActive ?? true}
+                                  onCheckedChange={(checked) =>
+                                    setContent({
+                                      partners: {
+                                        ...partnersData,
+                                        items: safePartners.map((partner, idx) => {
+                                          const partId = partner._id || partner.id || `partner-${idx}`;
+                                          return partId === partnerId
+                                            ? { ...partner, isActive: checked === true }
+                                            : partner;
+                                        }),
+                                      },
+                                    })
+                                  }
+                                />
+                                <label
+                                  htmlFor={`active-${partnerId}`}
+                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                  Active
+                                </label>
+                              </div>
+
+                              {/* Action Buttons */}
+                              <div className="flex justify-end gap-2 pt-2">
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => reorderPartner(partnerId, 'up')}
+                                    disabled={loading || index === 0}
+                                  >
+                                    <HexagonIcon size="sm">
+                                      <ChevronUp className="h-4 w-4" />
+                                    </HexagonIcon>
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => reorderPartner(partnerId, 'down')}
+                                    disabled={loading || index === safePartners.length - 1}
+                                  >
+                                    <HexagonIcon size="sm">
+                                      <ChevronDown className="h-4 w-4" />
+                                    </HexagonIcon>
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => deletePartner(partnerId)}
+                                    disabled={loading}
+                                  >
+                                    <HexagonIcon size="sm">
+                                      <Trash2 className="h-4 w-4" />
+                                    </HexagonIcon>
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </CollapsibleContent>
+                        </Card>
+                      </Collapsible>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-6">
+                  <Button
+                    onClick={() => updatePartners(partnersData)}
+                    disabled={loading}
+                    className="w-full"
+                  >
+                    {loading ? (language === 'en' ? 'Saving...' : 'جاري الحفظ...') : (language === 'en' ? 'Save All Partners' : 'حفظ كل الشركاء')}
+                </Button>
+                </div>
               </Card>
             </TabsContent>
 
             {/* Jobs Section */}
             <TabsContent value="jobs">
-              <Card className="glass-card">
-                <CardHeader>
-                  <CardTitle>Jobs Section</CardTitle>
-                  <Button onClick={addJob} className="w-fit bg-gold hover:bg-gold-dark">
-                    <Plus className="h-4 w-4 mr-2" />
+              <Card className="p-6">
+                <div className="mb-6">
+                  <h3 className="text-2xl font-bold mb-4">
+                    {language === 'en' ? 'Jobs Section' : 'قسم الوظائف'}
+                  </h3>
+                  <Button
+                    onClick={() => {
+                      const newJob = {
+                        title_en: 'New Job',
+                        title_ar: 'وظيفة جديدة',
+                        description_en: 'Job description',
+                        description_ar: 'وصف الوظيفة',
+                        link: '',
+                        isActive: true,
+                      };
+                      // Add to local state only (don't save to server yet)
+                      // User will fill in the fields and click "Save All Jobs"
+                      setContent({
+                        jobs: {
+                          ...jobsData,
+                          items: [...safeJobs, newJob],
+                        },
+                      });
+                    }}
+                    disabled={loading}
+                    className="bg-gold hover:bg-gold-dark text-black font-semibold"
+                  >
+                    <HexagonIcon size="sm" className="mr-2">
+                      <Plus className="h-4 w-4" />
+                    </HexagonIcon>
                     Add Job
                   </Button>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {content.jobs.map((job, index) => (
-                    <Card key={job.id} className="p-4 bg-secondary/30">
-                      <div className="flex justify-between items-center mb-3">
-                        <h4 className="font-semibold">Job {index + 1}</h4>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => deleteJob(job.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <Input
-                          placeholder="Title (EN)"
-                          value={job.title.en}
-                          onChange={async (e) => {
-                            const newJobs = [...content.jobs];
-                            const jobIndex = newJobs.findIndex(j => j.id === job.id);
-                            newJobs[jobIndex].title.en = e.target.value;
-                            await updateContent({ jobs: newJobs });
-                          }}
-                        />
-                        <Input
-                          placeholder="العنوان (AR)"
-                          value={job.title.ar}
-                          onChange={async (e) => {
-                            const newJobs = [...content.jobs];
-                            const jobIndex = newJobs.findIndex(j => j.id === job.id);
-                            newJobs[jobIndex].title.ar = e.target.value;
-                            await updateContent({ jobs: newJobs });
-                          }}
-                        />
-                        <Textarea
-                          placeholder="Description (EN)"
-                          value={job.description.en}
-                          onChange={async (e) => {
-                            const newJobs = [...content.jobs];
-                            const jobIndex = newJobs.findIndex(j => j.id === job.id);
-                            newJobs[jobIndex].description.en = e.target.value;
-                            await updateContent({ jobs: newJobs });
-                          }}
-                        />
-                        <Textarea
-                          placeholder="الوصف (AR)"
-                          value={job.description.ar}
-                          onChange={async (e) => {
-                            const newJobs = [...content.jobs];
-                            const jobIndex = newJobs.findIndex(j => j.id === job.id);
-                            newJobs[jobIndex].description.ar = e.target.value;
-                            await updateContent({ jobs: newJobs });
-                          }}
-                        />
-                        <Input
-                          placeholder="Application Link (optional)"
-                          value={job.applicationLink || ''}
-                          onChange={async (e) => {
-                            const newJobs = [...content.jobs];
-                            const jobIndex = newJobs.findIndex(j => j.id === job.id);
-                            newJobs[jobIndex].applicationLink = e.target.value;
-                            await updateContent({ jobs: newJobs });
-                          }}
-                        />
-                        <div className="md:col-span-2 flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id={`status-${job.id}`}
-                            checked={job.status === 'active'}
-                            onChange={async (e) => {
-                              const newJobs = [...content.jobs];
-                              const jobIndex = newJobs.findIndex(j => j.id === job.id);
-                              newJobs[jobIndex].status = e.target.checked ? 'active' : 'inactive';
-                              await updateContent({ jobs: newJobs });
-                            }}
-                            className="h-4 w-4"
-                          />
-                          <label htmlFor={`status-${job.id}`}>Active</label>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
+                </div>
 
-                  <Button onClick={handleSave} className="bg-gold hover:bg-gold-dark">
-                    Save Changes
-                  </Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                <div className="space-y-4">
+                  {safeJobs.map((j, index) => {
+                    const jobId = j._id || j.id || `job-${index}`;
+                    const isNewJob = !j._id && !j.id;
+                    return (
+                      <Collapsible key={jobId} defaultOpen={index === 0}>
+                        <Card className="border-2">
+                          <CollapsibleTrigger asChild>
+                            <CardHeader className="cursor-pointer hover:bg-secondary/50 transition-colors">
+                              <div className="flex items-center justify-between">
+                                <CardTitle>
+                                  Job {index + 1}
+                                </CardTitle>
+                                <div className="flex items-center gap-2">
+                                  {!isNewJob && (
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const realId = j._id || j.id;
+                                        if (realId) {
+                                          deleteJob(realId);
+                                        }
+                                      }}
+                                      disabled={loading}
+                                    >
+                                      <HexagonIcon size="sm">
+                                        <Trash2 className="h-4 w-4" />
+                                      </HexagonIcon>
+                                    </Button>
+                                  )}
+                                  <ChevronDownIcon className="h-5 w-5 transition-transform duration-200 data-[state=open]:rotate-180" />
+                                </div>
+                              </div>
+                            </CardHeader>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <CardContent className="pt-4 space-y-4">
+                              {/* Title Row - English and Arabic */}
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="text-sm font-medium mb-1 block">Job Title (English)</label>
+                                  <Input
+                                    placeholder="Job Title (English)"
+                                    value={j.title_en || ''}
+                                    onChange={(e) =>
+                                      setContent({
+                                        jobs: {
+                                          ...jobsData,
+                                          items: safeJobs.map((job, idx) =>
+                                            (job._id === j._id && job.id === j.id) || 
+                                            (!job._id && !job.id && idx === index)
+                                              ? { ...job, title_en: e.target.value }
+                                              : job
+                                          ),
+                                        },
+                                      })
+                                    }
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium mb-1 block">Job Title (Arabic)</label>
+                                  <Input
+                                    placeholder="عنوان الوظيفة (عربي)"
+                                    dir="rtl"
+                                    value={j.title_ar || ''}
+                                    onChange={(e) =>
+                                      setContent({
+                                        jobs: {
+                                          ...jobsData,
+                                          items: safeJobs.map((job, idx) =>
+                                            (job._id === j._id && job.id === j.id) || 
+                                            (!job._id && !job.id && idx === index)
+                                              ? { ...job, title_ar: e.target.value }
+                                              : job
+                                          ),
+                                        },
+                                      })
+                                    }
+                                  />
+                                </div>
+                              </div>
 
-            {/* CTA Section */}
-            <TabsContent value="cta">
-              <Card className="glass-card">
-                <CardHeader>
-                  <CardTitle>Call to Action Section</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Title (English)</label>
-                      <Input
-                        value={content.cta.title.en}
-                        onChange={async (e) =>
-                          await updateContent({
-                            cta: { ...content.cta, title: { ...content.cta.title, en: e.target.value } },
-                          })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">العنوان (العربية)</label>
-                      <Input
-                        value={content.cta.title.ar}
-                        onChange={async (e) =>
-                          await updateContent({
-                            cta: { ...content.cta, title: { ...content.cta.title, ar: e.target.value } },
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
+                              {/* Description Row - English and Arabic */}
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="text-sm font-medium mb-1 block">Description (English)</label>
+                                  <Textarea
+                                    placeholder="Job description in English"
+                                    value={j.description_en || ''}
+                                    onChange={(e) =>
+                                      setContent({
+                                        jobs: {
+                                          ...jobsData,
+                                          items: safeJobs.map((job, idx) =>
+                                            (job._id === j._id && job.id === j.id) || 
+                                            (!job._id && !job.id && idx === index)
+                                              ? { ...job, description_en: e.target.value }
+                                              : job
+                                          ),
+                                        },
+                                      })
+                                    }
+                                    rows={4}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium mb-1 block">Description (Arabic)</label>
+                                  <Textarea
+                                    placeholder="وصف الوظيفة بالعربية"
+                                    dir="rtl"
+                                    value={j.description_ar || ''}
+                                    onChange={(e) =>
+                                      setContent({
+                                        jobs: {
+                                          ...jobsData,
+                                          items: safeJobs.map((job, idx) =>
+                                            (job._id === j._id && job.id === j.id) || 
+                                            (!job._id && !job.id && idx === index)
+                                              ? { ...job, description_ar: e.target.value }
+                                              : job
+                                          ),
+                                        },
+                                      })
+                                    }
+                                    rows={4}
+                                  />
+                                </div>
+                              </div>
 
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Subtitle (English)</label>
-                      <Textarea
-                        value={content.cta.subtitle.en}
-                        onChange={async (e) =>
-                          await updateContent({
-                            cta: { ...content.cta, subtitle: { ...content.cta.subtitle, en: e.target.value } },
-                          })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">العنوان الفرعي (العربية)</label>
-                      <Textarea
-                        value={content.cta.subtitle.ar}
-                        onChange={async (e) =>
-                          await updateContent({
-                            cta: { ...content.cta, subtitle: { ...content.cta.subtitle, ar: e.target.value } },
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
+                              {/* Application Link */}
+                              <div>
+                                <label className="text-sm font-medium mb-1 block">Application Link (optional)</label>
+                                <Input
+                                  placeholder="https://example.com/apply"
+                                  value={j.link || ''}
+                                  onChange={(e) =>
+                                    setContent({
+                                      jobs: {
+                                        ...jobsData,
+                                        items: safeJobs.map((job, idx) =>
+                                          (job._id === j._id && job.id === j.id) || 
+                                          (!job._id && !job.id && idx === index)
+                                            ? { ...job, link: e.target.value }
+                                            : job
+                                        ),
+                                      },
+                                    })
+                                  }
+                                />
+                              </div>
 
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Button Text (English)</label>
-                      <Input
-                        value={content.cta.button.en}
-                        onChange={async (e) =>
-                          await updateContent({
-                            cta: { ...content.cta, button: { ...content.cta.button, en: e.target.value } },
-                          })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">نص الزر (العربية)</label>
-                      <Input
-                        value={content.cta.button.ar}
-                        onChange={async (e) =>
-                          await updateContent({
-                            cta: { ...content.cta, button: { ...content.cta.button, ar: e.target.value } },
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
+                              {/* Active Checkbox */}
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`active-job-${jobId}`}
+                                  checked={j.isActive ?? true}
+                                  onCheckedChange={(checked) =>
+                                    setContent({
+                                      jobs: {
+                                        ...jobsData,
+                                        items: safeJobs.map((job, idx) =>
+                                          (job._id === j._id && job.id === j.id) || 
+                                          (!job._id && !job.id && idx === index)
+                                            ? { ...job, isActive: checked === true }
+                                            : job
+                                        ),
+                                      },
+                                    })
+                                  }
+                                />
+                                <label
+                                  htmlFor={`active-job-${jobId}`}
+                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                  Active
+                                </label>
+                              </div>
+                            </CardContent>
+                          </CollapsibleContent>
+                        </Card>
+                      </Collapsible>
+                    );
+                  })}
+                </div>
 
-                  <Button onClick={handleSave} className="bg-gold hover:bg-gold-dark">
-                    Save Changes
-                  </Button>
-                </CardContent>
+                <div className="mt-6">
+                  <Button
+                    onClick={() => updateJobs(jobsData)}
+                    disabled={loading}
+                    className="w-full"
+                  >
+                    {loading ? (language === 'en' ? 'Saving...' : 'جاري الحفظ...') : (language === 'en' ? 'Save All Jobs' : 'حفظ كل الوظائف')}
+                </Button>
+                </div>
               </Card>
             </TabsContent>
           </Tabs>
