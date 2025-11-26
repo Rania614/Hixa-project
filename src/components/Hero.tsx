@@ -19,7 +19,7 @@ export const Hero = () => {
       <p className="text-xl mb-8 max-w-3xl">
         {language === "ar" ? content.hero.subtitle_ar : content.hero.subtitle_en}
       </p>
-
+{/* 
       <div className="flex gap-4">
         <Button onClick={() => navigate("/auth/client")}>
           <User className="mr-2" />
@@ -30,7 +30,7 @@ export const Hero = () => {
           <Handshake className="mr-2" />
           {language === "ar" ? "ادخل كشريك" : "Enter as Partner"}
         </Button>
-      </div>
+      </div> */}
     </section>
   );
 };

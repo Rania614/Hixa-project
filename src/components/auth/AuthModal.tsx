@@ -112,7 +112,7 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
           </div>
           <CardTitle className="text-2xl font-bold">
             {role === 'client' 
-              ? 'Client Portal' 
+              ? 'LOG IN' 
               : role === 'partner' && partnerType === 'engineer'
               ? 'Engineer Registration'
               : role === 'partner' && partnerType === 'company'
@@ -141,13 +141,14 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
                 >
                   Login
                 </Button>
-                <Button
+                {/* TEMPORARILY HIDDEN - Register button */}
+                {/* <Button
                   variant="outline"
                   onClick={handleRegisterClick}
                   size="sm"
                 >
                   Register
-                </Button>
+                </Button> */}
               </div>
               
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -189,63 +190,146 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
                 </Button>
               </form>
             </>
-          ) : role === 'partner' && !partnerType ? (
-            // Partner type selection
-            <div className="space-y-4">
-              <p className="text-center text-muted-foreground">
-                Please select your partner type to continue registration
-              </p>
-              <div className="grid grid-cols-1 gap-4">
-                <Button
-                  onClick={() => selectPartnerType('engineer')}
-                  variant="outline"
-                  className="h-auto py-6 flex flex-col items-center gap-2"
-                >
-                  <Wrench className="h-8 w-8 text-gold" />
-                  <span className="font-semibold">Engineer</span>
-                  <span className="text-xs text-muted-foreground">Individual professional</span>
-                </Button>
-                <Button
-                  onClick={() => selectPartnerType('company')}
-                  variant="outline"
-                  className="h-auto py-6 flex flex-col items-center gap-2"
-                >
-                  <Building className="h-8 w-8 text-gold" />
-                  <span className="font-semibold">Company</span>
-                  <span className="text-xs text-muted-foreground">Business organization</span>
-                </Button>
-              </div>
-            </div>
           ) : (
-            // Registration form
-            <>
-              <div className="flex gap-2 mb-6">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsLogin(true)}
-                  size="sm"
-                >
-                  Login
-                </Button>
-                <Button
-                  variant="default"
-                  className="bg-gold hover:bg-gold-dark"
-                  size="sm"
-                >
-                  Register
-                </Button>
+            // TEMPORARILY HIDDEN - All registration forms (Partner type selection + Client/Partner registration forms)
+            // Uncomment the code below to restore registration functionality
+            /* role === 'partner' && !partnerType ? (
+              // Partner type selection
+              <div className="space-y-4">
+                <p className="text-center text-muted-foreground">
+                  Please select your partner type to continue registration
+                </p>
+                <div className="grid grid-cols-1 gap-4">
+                  <Button
+                    onClick={() => selectPartnerType('engineer')}
+                    variant="outline"
+                    className="h-auto py-6 flex flex-col items-center gap-2"
+                  >
+                    <Wrench className="h-8 w-8 text-gold" />
+                    <span className="font-semibold">Engineer</span>
+                    <span className="text-xs text-muted-foreground">Individual professional</span>
+                  </Button>
+                  <Button
+                    onClick={() => selectPartnerType('company')}
+                    variant="outline"
+                    className="h-auto py-6 flex flex-col items-center gap-2"
+                  >
+                    <Building className="h-8 w-8 text-gold" />
+                    <span className="font-semibold">Company</span>
+                    <span className="text-xs text-muted-foreground">Business organization</span>
+                  </Button>
+                </div>
               </div>
-              
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {role === 'partner' && partnerType === 'engineer' ? (
-                  // Engineer registration form
-                  <>
+            ) : (
+              // Registration form
+              <>
+                <div className="flex gap-2 mb-6">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsLogin(true)}
+                    size="sm"
+                  >
+                    Login
+                  </Button>
+                  <Button
+                    variant="default"
+                    className="bg-gold hover:bg-gold-dark"
+                    size="sm"
+                  >
+                    Register
+                  </Button>
+                </div>
+                
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {role === 'partner' && partnerType === 'engineer' ? (
+                    // Engineer registration form
+                    <>
+                      <div>
+                        <label htmlFor="engineerName" className="block text-sm font-medium mb-2">
+                          Full Name
+                        </label>
+                        <Input
+                          id="engineerName"
+                          type="text"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="Your full name"
+                          className="bg-secondary/50"
+                          required
+                        />
+                      </div>
+                      
+                      <div>
+                        <label htmlFor="specialization" className="block text-sm font-medium mb-2">
+                          Specialization
+                        </label>
+                        <Input
+                          id="specialization"
+                          type="text"
+                          value={specialization}
+                          onChange={(e) => setSpecialization(e.target.value)}
+                          placeholder="e.g., Civil Engineer, Electrical Engineer"
+                          className="bg-secondary/50"
+                          required
+                        />
+                      </div>
+                      
+                      <div>
+                        <label htmlFor="licenseNumber" className="block text-sm font-medium mb-2">
+                          License Number
+                        </label>
+                        <Input
+                          id="licenseNumber"
+                          type="text"
+                          value={licenseNumber}
+                          onChange={(e) => setLicenseNumber(e.target.value)}
+                          placeholder="Professional license number"
+                          className="bg-secondary/50"
+                          required
+                        />
+                      </div>
+                    </>
+                  ) : role === 'partner' && partnerType === 'company' ? (
+                    // Company registration form
+                    <>
+                      <div>
+                        <label htmlFor="companyName" className="block text-sm font-medium mb-2">
+                          Company Name
+                        </label>
+                        <Input
+                          id="companyName"
+                          type="text"
+                          value={companyName}
+                          onChange={(e) => setCompanyName(e.target.value)}
+                          placeholder="Your company name"
+                          className="bg-secondary/50"
+                          required
+                        />
+                      </div>
+                      
+                      <div>
+                        <label htmlFor="contactName" className="block text-sm font-medium mb-2">
+                          Contact Person Name
+                        </label>
+                        <Input
+                          id="contactName"
+                          type="text"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="Full name of contact person"
+                          className="bg-secondary/50"
+                          required
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    // Client registration form
                     <div>
-                      <label htmlFor="engineerName" className="block text-sm font-medium mb-2">
+                      <label htmlFor="clientName" className="block text-sm font-medium mb-2">
                         Full Name
                       </label>
                       <Input
-                        id="engineerName"
+                        id="clientName"
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
@@ -254,141 +338,67 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
                         required
                       />
                     </div>
-                    
-                    <div>
-                      <label htmlFor="specialization" className="block text-sm font-medium mb-2">
-                        Specialization
-                      </label>
-                      <Input
-                        id="specialization"
-                        type="text"
-                        value={specialization}
-                        onChange={(e) => setSpecialization(e.target.value)}
-                        placeholder="e.g., Civil Engineer, Electrical Engineer"
-                        className="bg-secondary/50"
-                        required
-                      />
-                    </div>
-                    
-                    <div>
-                      <label htmlFor="licenseNumber" className="block text-sm font-medium mb-2">
-                        License Number
-                      </label>
-                      <Input
-                        id="licenseNumber"
-                        type="text"
-                        value={licenseNumber}
-                        onChange={(e) => setLicenseNumber(e.target.value)}
-                        placeholder="Professional license number"
-                        className="bg-secondary/50"
-                        required
-                      />
-                    </div>
-                  </>
-                ) : role === 'partner' && partnerType === 'company' ? (
-                  // Company registration form
-                  <>
-                    <div>
-                      <label htmlFor="companyName" className="block text-sm font-medium mb-2">
-                        Company Name
-                      </label>
-                      <Input
-                        id="companyName"
-                        type="text"
-                        value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
-                        placeholder="Your company name"
-                        className="bg-secondary/50"
-                        required
-                      />
-                    </div>
-                    
-                    <div>
-                      <label htmlFor="contactName" className="block text-sm font-medium mb-2">
-                        Contact Person Name
-                      </label>
-                      <Input
-                        id="contactName"
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Full name of contact person"
-                        className="bg-secondary/50"
-                        required
-                      />
-                    </div>
-                  </>
-                ) : (
-                  // Client registration form
+                  )}
+                  
                   <div>
-                    <label htmlFor="clientName" className="block text-sm font-medium mb-2">
-                      Full Name
+                    <label htmlFor="regEmail" className="block text-sm font-medium mb-2">
+                      Email Address
                     </label>
                     <Input
-                      id="clientName"
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Your full name"
+                      id="regEmail"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
                       className="bg-secondary/50"
                       required
                     />
                   </div>
-                )}
-                
-                <div>
-                  <label htmlFor="regEmail" className="block text-sm font-medium mb-2">
-                    Email Address
-                  </label>
-                  <Input
-                    id="regEmail"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="bg-secondary/50"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="regPassword" className="block text-sm font-medium mb-2">
-                    Password
-                  </label>
-                  <Input
-                    id="regPassword"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Create a password"
-                    className="bg-secondary/50"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium mb-2">
-                    Confirm Password
-                  </label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm your password"
-                    className="bg-secondary/50"
-                    required
-                  />
-                </div>
-                
-                <Button
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold"
-                >
-                  Create Account
-                </Button>
-              </form>
-            </>
+                  
+                  <div>
+                    <label htmlFor="regPassword" className="block text-sm font-medium mb-2">
+                      Password
+                    </label>
+                    <Input
+                      id="regPassword"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Create a password"
+                      className="bg-secondary/50"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="confirmPassword" className="block text-sm font-medium mb-2">
+                      Confirm Password
+                    </label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm your password"
+                      className="bg-secondary/50"
+                      required
+                    />
+                  </div>
+                  
+                  <Button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold"
+                  >
+                    Create Account
+                  </Button>
+                </form>
+              </>
+            ) */
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">
+                Registration is temporarily disabled. Please use login only.
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>

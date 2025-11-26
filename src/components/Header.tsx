@@ -165,7 +165,7 @@ export const Header = () => {
                 {showDropdown && (
                   <div className="absolute top-full right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-lg z-50 animate-fade-in">
                     <div className="p-2">
-                      <button
+                      {/* <button
                         onClick={handleClientLogin}
                         className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium mb-1 flex items-center gap-2 text-foreground hover:bg-gold/10"
                       >
@@ -179,7 +179,7 @@ export const Header = () => {
                         <Handshake className="h-4 w-4" />
                         {language === 'en' ? 'Enter as Partner' : 'ادخل كشريك'}
                       </button>
-                      <div className="border-t border-border my-1"></div>
+                      <div className="border-t border-border my-1"></div> */}
                       <button
                         onClick={handleSignUp}
                         className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10"
@@ -239,7 +239,7 @@ export const Header = () => {
                   {showDropdown && (
                     <div className="mt-2 bg-card border border-border rounded-lg shadow-lg animate-fade-in">
                       <div className="p-2">
-                        <button
+                        {/* <button
                           onClick={handleClientLogin}
                           className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium mb-1 flex items-center gap-2 text-foreground hover:bg-gold/10"
                         >
@@ -252,8 +252,8 @@ export const Header = () => {
                         >
                           <Handshake className="h-4 w-4" />
                           {language === 'en' ? 'Enter as Partner' : 'ادخل كشريك'}
-                        </button>
-                        <div className="border-t border-border my-1"></div>
+                        </button> */}
+                        {/* <div className="border-t border-border my-1"></div> */}
                         <button
                           onClick={handleSignUp}
                           className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10"

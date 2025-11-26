@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +27,7 @@ api.interceptors.request.use((config) => {
 // ------------------------------------------------------
 
 const AdminLogin = () => {
-  const { setIsAuthenticated, isAuthenticated } = useApp();
+  const { setIsAuthenticated } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -80,11 +80,9 @@ const AdminLogin = () => {
     }
   };
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/admin/dashboard');
-    }
-  }, [isAuthenticated, navigate]);
+  // Removed useEffect to prevent infinite loop
+  // Navigation is handled in handleLogin after successful authentication
+  // and by AppRoutes when isAuthenticated changes
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden">
