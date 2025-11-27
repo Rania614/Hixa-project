@@ -6,12 +6,20 @@ import { About } from '@/components/About';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
+import { Instagram, MessageCircle, Twitter, Send } from 'lucide-react';
 import { User, ChevronDown } from 'lucide-react';
 
 const Landing = () => {
   const navigate = useNavigate();
   const { language } = useApp();
   const [showDropdown, setShowDropdown] = useState(false);
+  
+  const socialLinks = {
+    instagram: 'https://www.instagram.com/hixa_groups?utm_source=qr&igsh=MWo1MG03Z3c0NmF4cQ==',
+    whatsapp: 'https://chat.whatsapp.com/LQrlGeLPOFjGlhN7d1Tl52',
+    twitter: 'https://x.com/SOARdecor?t=0NFoc2u5IhVp5CGhoBgETg&s=09',
+    telegram: 'https://t.me/projectsco'
+  };
 
   const handleSubscribe = () => {
     // Scroll to subscription section or navigate to it
@@ -123,7 +131,7 @@ const Landing = () => {
                 console.log('Subscribe:', email);
                 alert(language === 'en' ? 'Thank you for subscribing!' : 'شكراً لك على الاشتراك!');
               }}
-              className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto"
+              className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto mb-8"
             >
               <input
                 type="email"
@@ -139,6 +147,46 @@ const Landing = () => {
                 {language === 'en' ? 'Subscribe' : 'اشترك'}
               </button>
             </form>
+            
+            {/* Social Media Icons */}
+            <div className="flex justify-center gap-4 md:gap-6">
+              <a 
+                href={socialLinks.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 border-2 border-gold rounded-full flex items-center justify-center text-gold hover:bg-gold hover:text-black transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2"
+                aria-label="Instagram"
+              >
+                <Instagram className="w-5 h-5" />
+              </a>
+              <a 
+                href={socialLinks.whatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 border-2 border-gold rounded-full flex items-center justify-center text-gold hover:bg-gold hover:text-black transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2"
+                aria-label="WhatsApp"
+              >
+                <MessageCircle className="w-5 h-5" />
+              </a>
+              <a 
+                href={socialLinks.twitter}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 border-2 border-gold rounded-full flex items-center justify-center text-gold hover:bg-gold hover:text-black transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2"
+                aria-label="Twitter/X"
+              >
+                <Twitter className="w-5 h-5" />
+              </a>
+              <a 
+                href={socialLinks.telegram}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 border-2 border-gold rounded-full flex items-center justify-center text-gold hover:bg-gold hover:text-black transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2"
+                aria-label="Telegram"
+              >
+                <Send className="w-5 h-5" />
+              </a>
+            </div>
           </div>
         </div>
       </section>

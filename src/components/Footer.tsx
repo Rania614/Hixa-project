@@ -1,7 +1,15 @@
 import { useApp } from '@/context/AppContext';
+import { Instagram, MessageCircle, Twitter, Send } from 'lucide-react';
 
 export const Footer = () => {
   const { content, language } = useApp();
+  
+  const socialLinks = {
+    instagram: 'https://www.instagram.com/hixa_groups?utm_source=qr&igsh=MWo1MG03Z3c0NmF4cQ==',
+    whatsapp: 'https://chat.whatsapp.com/LQrlGeLPOFjGlhN7d1Tl52',
+    twitter: 'https://x.com/SOARdecor?t=0NFoc2u5IhVp5CGhoBgETg&s=09',
+    telegram: 'https://t.me/projectsco'
+  };
 
   return (
     <footer className="bg-[#0B0B0EB2] text-white py-12 px-6" dir={language === 'ar' ? 'rtl' : 'ltr'}>
@@ -32,32 +40,40 @@ export const Footer = () => {
           
           <div className="flex justify-center gap-4 md:gap-6 mb-12">
             <a 
-              href="#" 
-              className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
-              aria-label="Facebook"
-            >
-              <span className="text-xs font-bold">f</span>
-            </a>
-            <a 
-              href="#" 
-              className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
-              aria-label="Twitter"
-            >
-              <span className="text-xs font-bold">t</span>
-            </a>
-            <a 
-              href="#" 
+              href={socialLinks.instagram}
+              target="_blank"
+              rel="noopener noreferrer"
               className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
               aria-label="Instagram"
             >
-              <span className="text-xs font-bold">ig</span>
+              <Instagram className="w-5 h-5" />
             </a>
             <a 
-              href="#" 
+              href={socialLinks.whatsapp}
+              target="_blank"
+              rel="noopener noreferrer"
               className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
-              aria-label="LinkedIn"
+              aria-label="WhatsApp"
             >
-              <span className="text-xs font-bold">in</span>
+              <MessageCircle className="w-5 h-5" />
+            </a>
+            <a 
+              href={socialLinks.twitter}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
+              aria-label="Twitter/X"
+            >
+              <Twitter className="w-5 h-5" />
+            </a>
+            <a 
+              href={socialLinks.telegram}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
+              aria-label="Telegram"
+            >
+              <Send className="w-5 h-5" />
             </a>
           </div>
         </div>
