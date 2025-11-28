@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Instagram, MessageCircle, Twitter, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -170,24 +170,15 @@ const CompanyLanding = () => {
           )}
 
           <div className="flex-grow flex flex-col items-center justify-center px-4 sm:px-6 text-center">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold uppercase mb-4 sm:mb-6 text-gold transition-all duration-300">
+            <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-bold uppercase mb-6 sm:mb-8 text-gold transition-all duration-300">
               {heroTitle}
             </h1>
-            <p className="text-white text-lg sm:text-xl md:text-2xl lg:text-3xl max-w-2xl sm:max-w-3xl mx-auto opacity-90 transition-all duration-300">
+            <p className="text-white text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl max-w-3xl sm:max-w-4xl mx-auto opacity-90 transition-all duration-300 font-medium">
               {heroSubtitle}
             </p>
-            
-            {/* Static Sub-section - Engineering Identity */}
-            <div className="mt-8 sm:mt-10 md:mt-12 max-w-3xl mx-auto px-4 space-y-3 sm:space-y-4 transition-all duration-300">
-              <p className="text-white text-sm sm:text-base md:text-lg lg:text-xl font-normal text-center leading-relaxed opacity-90">
-                {language === 'en' 
-                  ? 'Transforming ideas into experiences that leave a lasting impact.' 
-                  : 'تحويل الأفكار إلى تجارب تترك أثراً دائماً.'}
-              </p>
-            </div>
 
             <Button 
-              className="mt-8 sm:mt-10 hexagon bg-transparent border-2 border-gold text-gold hover:bg-gold hover:text-black font-bold px-12 py-6 text-xl rounded-lg transition-all duration-300"
+              className="mt-10 sm:mt-12 md:mt-16 hexagon bg-transparent border-2 border-gold text-gold hover:bg-gold hover:text-black font-bold px-12 py-6 text-xl sm:text-2xl rounded-lg transition-all duration-300"
               onClick={handleGetStarted}
             >
               {language === 'en' ? 'Join Platform' : 'انضم إلى المنصة'}
@@ -331,18 +322,132 @@ const CompanyLanding = () => {
       {/* Jobs */}
       <Jobs />
 
-      {/* CTA Section */}
-      <section id="contact" className="py-16 sm:py-20 px-4 sm:px-6 bg-secondary/30 text-center">
-        <h2 className="text-3xl sm:text-4xl font-bold mb-4">{ctaTitle}</h2>
-        <p className="text-lg sm:text-xl text-muted-foreground mb-6">
-          {ctaSubtitle}
+      {/* Contact Section */}
+      <section id="contact" className="relative py-20 sm:py-24 px-4 sm:px-6 overflow-hidden">
+        {/* Engineering Background Pattern */}
+        <div className="absolute inset-0 opacity-10 pointer-events-none">
+          {/* Grid Pattern */}
+          <div className="absolute inset-0" style={{
+            backgroundImage: `
+              linear-gradient(rgba(212, 172, 53, 0.1) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(212, 172, 53, 0.1) 1px, transparent 1px)
+            `,
+            backgroundSize: '50px 50px'
+          }}></div>
+          
+          {/* Geometric Shapes */}
+          <div className="absolute top-10 left-10 w-32 h-32 border-2 border-[#D4AC35] rotate-45 opacity-20"></div>
+          <div className="absolute top-20 right-20 w-24 h-24 border-2 border-[#D4AC35] rounded-full opacity-20"></div>
+          <div className="absolute bottom-20 left-1/4 w-40 h-40 border-2 border-[#D4AC35] opacity-20" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }}></div>
+          <div className="absolute bottom-10 right-10 w-28 h-28 border-2 border-[#D4AC35] rotate-12 opacity-20"></div>
+          
+          {/* Engineering Lines */}
+          <svg className="absolute inset-0 w-full h-full opacity-10" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="engineering-pattern" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
+                <line x1="0" y1="0" x2="100" y2="100" stroke="#D4AC35" strokeWidth="1"/>
+                <line x1="100" y1="0" x2="0" y2="100" stroke="#D4AC35" strokeWidth="1"/>
+                <circle cx="50" cy="50" r="3" fill="#D4AC35"/>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#engineering-pattern)"/>
+          </svg>
+          
+          {/* Blueprint-style lines */}
+          <div className="absolute top-1/4 left-0 w-full h-px bg-[#D4AC35] opacity-10"></div>
+          <div className="absolute top-1/2 left-0 w-full h-px bg-[#D4AC35] opacity-10"></div>
+          <div className="absolute top-3/4 left-0 w-full h-px bg-[#D4AC35] opacity-10"></div>
+        </div>
+        
+        <div className="container mx-auto relative z-10">
+          <div className="max-w-6xl mx-auto">
+            {/* Header */}
+            <div className="text-center mb-16">
+              <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-gold to-gold-light bg-clip-text text-transparent">
+                {language === 'en' ? 'Let\'s Work Together' : 'دعنا نعمل معاً'}
+              </h2>
+              <p className="text-xl sm:text-2xl text-muted-foreground max-w-3xl mx-auto">
+                {language === 'en' 
+                  ? 'Ready to start your next engineering project? Get in touch with us today.' 
+                  : 'هل أنت مستعد لبدء مشروعك الهندسي القادم؟ تواصل معنا اليوم.'}
         </p>
-        <Button 
-          onClick={handleGetStarted} 
-          className="bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg"
-        >
-          {language === 'en' ? 'Join Platform' : 'انضم إلى المنصة'}
-        </Button>
+            </div>
+
+            {/* Contact Cards Row */}
+            <div className="max-w-4xl mx-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
+                <div className="glass-card p-6 rounded-xl text-center hover:scale-105 transition-transform">
+                  <div className="w-16 h-16 bg-gold rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-2xl">📧</span>
+                  </div>
+                  <h3 className="font-bold text-lg mb-2">{language === 'en' ? 'Email' : 'البريد الإلكتروني'}</h3>
+                  <p className="text-muted-foreground">info@hixa.com</p>
+                </div>
+                
+                <div className="glass-card p-6 rounded-xl text-center hover:scale-105 transition-transform">
+                  <div className="w-16 h-16 bg-gold rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-2xl">📞</span>
+                  </div>
+                  <h3 className="font-bold text-lg mb-2">{language === 'en' ? 'Phone' : 'الهاتف'}</h3>
+                  <p className="text-muted-foreground">+966 50 123 4567</p>
+                </div>
+                
+                <div className="glass-card p-6 rounded-xl text-center hover:scale-105 transition-transform">
+                  <div className="w-16 h-16 bg-gold rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-2xl">📍</span>
+                  </div>
+                  <h3 className="font-bold text-lg mb-2">{language === 'en' ? 'Location' : 'الموقع'}</h3>
+                  <p className="text-muted-foreground">Riyadh, Saudi Arabia</p>
+                </div>
+              </div>
+
+              {/* Social Media */}
+              <div className="text-center">
+                <p className="text-lg font-semibold text-foreground mb-6">
+                  {language === 'en' ? 'Follow us on our platforms' : 'تابعنا على منصاتنا'}
+                </p>
+                <div className="flex justify-center gap-4 md:gap-6">
+                  <a 
+                    href="https://www.instagram.com/hixa_groups?utm_source=qr&igsh=MWo1MG03Z3c0NmF4cQ=="
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
+                    aria-label="Instagram"
+                  >
+                    <Instagram className="w-5 h-5" />
+                  </a>
+                  <a 
+                    href="https://chat.whatsapp.com/LQrlGeLPOFjGlhN7d1Tl52"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
+                    aria-label="WhatsApp"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                  </a>
+                  <a 
+                    href="https://x.com/SOARdecor?t=0NFoc2u5IhVp5CGhoBgETg&s=09"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
+                    aria-label="Twitter/X"
+                  >
+                    <Twitter className="w-5 h-5" />
+                  </a>
+                  <a 
+                    href="https://t.me/projectsco"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
+                    aria-label="Telegram"
+                  >
+                    <Send className="w-5 h-5" />
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <Footer />

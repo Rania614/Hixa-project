@@ -33,6 +33,16 @@
     --cyan-light: 187 75% 70%;
     --cyan-dark: 187 75% 40%;
     --glass-bg: 0 0% 100% / 0.7;
+    
+    /* Hexa Brand Colors - Dark Theme with Gold & Silver */
+    --hexa-primary: 0 0% 0%; /* Black */
+    --hexa-secondary: 45 65% 52%; /* Gold */
+    --hexa-accent: 0 0% 75%; /* Silver/Light Gray */
+    --hexa-bg: 0 0% 8%; /* Very Dark Background */
+    --hexa-card: 0 0% 12%; /* Dark Card Background */
+    --hexa-text-dark: 0 0% 98%; /* White/Light Text */
+    --hexa-text-light: 0 0% 65%; /* Light Gray Text */
+    --hexa-border: 0 0% 20%; /* Dark Border */
   }
 
   .dark {
@@ -203,6 +213,115 @@
 
   .bg-glass-bg {
     background-color: hsl(var(--glass-bg));
+  }
+
+  /* Hexa Brand Color Utilities - Dark Theme */
+  .bg-hexa-primary {
+    background-color: hsl(var(--hexa-primary));
+  }
+
+  .text-hexa-primary {
+    color: hsl(var(--hexa-primary));
+  }
+
+  .bg-hexa-secondary {
+    background-color: hsl(var(--hexa-secondary));
+  }
+
+  .text-hexa-secondary {
+    color: hsl(var(--hexa-secondary));
+  }
+
+  .bg-hexa-accent {
+    background-color: hsl(var(--hexa-accent));
+  }
+
+  .text-hexa-accent {
+    color: hsl(var(--hexa-accent));
+  }
+
+  .bg-hexa-bg {
+    background-color: hsl(var(--hexa-bg));
+  }
+
+  .bg-hexa-card {
+    background-color: hsl(var(--hexa-card));
+  }
+
+  .text-hexa-dark {
+    color: hsl(var(--hexa-text-dark));
+  }
+
+  .text-hexa-light {
+    color: hsl(var(--hexa-text-light));
+  }
+
+  .border-hexa-border {
+    border-color: hsl(var(--hexa-border));
+  }
+
+  /* Dark Theme Card Styles for Dashboard */
+  .bg-hexa-bg [class*="Card"],
+  .bg-hexa-bg .card,
+  .bg-hexa-bg [data-card] {
+    background-color: hsl(var(--hexa-card));
+    border-color: hsl(var(--hexa-border));
+  }
+
+  .bg-hexa-bg [class*="CardTitle"],
+  .bg-hexa-bg .card-title,
+  .bg-hexa-bg h1,
+  .bg-hexa-bg h2,
+  .bg-hexa-bg h3 {
+    color: hsl(var(--hexa-text-dark));
+  }
+
+  .bg-hexa-bg [class*="CardDescription"],
+  .bg-hexa-bg .card-description,
+  .bg-hexa-bg p {
+    color: hsl(var(--hexa-text-light));
+  }
+
+  /* Button Dark Theme */
+  .bg-hexa-bg button[class*="outline"] {
+    border-color: hsl(var(--hexa-border));
+    background-color: hsl(var(--hexa-card));
+    color: hsl(var(--hexa-text-light));
+  }
+
+  .bg-hexa-bg button[class*="outline"]:hover {
+    background-color: hsl(var(--hexa-secondary) / 0.2);
+    color: hsl(var(--hexa-secondary));
+    border-color: hsl(var(--hexa-secondary));
+  }
+
+  /* Input Dark Theme */
+  .bg-hexa-bg input,
+  .bg-hexa-bg textarea {
+    background-color: hsl(var(--hexa-bg));
+    border-color: hsl(var(--hexa-border));
+    color: hsl(var(--hexa-text-dark));
+  }
+
+  .bg-hexa-bg input::placeholder,
+  .bg-hexa-bg textarea::placeholder {
+    color: hsl(var(--hexa-text-light));
+  }
+
+  /* Badge Dark Theme */
+  .bg-hexa-bg [class*="Badge"] {
+    border-color: hsl(var(--hexa-border));
+  }
+
+  /* RTL Support */
+  [dir="rtl"] {
+    direction: rtl;
+    text-align: right;
+  }
+
+  [dir="ltr"] {
+    direction: ltr;
+    text-align: left;
   }
 }
 

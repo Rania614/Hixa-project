@@ -63,7 +63,7 @@ const Landing = () => {
           </div>
           
           <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-slide-up">
-            Engineering Solutions
+            High Xpert ARTBUILD
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto animate-slide-up" style={{ animationDelay: '0.2s' }}>
             Connecting clients with professional engineers to execute engineering projects seamlessly
@@ -89,7 +89,7 @@ const Landing = () => {
                   <div className="p-2">
                     <button
                       onClick={() => {
-                        navigate('/auth/client');
+                        navigate('/admin/login');
                         setShowDropdown(false);
                       }}
                       className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10"
@@ -126,19 +126,48 @@ const Landing = () => {
               onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
-                const email = formData.get('email') as string;
+                const contact = formData.get('contact') as string;
+                const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                const phonePattern = /^[\d\s\-\+\(\)]{8,}$/;
+                
+                if (!emailPattern.test(contact) && !phonePattern.test(contact)) {
+                  alert(language === 'en' 
+                    ? 'Please enter a valid email or phone number' 
+                    : 'يرجى إدخال بريد إلكتروني أو رقم هاتف صحيح');
+                  return;
+                }
+                
                 // TODO: Add subscription API call
-                console.log('Subscribe:', email);
+                console.log('Subscribe:', contact);
                 alert(language === 'en' ? 'Thank you for subscribing!' : 'شكراً لك على الاشتراك!');
+                (e.target as HTMLFormElement).reset();
               }}
               className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto mb-8"
             >
               <input
-                type="email"
-                name="email"
-                placeholder={language === 'en' ? 'Enter your email' : 'أدخل بريدك الإلكتروني'}
+                type="text"
+                name="contact"
+                placeholder={language === 'en' ? 'Enter your email or phone number' : 'أدخل بريدك الإلكتروني أو رقم هاتفك'}
                 required
                 className="flex-1 px-4 py-3 rounded-lg bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-gold"
+                onInput={(e) => {
+                  const value = (e.target as HTMLInputElement).value;
+                  // Remove validation message if user is typing
+                  (e.target as HTMLInputElement).setCustomValidity('');
+                }}
+                onInvalid={(e) => {
+                  const value = (e.target as HTMLInputElement).value;
+                  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                  const phonePattern = /^[\d\s\-\+\(\)]{8,}$/;
+                  
+                  if (!emailPattern.test(value) && !phonePattern.test(value)) {
+                    (e.target as HTMLInputElement).setCustomValidity(
+                      language === 'en' 
+                        ? 'Please enter a valid email or phone number' 
+                        : 'يرجى إدخال بريد إلكتروني أو رقم هاتف صحيح'
+                    );
+                  }
+                }}
               />
               <button 
                 type="submit"
@@ -149,43 +178,48 @@ const Landing = () => {
             </form>
             
             {/* Social Media Icons */}
-            <div className="flex justify-center gap-4 md:gap-6">
-              <a 
-                href={socialLinks.instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 border-2 border-gold rounded-full flex items-center justify-center text-gold hover:bg-gold hover:text-black transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2"
-                aria-label="Instagram"
-              >
-                <Instagram className="w-5 h-5" />
-              </a>
-              <a 
-                href={socialLinks.whatsapp}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 border-2 border-gold rounded-full flex items-center justify-center text-gold hover:bg-gold hover:text-black transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2"
-                aria-label="WhatsApp"
-              >
-                <MessageCircle className="w-5 h-5" />
-              </a>
-              <a 
-                href={socialLinks.twitter}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 border-2 border-gold rounded-full flex items-center justify-center text-gold hover:bg-gold hover:text-black transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2"
-                aria-label="Twitter/X"
-              >
-                <Twitter className="w-5 h-5" />
-              </a>
-              <a 
-                href={socialLinks.telegram}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 border-2 border-gold rounded-full flex items-center justify-center text-gold hover:bg-gold hover:text-black transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2"
-                aria-label="Telegram"
-              >
-                <Send className="w-5 h-5" />
-              </a>
+            <div className="mt-8">
+              <p className="text-lg font-medium text-foreground mb-4">
+                {language === 'en' ? 'Follow us on our platforms' : 'تابعنا على منصاتنا'}
+              </p>
+              <div className="flex justify-center gap-4 md:gap-6">
+                <a 
+                  href={socialLinks.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
+                  aria-label="Instagram"
+                >
+                  <Instagram className="w-5 h-5" />
+                </a>
+                <a 
+                  href={socialLinks.whatsapp}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
+                  aria-label="WhatsApp"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                </a>
+                <a 
+                  href={socialLinks.twitter}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
+                  aria-label="Twitter/X"
+                >
+                  <Twitter className="w-5 h-5" />
+                </a>
+                <a 
+                  href={socialLinks.telegram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
+                  aria-label="Telegram"
+                >
+                  <Send className="w-5 h-5" />
+                </a>
+              </div>
             </div>
           </div>
         </div>

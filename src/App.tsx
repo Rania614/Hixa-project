@@ -11,9 +11,34 @@ import AdminLogin from "./pages/admin-dashboard/AdminLogin";
 import AdminDashboard from "./pages/admin-dashboard/AdminDashboard";
 import ContentManagement from "./pages/admin-dashboard/ContentManagement";
 import Subscribers from "./pages/admin-dashboard/Subscribers";
+import AdminMessages from "./pages/admin-dashboard/AdminMessages";
 import NotFound from "./pages/NotFound";
 import CompanyLanding from "./pages/CompanyLanding";
 import AuthPage from "./pages/AuthPage";
+
+// Client Dashboard
+import ClientDashboard from "./pages/client-dashboard/ClientDashboard";
+import ClientProjects from "./pages/client-dashboard/ClientProjects";
+import ClientMessages from "./pages/client-dashboard/ClientMessages";
+import ClientNotifications from "./pages/client-dashboard/ClientNotifications";
+import ClientContracts from "./pages/client-dashboard/ClientContracts";
+import ClientProfile from "./pages/client-dashboard/ClientProfile";
+import ProjectDetails from "./pages/client-dashboard/ProjectDetails";
+import CreateProject from "./pages/client-dashboard/CreateProject";
+import EngineerProfileView from "./pages/client-dashboard/EngineerProfileView";
+
+// Engineer Dashboard
+import EngineerDashboard from "./pages/engineer-dashboard/EngineerDashboard";
+import AvailableProjects from "./pages/engineer-dashboard/AvailableProjects";
+import EngineerProjects from "./pages/engineer-dashboard/EngineerProjects";
+import EngineerMessages from "./pages/engineer-dashboard/EngineerMessages";
+import EngineerNotifications from "./pages/engineer-dashboard/EngineerNotifications";
+import EngineerPortfolio from "./pages/engineer-dashboard/EngineerPortfolio";
+import AddWork from "./pages/engineer-dashboard/AddWork";
+import WorkDetails from "./pages/engineer-dashboard/WorkDetails";
+import EngineerProfile from "./pages/engineer-dashboard/EngineerProfile";
+import EngineerProjectDetails from "./pages/engineer-dashboard/EngineerProjectDetails";
+import SubmitProposal from "./pages/engineer-dashboard/SubmitProposal";
 
 const queryClient = new QueryClient();
 
@@ -198,6 +223,39 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/admin/messages"
+        element={
+          <ProtectedRoute>
+            <AdminMessages />
+          </ProtectedRoute>
+        }
+      />
+      
+      {/* Client Dashboard Routes */}
+      <Route path="/client/dashboard" element={<ClientDashboard />} />
+      <Route path="/client/projects" element={<ClientProjects />} />
+      <Route path="/client/projects/new" element={<CreateProject />} />
+      <Route path="/client/projects/:id" element={<ProjectDetails />} />
+      <Route path="/client/engineers/:id" element={<EngineerProfileView />} />
+      <Route path="/client/messages" element={<ClientMessages />} />
+      <Route path="/client/notifications" element={<ClientNotifications />} />
+      <Route path="/client/contracts" element={<ClientContracts />} />
+      <Route path="/client/profile" element={<ClientProfile />} />
+      
+      {/* Engineer Dashboard Routes */}
+      <Route path="/engineer/dashboard" element={<EngineerDashboard />} />
+      <Route path="/engineer/available-projects" element={<AvailableProjects />} />
+      <Route path="/engineer/projects" element={<EngineerProjects />} />
+      <Route path="/engineer/projects/:id" element={<EngineerProjectDetails />} />
+      <Route path="/engineer/projects/:id/proposal" element={<SubmitProposal />} />
+      <Route path="/engineer/messages" element={<EngineerMessages />} />
+      <Route path="/engineer/notifications" element={<EngineerNotifications />} />
+      <Route path="/engineer/portfolio" element={<EngineerPortfolio />} />
+      <Route path="/engineer/portfolio/add" element={<AddWork />} />
+      <Route path="/engineer/portfolio/:id" element={<WorkDetails />} />
+      <Route path="/engineer/profile" element={<EngineerProfile />} />
+      
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
@@ -211,7 +269,12 @@ const App = () => {
           {/* Toasters */}
           <Toaster />
           <Sonner />
-          <BrowserRouter>
+          <BrowserRouter
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true,
+            }}
+          >
             <AppRoutes />
           </BrowserRouter>
         </TooltipProvider>

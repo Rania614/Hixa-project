@@ -21,14 +21,14 @@ export const Hero = () => {
       </p>
 {/* 
       <div className="flex gap-4">
-        <Button onClick={() => navigate("/auth/client")}>
+        <Button onClick={() => navigate("/admin/login")}>
           <User className="mr-2" />
-          {language === "ar" ? "ادخل كعميل" : "Enter as Client"}
+          {language === "ar" ? "تسجيل الدخول" : "Log In"}
         </Button>
 
-        <Button onClick={() => navigate("/auth/partner")}>
+        <Button onClick={() => navigate("/admin/login")}>
           <Handshake className="mr-2" />
-          {language === "ar" ? "ادخل كشريك" : "Enter as Partner"}
+          {language === "ar" ? "تسجيل الدخول" : "Log In"}
         </Button>
       </div> */}
     </section>

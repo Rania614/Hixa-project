@@ -73,10 +73,34 @@ const AdminLogin = () => {
       }
     } catch (err: any) {
       console.error('Login failed:', err.response || err.message);
-      const errorMessage = err.response?.data?.message || 
-                          err.response?.data?.error || 
-                          'Login failed. Please check your credentials.';
-      setError(errorMessage);
+      
+      // Extract error message - server may return it as string or in object
+      const getErrorMessage = (defaultMsg: string) => {
+        if (!err.response?.data) return defaultMsg;
+        
+        // If data is a string, use it directly
+        if (typeof err.response.data === 'string') {
+          return err.response.data;
+        }
+        
+        // If data is an object, check for message or error fields
+        return err.response.data?.message || 
+               err.response.data?.error || 
+               defaultMsg;
+      };
+      
+      // Handle different error types
+      if (err.response?.status === 429) {
+        setError(getErrorMessage('Too many login attempts. Please wait a few minutes and try again.'));
+      } else if (err.response?.status === 401) {
+        setError(getErrorMessage('Invalid email or password. Please check your credentials.'));
+      } else if (err.response?.status === 403) {
+        setError(getErrorMessage('Access denied. Admin credentials required.'));
+      } else if (err.response?.status >= 500) {
+        setError('Server error. Please try again later.');
+      } else {
+        setError(getErrorMessage('Login failed. Please check your credentials.'));
+      }
     }
   };
 
@@ -93,7 +117,7 @@ const AdminLogin = () => {
               <Lock className="h-8 w-8 text-gold" />
             </HexagonIcon>
           </div>
-          <CardTitle className="text-3xl font-bold">Admin Login</CardTitle>
+          <CardTitle className="text-3xl font-bold">Login</CardTitle>
           <CardDescription>Enter your credentials to access the dashboard</CardDescription>
         </CardHeader>
         <CardContent>
@@ -102,7 +126,7 @@ const AdminLogin = () => {
               type="email" 
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
-              placeholder="admin@example.com" 
+              placeholder="h@example.com" 
               autoComplete="email"
               required 
             />

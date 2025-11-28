@@ -22,7 +22,9 @@ export const AdminSidebar = () => {
 
   const handleLogout = () => {
     setIsAuthenticated(false);
-    navigate('/');
+    localStorage.removeItem('token');
+    // Navigate to CompanyLanding page
+    window.location.href = '/';
   };
 
   // Navigation items
@@ -41,6 +43,11 @@ export const AdminSidebar = () => {
       to: "/admin/subscribers",
       icon: Mail,
       label: language === 'en' ? 'Subscribers' : 'المشتركون'
+    },
+    {
+      to: "/admin/messages",
+      icon: MessageSquare,
+      label: language === 'en' ? 'Messages' : 'الرسائل'
     },
     // {
     //   to: "/admin/users",

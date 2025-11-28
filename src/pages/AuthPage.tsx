@@ -18,9 +18,17 @@ const AuthPage = () => {
   const initialMode = mode === 'register' ? 'register' : 'login';
 
   const handleAuthSuccess = () => {
-    // Authentication successful - redirect to dashboard
+    // Authentication successful - redirect to appropriate dashboard based on role
     setIsAuthenticated(true);
-    navigate('/admin/dashboard');
+    
+    if (role === 'client') {
+      navigate('/client/dashboard');
+    } else if (role === 'partner') {
+      navigate('/engineer/dashboard');
+    } else {
+      // Default to admin dashboard if role is not specified
+      navigate('/admin/dashboard');
+    }
   };
 
   const handleClose = () => {

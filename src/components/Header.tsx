@@ -19,14 +19,14 @@ export const Header = () => {
   };
 
   const handleClientLogin = () => {
-    // Navigate to the client authentication page
-    navigate('/auth/client');
+    // Navigate to admin login page
+    navigate('/admin/login');
     setShowDropdown(false);
   };
 
   const handlePartnerLogin = () => {
-    // Navigate to the partner authentication page
-    navigate('/auth/partner');
+    // Navigate to admin login page
+    navigate('/admin/login');
     setShowDropdown(false);
   };
 
@@ -168,7 +168,7 @@ export const Header = () => {
                     <div className="p-2">
                       <button
                         onClick={() => {
-                          navigate('/auth/client');
+                          navigate('/admin/login');
                           setShowPlatformDropdown(false);
                         }}
                         className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10"
@@ -230,7 +230,7 @@ export const Header = () => {
                       <div className="p-2">
                         <button
                           onClick={() => {
-                            navigate('/auth/client');
+                            navigate('/admin/login');
                             setShowPlatformDropdown(false);
                           }}
                           className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10"
