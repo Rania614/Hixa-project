@@ -11,6 +11,7 @@ const Landing = () => {
   const { language } = useApp();
   const [subscribeHover, setSubscribeHover] = useState(false);
   const [getStartedHover, setGetStartedHover] = useState(false);
+  const [subscribeFormHover, setSubscribeFormHover] = useState(false);
   
   const socialLinks = {
     instagram: 'https://www.instagram.com/hixa_groups?utm_source=qr&igsh=MWo1MG03Z3c0NmF4cQ==',
@@ -138,9 +139,14 @@ const Landing = () => {
               />
               <button 
                 type="submit"
-                className="hexagon bg-gold hover:bg-gold-dark text-black font-semibold px-8 py-3"
+                onMouseEnter={() => setSubscribeFormHover(true)}
+                onMouseLeave={() => setSubscribeFormHover(false)}
+                onClick={(e) => {
+                  e.preventDefault();
+                }}
+                className="hexagon bg-gold hover:bg-gold-dark text-black font-semibold px-8 py-3 cursor-not-allowed"
               >
-                {language === 'en' ? 'Subscribe' : 'اشترك'}
+                {subscribeFormHover ? (language === 'en' ? 'Coming Soon' : 'قريباً') : (language === 'en' ? 'Subscribe' : 'اشترك')}
               </button>
             </form>
             
