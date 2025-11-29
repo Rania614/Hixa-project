@@ -3,16 +3,14 @@ import { Footer } from '@/components/Footer';
 import { Chatbot } from '@/components/Chatbot';
 import { Hero } from '@/components/Hero';
 import { About } from '@/components/About';
-import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Instagram, MessageCircle, Twitter, Send } from 'lucide-react';
-import { User, ChevronDown } from 'lucide-react';
 
 const Landing = () => {
-  const navigate = useNavigate();
   const { language } = useApp();
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [subscribeHover, setSubscribeHover] = useState(false);
+  const [getStartedHover, setGetStartedHover] = useState(false);
   
   const socialLinks = {
     instagram: 'https://www.instagram.com/hixa_groups?utm_source=qr&igsh=MWo1MG03Z3c0NmF4cQ==',
@@ -20,25 +18,6 @@ const Landing = () => {
     twitter: 'https://x.com/HIXAGroup',
     telegram: 'https://t.me/projectsco'
   };
-
-  const handleSubscribe = () => {
-    // Scroll to subscription section or navigate to it
-    const subscriptionSection = document.getElementById('subscription');
-    if (subscriptionSection) {
-      subscriptionSection.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (showDropdown && !(e.target as Element).closest('.dropdown-container')) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [showDropdown]);
 
   return (
     <div className="min-h-screen">
@@ -70,36 +49,24 @@ const Landing = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up" style={{ animationDelay: '0.4s' }}>
             <button 
-              onClick={handleSubscribe}
-              className="hexagon bg-transparent border-2 border-gold text-gold hover:bg-gold hover:text-black font-semibold px-6 py-3 text-base flex items-center gap-2"
+              onMouseEnter={() => setSubscribeHover(true)}
+              onMouseLeave={() => setSubscribeHover(false)}
+              onClick={(e) => e.preventDefault()}
+              className="hexagon bg-transparent border-2 border-gold text-gold hover:bg-gold hover:text-black font-semibold px-6 py-3 text-base flex items-center gap-2 cursor-not-allowed"
             >
-              <span>{language === 'en' ? 'Subscribe' : 'اشترك'}</span>
+              <span>{subscribeHover ? (language === 'en' ? 'Coming Soon' : 'قريباً') : (language === 'en' ? 'Subscribe' : 'اشترك')}</span>
             </button>
             <div className="dropdown-container relative">
               <button 
-                onClick={() => setShowDropdown(!showDropdown)}
-                className="hexagon bg-gold hover:bg-gold-dark text-black font-semibold px-6 py-3 text-base flex items-center gap-2"
+                onMouseEnter={() => setGetStartedHover(true)}
+                onMouseLeave={() => setGetStartedHover(false)}
+                onClick={(e) => {
+                  e.preventDefault();
+                }}
+                className="hexagon bg-gold hover:bg-gold-dark text-black font-semibold px-6 py-3 text-base flex items-center gap-2 cursor-not-allowed"
               >
-                <span>{language === 'en' ? 'Get Started' : 'ابدأ الآن'}</span>
-                <ChevronDown className={`h-4 w-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
+                <span>{getStartedHover ? (language === 'en' ? 'Coming Soon' : 'قريباً') : (language === 'en' ? 'Get Started' : 'ابدأ الآن')}</span>
               </button>
-              
-              {showDropdown && (
-                <div className="absolute top-full right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-lg z-50 animate-fade-in">
-                  <div className="p-2">
-                    <button
-                      onClick={() => {
-                        navigate('/admin/login');
-                        setShowDropdown(false);
-                      }}
-                      className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10"
-                    >
-                      <User className="h-4 w-4" />
-                      {language === 'en' ? 'Log In' : 'تسجيل الدخول'}
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
