@@ -7,7 +7,7 @@ export const Footer = () => {
   const socialLinks = {
     instagram: 'https://www.instagram.com/hixa_groups?utm_source=qr&igsh=MWo1MG03Z3c0NmF4cQ==',
     whatsapp: 'https://chat.whatsapp.com/LQrlGeLPOFjGlhN7d1Tl52',
-    twitter: 'https://x.com/SOARdecor?t=0NFoc2u5IhVp5CGhoBgETg&s=09',
+    twitter: 'https://x.com/HIXAGroup',
     telegram: 'https://t.me/projectsco'
   };
 

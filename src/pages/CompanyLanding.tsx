@@ -426,7 +426,7 @@ const CompanyLanding = () => {
                     <MessageCircle className="w-5 h-5" />
                   </a>
                   <a 
-                    href="https://x.com/SOARdecor?t=0NFoc2u5IhVp5CGhoBgETg&s=09"
+                    href="https://x.com/HIXAGroup"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
