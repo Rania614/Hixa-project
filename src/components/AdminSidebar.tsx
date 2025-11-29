@@ -39,16 +39,16 @@ export const AdminSidebar = () => {
       icon: FileEdit,
       label: language === 'en' ? 'Landing Page Content' : 'تحكم محتوى الصفحة الرئيسية'
     },
-    {
-      to: "/admin/subscribers",
-      icon: Mail,
-      label: language === 'en' ? 'Subscribers' : 'المشتركون'
-    },
-    {
-      to: "/admin/messages",
-      icon: MessageSquare,
-      label: language === 'en' ? 'Messages' : 'الرسائل'
-    },
+    // {
+    //   to: "/admin/subscribers",
+    //   icon: Mail,
+    //   label: language === 'en' ? 'Subscribers' : 'المشتركون'
+    // },
+    // {
+    //   to: "/admin/messages",
+    //   icon: MessageSquare,
+    //   label: language === 'en' ? 'Messages' : 'الرسائل'
+    // },
     // {
     //   to: "/admin/users",
     //   icon: Users,
