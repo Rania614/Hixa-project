@@ -729,6 +729,121 @@ const ContentManagement = () => {
                                 </div>
                               </div>
 
+                              {/* Image Upload */}
+                              <div>
+                                <label className="text-sm font-medium mb-1 block">
+                                  Upload Project Image
+                                </label>
+                                <div className="space-y-2">
+                                  <Input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={async (e) => {
+                                      const file = e.target.files?.[0];
+                                      if (!file) return;
+
+                                      // Validate file size (max 5MB)
+                                      if (file.size > 5 * 1024 * 1024) {
+                                        alert(language === 'en' 
+                                          ? 'Image size must be less than 5MB' 
+                                          : 'يجب أن يكون حجم الصورة أقل من 5MB');
+                                        return;
+                                      }
+
+                                      try {
+                                        // Create FormData for file upload
+                                        const formData = new FormData();
+                                        formData.append('image', file);
+                                        formData.append('folder', 'hixa/projects');
+
+                                        // Upload image to API
+                                        const uploadResponse = await http.post('/content/upload', formData);
+
+                                        // Get uploaded image URL - try different response formats
+                                        const imageUrl = uploadResponse.data?.url || 
+                                                       uploadResponse.data?.data?.url || 
+                                                       uploadResponse.data?.imageUrl ||
+                                                       uploadResponse.data?.secure_url;
+                                        
+                                        if (imageUrl) {
+                                          // Update project image with uploaded URL
+                                          setContent({
+                                            projects: {
+                                              ...projectsData,
+                                              items: safeProjects.map((proj, idx) => {
+                                                const projId = proj._id || proj.id || `project-${idx}`;
+                                                return projId === projectId
+                                                  ? { ...proj, image: imageUrl }
+                                                  : proj;
+                                              }),
+                                            },
+                                          });
+                                          
+                                          alert(language === 'en' 
+                                            ? 'Image uploaded successfully!' 
+                                            : 'تم رفع الصورة بنجاح!');
+                                        } else {
+                                          throw new Error('No URL returned from upload');
+                                        }
+                                      } catch (err: any) {
+                                        console.error('Upload error details:', {
+                                          message: err.message,
+                                          status: err.response?.status,
+                                          statusText: err.response?.statusText,
+                                          data: err.response?.data,
+                                          url: err.config?.url,
+                                        });
+                                        
+                                        // Check if it's a 500 error (server error)
+                                        if (err.response?.status === 500) {
+                                          const errorDetails = err.response?.data?.message || 
+                                                             err.response?.data?.error || 
+                                                             'Server error occurred';
+                                          
+                                          const errorMsg = language === 'en'
+                                            ? `Image upload failed (Server Error 500): ${errorDetails}\n\nThe upload endpoint may not be configured on the backend. Please use the "Image URL" field below to enter the image URL directly, or contact the backend team to enable the upload endpoint.`
+                                            : `فشل رفع الصورة (خطأ في الخادم 500): ${errorDetails}\n\nنقطة رفع الصور قد لا تكون مفعلة في الـ backend. يرجى استخدام حقل "رابط الصورة" أدناه لإدخال رابط الصورة مباشرة، أو الاتصال بفريق الـ backend لتفعيل نقطة الرفع.`;
+                                          alert(errorMsg);
+                                        } else {
+                                          const errorMessage = err.response?.data?.message || 
+                                                             err.response?.data?.error || 
+                                                             err.message || 
+                                                             'Unknown error';
+                                          
+                                          alert(language === 'en' 
+                                            ? `Failed to upload image: ${errorMessage}` 
+                                            : `فشل رفع الصورة: ${errorMessage}`);
+                                        }
+                                      }
+                                      
+                                      // Reset file input
+                                      e.target.value = '';
+                                    }}
+                                    className="cursor-pointer"
+                                  />
+                                  <p className="text-xs text-muted-foreground">
+                                    {language === 'en' 
+                                      ? 'JPG, PNG or GIF. Max size 5MB. Image will be uploaded to Cloudinary and URL will be set automatically.'
+                                      : 'JPG أو PNG أو GIF. الحد الأقصى للحجم 5MB. سيتم رفع الصورة إلى Cloudinary وستتم إضافة الرابط تلقائياً.'}
+                                  </p>
+                                  {p.image && (
+                                    <div className="mt-2">
+                                      <p className="text-xs text-muted-foreground mb-1">
+                                        {language === 'en' ? 'Current Image:' : 'الصورة الحالية:'}
+                                      </p>
+                                      <img 
+                                        src={p.image} 
+                                        alt="Project Image" 
+                                        className="h-32 w-full object-cover border rounded"
+                                        onError={(e) => {
+                                          e.currentTarget.style.display = 'none';
+                                        }}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
                               {/* Image and Link Fields */}
                               <div className="grid grid-cols-2 gap-4">
                                 <div>
