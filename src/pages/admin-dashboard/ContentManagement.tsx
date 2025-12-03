@@ -12,6 +12,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { HexagonIcon } from '@/components/ui/hexagon-icon';
 import { Plus, Trash2, ChevronUp, ChevronDown, ChevronDown as ChevronDownIcon } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { http } from '@/services/http';
 
 const ContentManagement = () => {
   const [activeTab, setActiveTab] = useState('hero');
@@ -920,21 +921,118 @@ const ContentManagement = () => {
                                 </div>
                               </div>
 
-                              {/* Logo Upload - Disabled for now, use URL instead */}
+                              {/* Logo Upload */}
                               <div>
                                 <label className="text-sm font-medium mb-1 block">
-                                  Upload Logo (Currently disabled - use Logo URL instead)
+                                  Upload Logo
                                 </label>
-                                <div className="flex items-center gap-2">
+                                <div className="space-y-2">
                                   <Input
                                     type="file"
                                     accept="image/*"
-                                    disabled
-                                    className="cursor-not-allowed opacity-50"
+                                    onChange={async (e) => {
+                                      const file = e.target.files?.[0];
+                                      if (!file) return;
+
+                                      // Validate file size (max 5MB)
+                                      if (file.size > 5 * 1024 * 1024) {
+                                        alert(language === 'en' 
+                                          ? 'Image size must be less than 5MB' 
+                                          : 'يجب أن يكون حجم الصورة أقل من 5MB');
+                                        return;
+                                      }
+
+                                      try {
+                                        // Create FormData for file upload
+                                        const formData = new FormData();
+                                        formData.append('image', file);
+                                        formData.append('folder', 'hixa/partners');
+
+                                        // Upload image to API
+                                        const uploadResponse = await http.post('/content/upload', formData);
+
+                                        // Get uploaded image URL - try different response formats
+                                        const imageUrl = uploadResponse.data?.url || 
+                                                       uploadResponse.data?.data?.url || 
+                                                       uploadResponse.data?.imageUrl ||
+                                                       uploadResponse.data?.secure_url;
+                                        
+                                        if (imageUrl) {
+                                          // Update partner logo with uploaded URL
+                                          setContent({
+                                            partners: {
+                                              ...partnersData,
+                                              items: safePartners.map((partner, idx) => {
+                                                const partId = partner._id || partner.id || `partner-${idx}`;
+                                                return partId === partnerId
+                                                  ? { ...partner, logo: imageUrl }
+                                                  : partner;
+                                              }),
+                                            },
+                                          });
+                                          
+                                          alert(language === 'en' 
+                                            ? 'Image uploaded successfully!' 
+                                            : 'تم رفع الصورة بنجاح!');
+                                        } else {
+                                          throw new Error('No URL returned from upload');
+                                        }
+                                      } catch (err: any) {
+                                        console.error('Upload error details:', {
+                                          message: err.message,
+                                          status: err.response?.status,
+                                          statusText: err.response?.statusText,
+                                          data: err.response?.data,
+                                          url: err.config?.url,
+                                        });
+                                        
+                                        // Check if it's a 500 error (server error)
+                                        if (err.response?.status === 500) {
+                                          const errorDetails = err.response?.data?.message || 
+                                                             err.response?.data?.error || 
+                                                             'Server error occurred';
+                                          
+                                          const errorMsg = language === 'en'
+                                            ? `Image upload failed (Server Error 500): ${errorDetails}\n\nThe upload endpoint may not be configured on the backend. Please use the "Logo URL" field below to enter the image URL directly, or contact the backend team to enable the upload endpoint.`
+                                            : `فشل رفع الصورة (خطأ في الخادم 500): ${errorDetails}\n\nنقطة رفع الصور قد لا تكون مفعلة في الـ backend. يرجى استخدام حقل "رابط الشعار" أدناه لإدخال رابط الصورة مباشرة، أو الاتصال بفريق الـ backend لتفعيل نقطة الرفع.`;
+                                          alert(errorMsg);
+                                        } else {
+                                          const errorMessage = err.response?.data?.message || 
+                                                             err.response?.data?.error || 
+                                                             err.message || 
+                                                             'Unknown error';
+                                          
+                                          alert(language === 'en' 
+                                            ? `Failed to upload image: ${errorMessage}` 
+                                            : `فشل رفع الصورة: ${errorMessage}`);
+                                        }
+                                      }
+                                      
+                                      // Reset file input
+                                      e.target.value = '';
+                                    }}
+                                    className="cursor-pointer"
                                   />
                                   <p className="text-xs text-muted-foreground">
-                                    File upload is disabled. Please upload your image to a hosting service (e.g., Cloudinary, Imgur) and use the Logo URL field below.
+                                    {language === 'en' 
+                                      ? 'JPG, PNG or GIF. Max size 5MB. Image will be uploaded to Cloudinary and URL will be set automatically.'
+                                      : 'JPG أو PNG أو GIF. الحد الأقصى للحجم 5MB. سيتم رفع الصورة إلى Cloudinary وستتم إضافة الرابط تلقائياً.'}
                                   </p>
+                                  {p.logo && (
+                                    <div className="mt-2">
+                                      <p className="text-xs text-muted-foreground mb-1">
+                                        {language === 'en' ? 'Current Logo:' : 'الشعار الحالي:'}
+                                      </p>
+                                      <img 
+                                        src={p.logo} 
+                                        alt="Partner Logo" 
+                                        className="h-20 w-20 object-contain border rounded"
+                                        onError={(e) => {
+                                          e.currentTarget.style.display = 'none';
+                                        }}
+                                      />
+                                    </div>
+                                  )}
                                 </div>
                               </div>
 
