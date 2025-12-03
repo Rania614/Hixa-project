@@ -6,12 +6,15 @@ import { About } from '@/components/About';
 import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Instagram, MessageCircle, Twitter, Send } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Landing = () => {
   const { language } = useApp();
+  const navigate = useNavigate();
   const [subscribeHover, setSubscribeHover] = useState(false);
   const [getStartedHover, setGetStartedHover] = useState(false);
   const [subscribeFormHover, setSubscribeFormHover] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   
   const socialLinks = {
     instagram: 'https://www.instagram.com/hixa_groups?utm_source=qr&igsh=MWo1MG03Z3c0NmF4cQ==',
@@ -60,13 +63,53 @@ const Landing = () => {
             <div className="dropdown-container relative">
               <button 
                 onMouseEnter={() => setGetStartedHover(true)}
-                onMouseLeave={() => setGetStartedHover(false)}
+                onMouseLeave={() => {
+                  setGetStartedHover(false);
+                  // Delay closing dropdown to allow hover on menu items
+                  setTimeout(() => {
+                    if (!dropdownOpen) return;
+                    const dropdown = document.querySelector('.dropdown-menu');
+                    if (dropdown && !dropdown.matches(':hover')) {
+                      setDropdownOpen(false);
+                    }
+                  }, 200);
+                }}
                 onClick={(e) => {
                   e.preventDefault();
+                  setDropdownOpen(!dropdownOpen);
                 }}
-                className="hexagon bg-gold hover:bg-gold-dark text-black font-semibold px-6 py-3 text-base flex items-center gap-2 cursor-not-allowed"
+                className="hexagon bg-gold hover:bg-gold-dark text-black font-semibold px-6 py-3 text-base flex items-center gap-2 relative"
               >
                 <span>{getStartedHover ? (language === 'en' ? 'Coming Soon' : 'قريباً') : (language === 'en' ? 'Get Started' : 'ابدأ الآن')}</span>
+                {dropdownOpen && (
+                  <div 
+                    className="dropdown-menu absolute top-full left-0 mt-2 w-48 bg-background/95 backdrop-blur-sm border border-gold/20 rounded-lg shadow-lg z-50 py-2 opacity-0 animate-in fade-in slide-in-from-top-2 duration-200"
+                    onMouseEnter={() => setDropdownOpen(true)}
+                    onMouseLeave={() => setDropdownOpen(false)}
+                    style={{ opacity: 1 }}
+                  >
+                    <button
+                      onClick={() => {
+                        navigate('/client/dashboard');
+                        setDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-muted-foreground hover:text-gold hover:bg-gold/10 transition-colors duration-200 opacity-60 hover:opacity-100"
+                      title={language === 'en' ? 'Client Dashboard' : 'لوحة تحكم العميل'}
+                    >
+                      {language === 'en' ? 'Client Dashboard' : 'لوحة تحكم العميل'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigate('/engineer/dashboard');
+                        setDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-muted-foreground hover:text-gold hover:bg-gold/10 transition-colors duration-200 opacity-60 hover:opacity-100"
+                      title={language === 'en' ? 'Engineer Dashboard' : 'لوحة تحكم المهندس'}
+                    >
+                      {language === 'en' ? 'Engineer Dashboard' : 'لوحة تحكم المهندس'}
+                    </button>
+                  </div>
+                )}
               </button>
             </div>
           </div>
