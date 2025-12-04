@@ -551,8 +551,8 @@ const ContentManagement = () => {
                                 </div>
                               </div>
 
-                              {/* Code Field */}
-                              <div>
+                              {/* Code Field - Commented out */}
+                              {/* <div>
                                 <label className="text-sm font-medium mb-1 block">Code</label>
                                 <Input
                                   placeholder="Service Code"
@@ -570,7 +570,7 @@ const ContentManagement = () => {
                                     })
                                   }
                                 />
-                              </div>
+                              </div> */}
                             </CardContent>
                           </CollapsibleContent>
                   </Card>

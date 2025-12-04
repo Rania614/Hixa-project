@@ -92,7 +92,12 @@ const CompanyLanding = () => {
     getFieldValue(about, "description", language) ||
     getFieldValue(about, "details", language);
 
-  const safeServices = Array.isArray(services) ? services : [];
+  // Handle services structure - can be array or object with items array
+  const safeServices = Array.isArray(services) 
+    ? services 
+    : (services && typeof services === 'object' && 'items' in services && Array.isArray((services as any).items))
+    ? (services as any).items
+    : [];
   const safeProjects = Array.isArray(projects) ? projects : [];
   const aboutValues = Array.isArray(about?.values)
     ? about.values
@@ -197,7 +202,7 @@ const CompanyLanding = () => {
             </p>
           </div>
           {aboutValues.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
               {aboutValues.map((value: any, index: number) => {
                 const valueTitle =
                   getFieldValue(value, "title", language) ||
@@ -209,12 +214,31 @@ const CompanyLanding = () => {
                   "";
 
                 return (
-                  <div key={index} className="glass-card p-6 sm:p-8 rounded-xl">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gold rounded-full flex items-center justify-center mb-4 sm:mb-6">
-                      <span className="text-primary-foreground font-bold">{index + 1}</span>
+                  <div 
+                    key={index} 
+                    className="bg-card text-card-foreground border border-border rounded-xl p-6 sm:p-8 transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-xl hover:shadow-gold/20 hover:bg-card/80 cursor-pointer group flex flex-col min-h-[220px] sm:min-h-[240px]"
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                      }
+                    }}
+                  >
+                    {/* Numbered Circle and Title - Better Alignment */}
+                    <div className="flex items-start gap-4 mb-4 sm:mb-5">
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gold rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-gold-dark transition-colors duration-300">
+                        <span className="text-primary-foreground font-bold text-lg sm:text-xl">{index + 1}</span>
+                      </div>
+                      <h3 className="text-xl sm:text-2xl font-bold leading-tight pt-1 sm:pt-2 flex-grow">
+                        {valueTitle}
+                      </h3>
                     </div>
-                    <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">{valueTitle}</h3>
-                    <p className="text-muted-foreground text-sm sm:text-base">{valueDescription}</p>
+                    
+                    {/* Description */}
+                    <p className="text-muted-foreground text-sm sm:text-base leading-relaxed flex-grow">
+                      {valueDescription}
+                    </p>
                   </div>
                 );
               })}
@@ -230,15 +254,21 @@ const CompanyLanding = () => {
       </section>
 
       {/* Services Section */}
-      <section id="services" className="py-16 sm:py-20 px-4 sm:px-6">
+      <section id="services" className="py-16 sm:py-20 px-4 sm:px-6 bg-secondary/30">
         <div className="container mx-auto">
           <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Our Services</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+              {getFieldValue(services, "title", language) || 
+               (language === 'en' ? 'Our Services' : 'خدماتنا')}
+            </h2>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl sm:max-w-3xl mx-auto">
-              We provide cutting-edge solutions tailored to your business needs
+              {getFieldValue(services, "subtitle", language) || 
+               (language === 'en' 
+                ? 'We provide cutting-edge solutions tailored to your business needs'
+                : 'نوفر حلولاً متطورة مصممة خصيصاً لاحتياجات عملك')}
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             {safeServices
               .slice()
               .sort((a: any, b: any) => (a?.order || 0) - (b?.order || 0))
@@ -251,23 +281,77 @@ const CompanyLanding = () => {
                   getFieldValue(service, "description", language) ||
                   service?.details ||
                   "";
-                const serviceInitial = serviceTitle?.charAt(0) || "S";
+                // Check for code in multiple possible locations - code is not localized, it's a direct field
+                const serviceCode = service?.code || 
+                                   service?.serviceCode || 
+                                   service?.codeValue || 
+                                   "";
+                
+                // Debug: uncomment to check service data in browser console
+                // console.log('Service:', { 
+                //   id: service._id || service.id, 
+                //   title: serviceTitle,
+                //   code: serviceCode, 
+                //   codeRaw: service?.code,
+                //   allKeys: Object.keys(service)
+                // });
+                
+                // Use code if available and not empty, otherwise use first letter of title
+                const serviceDisplay = (serviceCode && String(serviceCode).trim() !== "") 
+                  ? String(serviceCode).trim() 
+                  : (serviceTitle?.charAt(0) || "S");
+                const serviceLink = service?.link || service?.url || service?.href;
+
+                // Truncate description to 2 lines
+                const truncateDescription = (text: string, maxLength: number = 120) => {
+                  if (text.length <= maxLength) return text;
+                  return text.substring(0, maxLength).trim() + '...';
+                };
+
+                const shortDescription = truncateDescription(serviceDescription);
+
+                const handleServiceClick = () => {
+                  if (serviceLink) {
+                    if (serviceLink.startsWith('http://') || serviceLink.startsWith('https://')) {
+                      window.open(serviceLink, '_blank', 'noopener,noreferrer');
+                    } else {
+                      navigate(serviceLink);
+                    }
+                  }
+                };
 
                 return (
-              <div key={service._id || service.id} className="glass-card rounded-xl overflow-hidden">
-                <div className="h-48 bg-gradient-to-r from-gold/20 to-gold/10 flex items-center justify-center">
-                  <div className="w-16 h-16 bg-gold rounded-full flex items-center justify-center">
-                    <span className="text-primary-foreground font-bold text-2xl">
-                            {serviceInitial}
+              <div 
+                key={service._id || service.id} 
+                className="bg-card text-card-foreground rounded-xl border border-border p-6 sm:p-8 transition-all duration-300 ease-in-out hover:scale-[1.03] hover:shadow-xl hover:shadow-gold/20 hover:bg-card/80 cursor-pointer group flex flex-col"
+                onClick={handleServiceClick}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleServiceClick();
+                  }
+                }}
+              >
+                {/* Hexagonal Icon/Code at Top Center */}
+                <div className="flex justify-center mb-6">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gold/10 group-hover:bg-gold/20 hexagon flex items-center justify-center transition-colors duration-300">
+                    <span className="text-gold group-hover:text-gold-dark font-bold text-lg sm:text-xl transition-colors duration-300">
+                      {serviceDisplay}
                     </span>
                   </div>
                 </div>
-                <div className="p-6">
-                      <h3 className="text-xl font-bold mb-3">{serviceTitle}</h3>
-                  <p className="text-muted-foreground mb-4">
-                        {serviceDescription}
-                  </p>
-                </div>
+
+                {/* Service Title */}
+                <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-center text-card-foreground leading-tight">
+                  {serviceTitle}
+                </h3>
+
+                {/* Short Description (Max 2 lines) */}
+                <p className="text-muted-foreground text-sm sm:text-base leading-relaxed line-clamp-2 text-center flex-grow">
+                  {shortDescription}
+                </p>
               </div>
                 );
               })}
@@ -297,17 +381,95 @@ const CompanyLanding = () => {
                   getFieldValue(project, "description", language) ||
                   project?.details ||
                   "";
+                const projectImage = project?.image || project?.imageUrl || project?.photo || project?.thumbnail;
+                const projectLink = project?.link || project?.url || project?.href;
+
+                const handleCardClick = () => {
+                  if (projectLink) {
+                    // Check if it's an external link (starts with http:// or https://)
+                    if (projectLink.startsWith('http://') || projectLink.startsWith('https://')) {
+                      window.open(projectLink, '_blank', 'noopener,noreferrer');
+                    } else {
+                      // Internal link - navigate using React Router
+                      navigate(projectLink);
+                    }
+                  }
+                };
+
+                // Truncate description to 2 lines
+                const truncateDescription = (text: string, maxLength: number = 120) => {
+                  if (text.length <= maxLength) return text;
+                  return text.substring(0, maxLength).trim() + '...';
+                };
+
+                const shortDescription = truncateDescription(projectDescription);
 
                 return (
-              <div key={project._id || project.id || `project-${projectTitle}`} className="glass-card rounded-xl overflow-hidden">
-                <div className="h-48 bg-gradient-to-r from-cyan/20 to-cyan/10 flex items-center justify-center">
-                  <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16" />
+              <div 
+                key={project._id || project.id || `project-${projectTitle}`} 
+                className="bg-card text-card-foreground rounded-xl overflow-hidden border border-border transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-xl hover:shadow-gold/20 cursor-pointer group flex flex-col"
+                onClick={handleCardClick}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleCardClick();
+                  }
+                }}
+              >
+                {/* 16:9 Image at the top */}
+                <div className="relative w-full aspect-video overflow-hidden bg-muted">
+                  {projectImage ? (
+                    <img 
+                      src={projectImage} 
+                      alt={projectTitle}
+                      className="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
+                      onError={(e) => {
+                        // Show placeholder on error
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-gold/20 to-gold/10 flex items-center justify-center">
+                      <div className="w-16 h-16 bg-gold/20 rounded-lg" />
+                    </div>
+                  )}
+                  {/* Fallback placeholder if image fails */}
+                  {projectImage && (
+                    <div className="hidden w-full h-full bg-gradient-to-br from-gold/20 to-gold/10 group-hover:flex items-center justify-center absolute inset-0">
+                      <div className="w-16 h-16 bg-gold/20 rounded-lg" />
+                    </div>
+                  )}
                 </div>
-                <div className="p-6">
-                      <h3 className="text-xl font-bold mb-3">{projectTitle}</h3>
-                  <p className="text-muted-foreground mb-4">
-                        {projectDescription}
+                
+                {/* Content Section */}
+                <div className="p-4 sm:p-6 flex flex-col flex-grow">
+                  {/* Bold Project Title */}
+                  <h3 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3 text-card-foreground leading-tight">
+                    {projectTitle}
+                  </h3>
+                  
+                  {/* Short Two-line Description */}
+                  <p className="text-muted-foreground text-sm sm:text-base leading-relaxed mb-4 sm:mb-6 line-clamp-2 flex-grow">
+                    {shortDescription}
                   </p>
+                  
+                  {/* View Details Button */}
+                  <div className="mt-auto">
+                    <span className={`inline-flex items-center text-sm font-medium text-muted-foreground group-hover:text-gold transition-colors duration-300 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                      {language === 'en' ? 'View details' : 'عرض التفاصيل'}
+                      <svg 
+                        className={`w-4 h-4 transition-transform duration-300 ${language === 'en' ? 'ml-2 group-hover:translate-x-1' : 'mr-2 group-hover:-translate-x-1'} ${language === 'ar' ? 'rotate-180' : ''}`}
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </span>
+                  </div>
                 </div>
               </div>
                 );

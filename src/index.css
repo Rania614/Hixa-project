@@ -373,3 +373,12 @@
     transform: translateY(0);
   }
 }
+
+@keyframes scroll-partners {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}

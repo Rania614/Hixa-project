@@ -82,26 +82,61 @@ export const Partners = () => {
                 : 'نتعاون مع قادة الصناعة لتقديم نتائج استثنائية.'}
             </p>
           </div>
-          <div className="flex justify-center items-center flex-wrap gap-12">
-            {activePartners.map((partner: any) => {
-              const partnerId = partner._id || partner.id;
-              const partnerName = getPartnerName(partner);
-              const logoUrl = getValidLogoUrl(partner.logo);
-              
-              return (
-                <div key={partnerId} className="flex-shrink-0">
-                  <div className="hexagon w-32 h-32">
-                    <img 
-                      src={logoUrl} 
-                      alt={partnerName} 
-                      className="w-full h-full object-cover"
-                      onError={handleImageError}
-                    />
+          <div className="relative overflow-hidden">
+            {/* Smooth Sliding Container */}
+            <div 
+              className="flex gap-8 lg:gap-12"
+              style={{
+                animation: `scroll-partners ${Math.max(activePartners.length * 2, 20)}s linear infinite`,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.animationPlayState = 'paused';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.animationPlayState = 'running';
+              }}
+            >
+              {/* First set of partners */}
+              {activePartners.map((partner: any) => {
+                const partnerId = partner._id || partner.id;
+                const partnerName = getPartnerName(partner);
+                const logoUrl = getValidLogoUrl(partner.logo);
+                
+                return (
+                  <div key={partnerId} className="flex-shrink-0">
+                    <div className="hexagon w-32 h-32 sm:w-36 sm:h-36 lg:w-40 lg:h-40 bg-card p-4 sm:p-5 lg:p-6 flex items-center justify-center transition-all duration-300 hover:scale-110 hover:bg-card/80 hover:shadow-lg hover:shadow-gold/20 group overflow-hidden">
+                      <img 
+                        src={logoUrl} 
+                        alt={partnerName} 
+                        className="w-full h-full object-contain hexagon"
+                        onError={handleImageError}
+                      />
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+              {/* Duplicate set for seamless loop */}
+              {activePartners.map((partner: any) => {
+                const partnerId = `duplicate-${partner._id || partner.id}`;
+                const partnerName = getPartnerName(partner);
+                const logoUrl = getValidLogoUrl(partner.logo);
+                
+                return (
+                  <div key={partnerId} className="flex-shrink-0">
+                    <div className="hexagon w-32 h-32 sm:w-36 sm:h-36 lg:w-40 lg:h-40 bg-card p-4 sm:p-5 lg:p-6 flex items-center justify-center transition-all duration-300 hover:scale-110 hover:bg-card/80 hover:shadow-lg hover:shadow-gold/20 group overflow-hidden">
+                      <img 
+                        src={logoUrl} 
+                        alt={partnerName} 
+                        className="w-full h-full object-contain hexagon"
+                        onError={handleImageError}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
+          
         </div>
       </section>
   );
