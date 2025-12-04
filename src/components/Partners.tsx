@@ -71,6 +71,20 @@ export const Partners = () => {
     e.currentTarget.src = '/placeholder.svg';
   };
 
+  const handlePartnerClick = (link: string | undefined | null) => {
+    if (!link || link.trim() === '') return;
+    
+    const trimmedLink = link.trim();
+    
+    // Check if it's a valid URL
+    if (trimmedLink.startsWith('http://') || trimmedLink.startsWith('https://')) {
+      window.open(trimmedLink, '_blank', 'noopener,noreferrer');
+    } else if (trimmedLink.startsWith('/')) {
+      // Internal route
+      window.location.href = trimmedLink;
+    }
+  };
+
   return (
     <section id="partners" className="py-20 px-6">
         <div className="container mx-auto">
@@ -101,10 +115,15 @@ export const Partners = () => {
                 const partnerId = partner._id || partner.id;
                 const partnerName = getPartnerName(partner);
                 const logoUrl = getValidLogoUrl(partner.logo);
+                const partnerLink = partner.link;
+                const hasLink = partnerLink && partnerLink.trim() !== '';
                 
                 return (
                   <div key={partnerId} className="flex-shrink-0">
-                    <div className="hexagon w-32 h-32 sm:w-36 sm:h-36 lg:w-40 lg:h-40 bg-card p-4 sm:p-5 lg:p-6 flex items-center justify-center transition-all duration-300 hover:scale-110 hover:bg-card/80 hover:shadow-lg hover:shadow-gold/20 group overflow-hidden">
+                    <div 
+                      onClick={() => handlePartnerClick(partnerLink)}
+                      className={`hexagon w-32 h-32 sm:w-36 sm:h-36 lg:w-40 lg:h-40 bg-card p-4 sm:p-5 lg:p-6 flex items-center justify-center transition-all duration-300 hover:scale-110 hover:bg-card/80 hover:shadow-lg hover:shadow-gold/20 group overflow-hidden ${hasLink ? 'cursor-pointer' : ''}`}
+                    >
                       <img 
                         src={logoUrl} 
                         alt={partnerName} 
@@ -120,10 +139,15 @@ export const Partners = () => {
                 const partnerId = `duplicate-${partner._id || partner.id}`;
                 const partnerName = getPartnerName(partner);
                 const logoUrl = getValidLogoUrl(partner.logo);
+                const partnerLink = partner.link;
+                const hasLink = partnerLink && partnerLink.trim() !== '';
                 
                 return (
                   <div key={partnerId} className="flex-shrink-0">
-                    <div className="hexagon w-32 h-32 sm:w-36 sm:h-36 lg:w-40 lg:h-40 bg-card p-4 sm:p-5 lg:p-6 flex items-center justify-center transition-all duration-300 hover:scale-110 hover:bg-card/80 hover:shadow-lg hover:shadow-gold/20 group overflow-hidden">
+                    <div 
+                      onClick={() => handlePartnerClick(partnerLink)}
+                      className={`hexagon w-32 h-32 sm:w-36 sm:h-36 lg:w-40 lg:h-40 bg-card p-4 sm:p-5 lg:p-6 flex items-center justify-center transition-all duration-300 hover:scale-110 hover:bg-card/80 hover:shadow-lg hover:shadow-gold/20 group overflow-hidden ${hasLink ? 'cursor-pointer' : ''}`}
+                    >
                       <img 
                         src={logoUrl} 
                         alt={partnerName} 

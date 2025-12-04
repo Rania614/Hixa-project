@@ -13,6 +13,7 @@ import { HexagonIcon } from '@/components/ui/hexagon-icon';
 import { Plus, Trash2, ChevronUp, ChevronDown, ChevronDown as ChevronDownIcon } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { http } from '@/services/http';
+import { toast } from '@/components/ui/sonner';
 
 const ContentManagement = () => {
   const [activeTab, setActiveTab] = useState('hero');
@@ -779,9 +780,14 @@ const ContentManagement = () => {
                                             },
                                           });
                                           
-                                          alert(language === 'en' 
-                                            ? 'Image uploaded successfully!' 
-                                            : 'تم رفع الصورة بنجاح!');
+                                          toast.success(
+                                            language === 'en' 
+                                              ? '🎉 Image uploaded successfully!' 
+                                              : '🎉 تم رفع الصورة بنجاح!',
+                                            {
+                                              position: 'top-center',
+                                            }
+                                          );
                                         } else {
                                           throw new Error('No URL returned from upload');
                                         }
@@ -803,16 +809,29 @@ const ContentManagement = () => {
                                           const errorMsg = language === 'en'
                                             ? `Image upload failed (Server Error 500): ${errorDetails}\n\nThe upload endpoint may not be configured on the backend. Please use the "Image URL" field below to enter the image URL directly, or contact the backend team to enable the upload endpoint.`
                                             : `فشل رفع الصورة (خطأ في الخادم 500): ${errorDetails}\n\nنقطة رفع الصور قد لا تكون مفعلة في الـ backend. يرجى استخدام حقل "رابط الصورة" أدناه لإدخال رابط الصورة مباشرة، أو الاتصال بفريق الـ backend لتفعيل نقطة الرفع.`;
-                                          alert(errorMsg);
+                                          toast.error(
+                                            language === 'en'
+                                              ? `😢 ${errorMsg}`
+                                              : `😢 ${errorMsg}`,
+                                            {
+                                              position: 'top-center',
+                                              duration: 5000,
+                                            }
+                                          );
                                         } else {
                                           const errorMessage = err.response?.data?.message || 
                                                              err.response?.data?.error || 
                                                              err.message || 
                                                              'Unknown error';
                                           
-                                          alert(language === 'en' 
-                                            ? `Failed to upload image: ${errorMessage}` 
-                                            : `فشل رفع الصورة: ${errorMessage}`);
+                                          toast.error(
+                                            language === 'en' 
+                                              ? `😢 Failed to upload image: ${errorMessage}` 
+                                              : `😢 فشل رفع الصورة: ${errorMessage}`,
+                                            {
+                                              position: 'top-center',
+                                            }
+                                          );
                                         }
                                       }
                                       
@@ -1086,9 +1105,14 @@ const ContentManagement = () => {
                                             },
                                           });
                                           
-                                          alert(language === 'en' 
-                                            ? 'Image uploaded successfully!' 
-                                            : 'تم رفع الصورة بنجاح!');
+                                          toast.success(
+                                            language === 'en' 
+                                              ? '🎉 Image uploaded successfully!' 
+                                              : '🎉 تم رفع الصورة بنجاح!',
+                                            {
+                                              position: 'top-center',
+                                            }
+                                          );
                                         } else {
                                           throw new Error('No URL returned from upload');
                                         }
@@ -1117,9 +1141,14 @@ const ContentManagement = () => {
                                                              err.message || 
                                                              'Unknown error';
                                           
-                                          alert(language === 'en' 
-                                            ? `Failed to upload image: ${errorMessage}` 
-                                            : `فشل رفع الصورة: ${errorMessage}`);
+                                          toast.error(
+                                            language === 'en' 
+                                              ? `😢 Failed to upload image: ${errorMessage}` 
+                                              : `😢 فشل رفع الصورة: ${errorMessage}`,
+                                            {
+                                              position: 'top-center',
+                                            }
+                                          );
                                         }
                                       }
                                       
