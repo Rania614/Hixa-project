@@ -41,26 +41,28 @@ const Landing = () => {
         <div className="container mx-auto px-6 text-center relative z-10">
           <div className="mb-8 animate-slide-up">
             <h1 className="text-6xl md:text-8xl font-bold mb-2">
-              <span className="block text-gold">HIXA</span>
+              <span className="block text-gold">{language === 'en' ? 'HIXA' : 'هيكسا'}</span>
             </h1>
           </div>
           
           <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-slide-up">
-            High Xpert ARTBUILD
+            {language === 'en' ? 'High Xpert ARTBUILD' : 'لكل مشروع لا ينسى'}
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            Connecting clients with professional engineers to execute engineering projects seamlessly
+            {language === 'en' 
+              ? 'Connecting clients with professional engineers to execute engineering projects seamlessly'
+              : 'ربط العملاء مع المهندسين المحترفين لتنفيذ المشاريع الهندسية بسلاسة'}
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up" style={{ animationDelay: '0.4s' }}>
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-stretch sm:items-center w-full sm:w-auto px-4 sm:px-0 animate-slide-up" style={{ animationDelay: '0.4s' }}>
             <button 
               onMouseEnter={() => setSubscribeHover(true)}
               onMouseLeave={() => setSubscribeHover(false)}
               onClick={(e) => e.preventDefault()}
-              className="hexagon bg-transparent border-2 border-gold text-gold hover:bg-gold hover:text-black font-semibold px-6 py-3 text-base flex items-center gap-2 cursor-not-allowed"
+              className="hexagon bg-transparent border-2 border-gold text-gold hover:bg-gold hover:text-black font-semibold px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base flex items-center justify-center gap-2 cursor-not-allowed w-full sm:w-auto"
             >
               <span>{subscribeHover ? (language === 'en' ? 'Coming Soon' : 'قريباً') : (language === 'en' ? 'Subscribe' : 'اشترك')}</span>
             </button>
-            <div className="dropdown-container relative">
+            <div className="dropdown-container relative w-full sm:w-auto">
               <button 
                 onMouseEnter={() => setGetStartedHover(true)}
                 onMouseLeave={() => {
@@ -78,7 +80,7 @@ const Landing = () => {
                   e.preventDefault();
                   setDropdownOpen(!dropdownOpen);
                 }}
-                className="hexagon bg-gold hover:bg-gold-dark text-black font-semibold px-6 py-3 text-base flex items-center gap-2 relative"
+                className="hexagon bg-gold hover:bg-gold-dark text-black font-semibold px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base flex items-center justify-center gap-2 relative w-full sm:w-auto"
               >
                 <span>{getStartedHover ? (language === 'en' ? 'Coming Soon' : 'قريباً') : (language === 'en' ? 'Get Started' : 'ابدأ الآن')}</span>
                 {dropdownOpen && (
