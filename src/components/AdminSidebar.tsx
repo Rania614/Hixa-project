@@ -8,7 +8,8 @@ import {
   // Settings,
   LogOut,
   FileEdit,
-  Mail
+  Mail,
+  ShoppingCart
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useApp } from '@/context/AppContext';
@@ -38,6 +39,11 @@ export const AdminSidebar = () => {
       to: "/admin/content",
       icon: FileEdit,
       label: language === 'en' ? 'Landing Page Content' : 'تحكم محتوى الصفحة الرئيسية'
+    },
+    {
+      to: "/admin/orders",
+      icon: ShoppingCart,
+      label: language === 'en' ? 'Service Orders' : 'طلبات الخدمات'
     },
     // {
     //   to: "/admin/subscribers",

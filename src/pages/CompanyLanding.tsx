@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, X, Instagram, MessageCircle, Twitter, Send } from "lucide-react";
+import { Menu, X, Instagram, MessageCircle, Twitter, Send, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -13,10 +13,31 @@ import { SkeletonCard } from "@/components/SkeletonCard";
 import { useLandingStore } from "@/stores/landingStore";
 import { useShallow } from "zustand/react/shallow";
 import { useApp } from "@/context/AppContext";
+import { http } from "@/services/http";
+import { toast } from "@/components/ui/sonner";
+
+interface OrderFormSection {
+  title: string;
+  description: string;
+  image: File | null;
+  imagePreview: string | null;
+  textarea: string;
+}
 
 const CompanyLanding = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [orderModalOpen, setOrderModalOpen] = useState(false);
+  const [selectedService, setSelectedService] = useState<any>(null);
+  const [email, setEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [section, setSection] = useState<OrderFormSection>({
+    title: "",
+    description: "",
+    image: null,
+    imagePreview: null,
+    textarea: "",
+  });
   const { language } = useApp();
   const { hero, about, services, projects, cta, loading } = useLandingStore(
     useShallow((state) => ({
@@ -119,6 +140,101 @@ const CompanyLanding = () => {
 
   const handleGetStarted = () => {
     navigate("/platform");
+  };
+
+  const handleOrderNow = (e: React.MouseEvent, service: any) => {
+    e.stopPropagation(); // Prevent card click
+    setSelectedService(service);
+    setOrderModalOpen(true);
+    // Reset form
+    setEmail("");
+    setSection({
+      title: "",
+      description: "",
+      image: null,
+      imagePreview: null,
+      textarea: "",
+    });
+  };
+
+  const handleCloseModal = () => {
+    setOrderModalOpen(false);
+    setSelectedService(null);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSection((prev) => ({
+          ...prev,
+          image: file,
+          imagePreview: reader.result as string,
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSectionChange = (field: keyof OrderFormSection, value: string) => {
+    setSection((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email || !email.includes('@')) {
+      toast.error(language === 'en' ? 'Please enter a valid email address' : 'يرجى إدخال عنوان بريد إلكتروني صحيح');
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      // Prepare form data
+      const formData = new FormData();
+      formData.append('email', email);
+      formData.append('service', JSON.stringify({
+        _id: selectedService?._id || selectedService?.id,
+        title_en: selectedService?.title_en || selectedService?.title?.en,
+        title_ar: selectedService?.title_ar || selectedService?.title?.ar,
+        name: selectedService?.name,
+      }));
+      formData.append('section', JSON.stringify({
+        title: section.title,
+        description: section.description,
+        textarea: section.textarea,
+      }));
+
+      // Add image if available
+      if (section.image) {
+        formData.append('image', section.image);
+      }
+
+      // Send to API
+      await http.post('/orders', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      toast.success(language === 'en' ? 'Order submitted successfully!' : 'تم إرسال الطلب بنجاح!');
+
+      // Close modal and reset form
+      handleCloseModal();
+    } catch (error: any) {
+      console.error('Error submitting order:', error);
+      toast.error(
+        error.response?.data?.message || 
+        (language === 'en' ? 'Failed to submit order. Please try again.' : 'فشل إرسال الطلب. يرجى المحاولة مرة أخرى.')
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Don't show loading - page renders immediately with fallback data
@@ -352,6 +468,14 @@ const CompanyLanding = () => {
                 <p className="text-muted-foreground text-sm sm:text-base leading-relaxed line-clamp-2 text-center flex-grow">
                   {shortDescription}
                 </p>
+
+                {/* Order Now Button */}
+                <Button
+                  className="mt-4 w-full bg-gold hover:bg-gold-dark text-black font-semibold py-2"
+                  onClick={(e) => handleOrderNow(e, service)}
+                >
+                  {language === 'en' ? 'Order Now' : 'اطلب الآن'}
+                </Button>
               </div>
                 );
               })}
@@ -614,6 +738,170 @@ const CompanyLanding = () => {
 
       <Footer />
       <Chatbot />
+
+      {/* Order Modal */}
+      {orderModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Dark Overlay */}
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={handleCloseModal}
+          ></div>
+
+          {/* Modal Content */}
+          <div className="relative z-50 w-full max-w-4xl max-h-[90vh] bg-card rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-border">
+              <h2 className="text-2xl font-bold text-card-foreground">
+                {language === 'en' ? 'Order Service' : 'طلب الخدمة'}
+              </h2>
+              <button
+                onClick={handleCloseModal}
+                className="text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-muted"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6">
+              {/* Service Description */}
+              {selectedService && (
+                <div className="mb-6 p-4 bg-muted/50 rounded-lg">
+                  <h3 className="font-semibold text-lg mb-2">
+                    {getFieldValue(selectedService, "title", language) || selectedService?.name || "Service"}
+                  </h3>
+                  <p className="text-muted-foreground text-sm">
+                    {getFieldValue(selectedService, "description", language) || selectedService?.details || ""}
+                  </p>
+                </div>
+              )}
+
+              {/* Single Section Card */}
+              <div className="mb-6">
+                <div className="bg-muted/30 rounded-xl p-6 border border-border space-y-4">
+                  {/* Description */}
+                  <div>
+                    <label className="block text-sm font-medium text-card-foreground mb-2">
+                      {language === 'en' ? 'Description' : 'الوصف'}
+                    </label>
+                    <input
+                      type="text"
+                      value={section.description}
+                      onChange={(e) => handleSectionChange("description", e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-card-foreground focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
+                      placeholder={language === 'en' ? 'Enter description...' : 'أدخل الوصف...'}
+                    />
+                  </div>
+
+                  {/* Title Input */}
+                  <div>
+                    <label className="block text-sm font-medium text-card-foreground mb-2">
+                      {language === 'en' ? 'Title' : 'العنوان'}
+                    </label>
+                    <input
+                      type="text"
+                      value={section.title}
+                      onChange={(e) => handleSectionChange("title", e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-card-foreground focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
+                      placeholder={language === 'en' ? 'Enter title...' : 'أدخل العنوان...'}
+                    />
+                  </div>
+
+                  {/* Image Upload */}
+                  <div>
+                    <label className="block text-sm font-medium text-card-foreground mb-2">
+                      {language === 'en' ? 'Image' : 'الصورة'}
+                    </label>
+                    <div className="space-y-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                        id="image-upload"
+                      />
+                      <label
+                        htmlFor="image-upload"
+                        className="flex items-center justify-center w-full px-4 py-2 bg-background border border-border rounded-lg cursor-pointer hover:bg-muted transition-colors"
+                      >
+                        <Upload className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          {section.image
+                            ? section.image.name
+                            : language === 'en'
+                            ? 'Choose image...'
+                            : 'اختر صورة...'}
+                        </span>
+                      </label>
+                      {section.imagePreview && (
+                        <div className="mt-2">
+                          <img
+                            src={section.imagePreview}
+                            alt="Preview"
+                            className="w-full h-32 object-cover rounded-lg border border-border"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Textarea */}
+                  <div>
+                    <label className="block text-sm font-medium text-card-foreground mb-2">
+                      {language === 'en' ? 'Details' : 'التفاصيل'}
+                    </label>
+                    <textarea
+                      value={section.textarea}
+                      onChange={(e) => handleSectionChange("textarea", e.target.value)}
+                      rows={4}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-card-foreground focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent resize-none"
+                      placeholder={language === 'en' ? 'Enter details...' : 'أدخل التفاصيل...'}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Email Field */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-card-foreground mb-2">
+                  {language === 'en' ? 'Email' : 'البريد الإلكتروني'}
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-card-foreground focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
+                  placeholder={language === 'en' ? 'your.email@example.com' : 'بريدك.الإلكتروني@example.com'}
+                />
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex justify-end gap-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCloseModal}
+                  className="px-6"
+                >
+                  {language === 'en' ? 'Cancel' : 'إلغاء'}
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-6 bg-gold hover:bg-gold-dark text-black font-semibold"
+                >
+                  {submitting 
+                    ? (language === 'en' ? 'Submitting...' : 'جاري الإرسال...')
+                    : (language === 'en' ? 'Submit Order' : 'إرسال الطلب')}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

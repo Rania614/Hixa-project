@@ -10,6 +10,7 @@ import Landing from "./pages/PlatformLanding";
 import AdminLogin from "./pages/admin-dashboard/AdminLogin";
 import AdminDashboard from "./pages/admin-dashboard/AdminDashboard";
 import ContentManagement from "./pages/admin-dashboard/ContentManagement";
+import Orders from "./pages/admin-dashboard/Orders";
 import Subscribers from "./pages/admin-dashboard/Subscribers";
 import AdminMessages from "./pages/admin-dashboard/AdminMessages";
 import NotFound from "./pages/NotFound";
@@ -212,6 +213,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <ContentManagement />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/orders"
+        element={
+          <ProtectedRoute>
+            <Orders />
           </ProtectedRoute>
         }
       />

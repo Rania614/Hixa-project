@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { http } from "../services/http";
 import { toast } from "@/hooks/use-toast";
+import { API_ENDPOINTS } from "@/config/endpoints";
 
 interface ContentItem {
   id?: string;
