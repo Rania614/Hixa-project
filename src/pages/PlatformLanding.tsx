@@ -325,7 +325,7 @@ const Landing = () => {
               >
                 {subscribing 
                   ? (language === 'en' ? 'Subscribing...' : 'جاري الاشتراك...') 
-                  : (language === 'en' ? 'Join Engineers List' : 'انضم لقائمة المهندسين')}
+                  : (language === 'en' ? 'Subscribe to Follow Our Work' : 'اشترك لمتابعة أعمالنا')}
               </button>
               
               <p className="text-xs text-muted-foreground text-left mt-2">
@@ -523,7 +523,7 @@ const Landing = () => {
                   >
                     {subscribing 
                       ? (language === 'en' ? 'Subscribing...' : 'جاري الاشتراك...') 
-                      : (language === 'en' ? 'Join Engineers List' : 'انضم لقائمة المهندسين')}
+                      : (language === 'en' ? 'Subscribe to Follow Our Work' : 'اشترك لمتابعة أعمالنا')}
                   </Button>
                 </div>
                 
