@@ -1,14 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { AdminSidebar } from '@/components/AdminSidebar';
 import { AdminTopBar } from '@/components/AdminTopBar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trash2, Send, X } from 'lucide-react';
+import { Trash2, Send, X, RefreshCw, Download } from 'lucide-react';
+import { http } from '@/services/http';
+import { toast } from '@/components/ui/sonner';
+
+interface Subscriber {
+  _id?: string;
+  id?: string;
+  email?: string;
+  phone?: string;
+  phoneNumber?: string;
+  contact?: string;
+  name?: string;
+  isActive?: boolean;
+  source?: string;
+  subscribedAt?: string;
+  createdAt?: string;
+  joinDate?: string;
+}
 
 export const Subscribers = () => {
-  const { content, language, updateContent, sendEmailBroadcast } = useApp();
+  const { language } = useApp();
+  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+  const [subscribersLoading, setSubscribersLoading] = useState(true);
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
   const [broadcastSubjectEn, setBroadcastSubjectEn] = useState('');
   const [broadcastSubjectAr, setBroadcastSubjectAr] = useState('');
@@ -16,13 +35,159 @@ export const Subscribers = () => {
   const [broadcastMessageAr, setBroadcastMessageAr] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [statistics, setStatistics] = useState({
+    total: 0,
+    email: 0,
+    phone: 0
+  });
 
-  // Safe access to subscribers with fallback to empty array
-  const subscribers = content?.subscribers || [];
+  const fetchStatistics = async () => {
+    try {
+      const response = await http.get('/subscribers/statistics');
+      const stats = response.data;
+      
+      setStatistics({
+        total: stats.total || stats.totalSubscribers || 0,
+        email: stats.email || stats.emailSubscribers || 0,
+        phone: stats.phone || stats.phoneSubscribers || 0
+      });
+    } catch (error: any) {
+      console.error('Error fetching statistics:', error);
+      // Don't show error toast for statistics, just use local count
+    }
+  };
+
+  const fetchSubscribers = async () => {
+    setSubscribersLoading(true);
+    try {
+      // Use /subscribers endpoint (works correctly)
+      const response = await http.get('/subscribers');
+      let subscribersData = response.data;
+      
+      console.log('Subscribers response:', subscribersData);
+      
+      // Handle different response structures
+      // The API returns {data: Array, meta: {...}}
+      if (subscribersData && typeof subscribersData === 'object' && !Array.isArray(subscribersData)) {
+        subscribersData = subscribersData.data || subscribersData.subscribers || subscribersData.items || subscribersData.results || [];
+      }
+      
+      // Ensure it's an array
+      let subscribersArray = Array.isArray(subscribersData) ? subscribersData : [];
+      
+      // Filter out inactive subscribers (isActive: false) - they are considered deleted/unsubscribed
+      // Only show active subscribers (isActive: true or undefined)
+      subscribersArray = subscribersArray.filter((sub: any) => {
+        // Include if isActive is true or undefined (not explicitly false)
+        return sub.isActive !== false;
+      });
+      
+      console.log('Processed subscribers (after filter):', subscribersArray);
+      
+      setSubscribers(subscribersArray);
+      
+      // Fetch statistics after getting subscribers
+      await fetchStatistics();
+    } catch (error: any) {
+      console.error('Error fetching subscribers:', error);
+      console.error('Error response:', error.response?.data);
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error ||
+                          (language === 'en' 
+                            ? 'Failed to fetch subscribers. Please check the API endpoint.' 
+                            : 'فشل في جلب المشتركين. يرجى التحقق من نقطة نهاية API.');
+      toast.error(errorMessage);
+      // Set empty array on error to prevent UI issues
+      setSubscribers([]);
+    } finally {
+      setSubscribersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSubscribers();
+  }, []);
 
   const handleDeleteSubscriber = async (id: string) => {
-    const updatedSubscribers = subscribers.filter(subscriber => subscriber.id !== id);
-    await updateContent({ subscribers: updatedSubscribers });
+    const subscriberId = id;
+    if (!subscriberId) {
+      toast.error(language === 'en' ? 'Invalid subscriber ID' : 'معرف المشترك غير صحيح');
+      return;
+    }
+
+    setDeletingId(subscriberId);
+    try {
+      let deleted = false;
+      
+      // Try DELETE endpoint first (actual deletion)
+      try {
+        await http.delete(`/subscribers/${subscriberId}`);
+        deleted = true;
+        console.log('Subscriber deleted via DELETE endpoint');
+      } catch (error1: any) {
+        // If DELETE fails (404 or other), try unsubscribe endpoint (sets isActive: false)
+        if (error1.response?.status === 404) {
+          try {
+            await http.post('/subscribers/unsubscribe', { id: subscriberId });
+            deleted = true;
+            console.log('Subscriber unsubscribed via unsubscribe endpoint');
+          } catch (error2: any) {
+            console.error('Both DELETE and unsubscribe failed:', error1, error2);
+            // If both fail, throw the first error
+            throw error1;
+          }
+        } else {
+          throw error1;
+        }
+      }
+      
+      if (deleted) {
+        toast.success(language === 'en' ? 'Subscriber deleted successfully' : 'تم حذف المشترك بنجاح');
+        // Small delay to ensure backend has processed the deletion
+        await new Promise(resolve => setTimeout(resolve, 500));
+        // Refresh the list and statistics
+        await fetchSubscribers();
+      }
+    } catch (error: any) {
+      console.error('Error unsubscribing subscriber:', error);
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error ||
+                          (language === 'en' 
+                            ? 'Failed to unsubscribe subscriber' 
+                            : 'فشل إلغاء اشتراك المشترك');
+      toast.error(errorMessage);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      const response = await http.get('/subscribers/export', {
+        responseType: 'blob'
+      });
+      
+      // Create a blob URL and download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `subscribers-${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success(language === 'en' ? 'Subscribers exported successfully' : 'تم تصدير المشتركين بنجاح');
+    } catch (error: any) {
+      console.error('Error exporting subscribers:', error);
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error ||
+                          (language === 'en' 
+                            ? 'Failed to export subscribers' 
+                            : 'فشل تصدير المشتركين');
+      toast.error(errorMessage);
+    }
   };
 
   const handleSendBroadcast = async (e: React.FormEvent) => {
@@ -30,10 +195,37 @@ export const Subscribers = () => {
     setIsSending(true);
     
     try {
-      await sendEmailBroadcast({
-        subject: { en: broadcastSubjectEn, ar: broadcastSubjectAr },
-        message: { en: broadcastMessageEn, ar: broadcastMessageAr }
-      });
+      // Try different possible endpoints
+      let response;
+      
+      try {
+        // First try: /subscribers/broadcast
+        response = await http.post('/subscribers/broadcast', {
+          subject: { en: broadcastSubjectEn, ar: broadcastSubjectAr },
+          message: { en: broadcastMessageEn, ar: broadcastMessageAr }
+        });
+      } catch (error1: any) {
+        console.log('First endpoint failed, trying /subscribers/subscribe/broadcast...');
+        try {
+          // Second try: /subscribers/subscribe/broadcast
+          response = await http.post('/subscribers/subscribe/broadcast', {
+            subject: { en: broadcastSubjectEn, ar: broadcastSubjectAr },
+            message: { en: broadcastMessageEn, ar: broadcastMessageAr }
+          });
+        } catch (error2: any) {
+          console.log('Second endpoint failed, trying /subscribers/send-broadcast...');
+          try {
+            // Third try: /subscribers/send-broadcast
+            response = await http.post('/subscribers/send-broadcast', {
+              subject: { en: broadcastSubjectEn, ar: broadcastSubjectAr },
+              message: { en: broadcastMessageEn, ar: broadcastMessageAr }
+            });
+          } catch (error3: any) {
+            console.error('All broadcast endpoints failed:', error1, error2, error3);
+            throw error1; // Throw the first error
+          }
+        }
+      }
       
       setIsSending(false);
       setSendSuccess(true);
@@ -47,13 +239,31 @@ export const Subscribers = () => {
         setBroadcastMessageEn('');
         setBroadcastMessageAr('');
       }, 2000);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to send broadcast:', error);
+      console.error('Error response:', error.response?.data);
+      
+      // Check if it's a 404 error
+      if (error.response?.status === 404) {
+        toast.error(
+          language === 'en' 
+            ? 'Broadcast endpoint not found. Please check if the API endpoint is implemented in the backend.' 
+            : 'نقطة نهاية البث غير موجودة. يرجى التحقق من أن نقطة نهاية API موجودة في الـ backend.'
+        );
+      } else {
+        const errorMessage = error.response?.data?.message || 
+                            error.response?.data?.error ||
+                            (language === 'en' 
+                              ? 'Failed to send broadcast. Please try again later.' 
+                              : 'فشل إرسال البث. يرجى المحاولة مرة أخرى لاحقاً.');
+        toast.error(errorMessage);
+      }
       setIsSending(false);
     }
   };
 
-  const totalSubscribers = subscribers.length;
+  // Use statistics if available, otherwise use local count
+  const totalSubscribers = statistics.total > 0 ? statistics.total : subscribers.length;
 
   return (
     <div className="flex min-h-screen">
@@ -91,7 +301,9 @@ export const Subscribers = () => {
                 </div>
                 <div className="bg-secondary/30 p-4 rounded-lg">
                   <h3 className="text-2xl font-bold">
-                    {subscribers.filter(s => s.email).length}
+                    {statistics.email > 0 
+                      ? statistics.email 
+                      : (Array.isArray(subscribers) ? subscribers.filter(s => s.email).length : 0)}
                   </h3>
                   <p className="text-muted-foreground">
                     {language === 'en' ? 'Email Subscribers' : 'المشتركون عبر البريد الإلكتروني'}
@@ -99,7 +311,9 @@ export const Subscribers = () => {
                 </div>
                 <div className="bg-secondary/30 p-4 rounded-lg">
                   <h3 className="text-2xl font-bold">
-                    {subscribers.filter(s => s.phone).length}
+                    {statistics.phone > 0 
+                      ? statistics.phone 
+                      : (Array.isArray(subscribers) ? subscribers.filter(s => s.phone || s.phoneNumber || s.contact).length : 0)}
                   </h3>
                   <p className="text-muted-foreground">
                     {language === 'en' ? 'Phone Subscribers' : 'المشتركون عبر الهاتف'}
@@ -114,74 +328,161 @@ export const Subscribers = () => {
             <h2 className="text-2xl font-semibold">
               {language === 'en' ? 'Subscriber List' : 'قائمة المشتركين'}
             </h2>
-            <Button 
-              onClick={() => setShowBroadcastModal(true)}
-              className="bg-gold hover:bg-gold-dark"
-            >
-              <Send className="h-4 w-4 mr-2" />
-              {language === 'en' ? 'Send Email Broadcast' : 'إرسال بث عبر البريد الإلكتروني'}
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={fetchSubscribers}
+                variant="outline"
+                disabled={subscribersLoading}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${subscribersLoading ? 'animate-spin' : ''}`} />
+                {language === 'en' ? 'Refresh' : 'تحديث'}
+              </Button>
+              <Button 
+                onClick={handleExportCSV}
+                variant="outline"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {language === 'en' ? 'Export CSV' : 'تصدير CSV'}
+              </Button>
+              {/* Broadcast button - Commented out until endpoint is implemented */}
+              {/* <Button 
+                onClick={() => setShowBroadcastModal(true)}
+                className="bg-gold hover:bg-gold-dark"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                {language === 'en' ? 'Send Email Broadcast' : 'إرسال بث عبر البريد الإلكتروني'}
+              </Button> */}
+            </div>
           </div>
           
           {/* Subscribers Table */}
           <Card className="glass-card">
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left p-4 font-semibold">
-                        {language === 'en' ? 'Contact' : 'جهة الاتصال'}
-                      </th>
-                      <th className="text-left p-4 font-semibold">
-                        {language === 'en' ? 'Join Date' : 'تاريخ الانضمام'}
-                      </th>
-                      <th className="text-left p-4 font-semibold">
-                        {language === 'en' ? 'Actions' : 'الإجراءات'}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {subscribers.length > 0 ? (
-                      subscribers.map((subscriber) => (
-                        <tr key={subscriber.id} className="border-b border-border hover:bg-secondary/30">
-                          <td className="p-4">
-                            {subscriber.email ? subscriber.email : subscriber.phone}
-                          </td>
-                          <td className="p-4">
-                            {subscriber.joinDate}
-                          </td>
-                          <td className="p-4">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteSubscriber(subscriber.id)}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+              {subscribersLoading ? (
+                <div className="p-8 text-center text-muted-foreground">
+                  {language === 'en' ? 'Loading subscribers...' : 'جاري تحميل المشتركين...'}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left p-4 font-semibold">
+                          {language === 'en' ? 'Name' : 'الاسم'}
+                        </th>
+                        <th className="text-left p-4 font-semibold">
+                          {language === 'en' ? 'Email' : 'البريد الإلكتروني'}
+                        </th>
+                        <th className="text-left p-4 font-semibold">
+                          {language === 'en' ? 'Phone' : 'الهاتف'}
+                        </th>
+                        <th className="text-left p-4 font-semibold">
+                          {language === 'en' ? 'Active' : 'نشط'}
+                        </th>
+                        <th className="text-left p-4 font-semibold">
+                          {language === 'en' ? 'Source' : 'المصدر'}
+                        </th>
+                        <th className="text-left p-4 font-semibold">
+                          {language === 'en' ? 'Subscribed At' : 'تاريخ الاشتراك'}
+                        </th>
+                        <th className="text-left p-4 font-semibold">
+                          {language === 'en' ? 'Actions' : 'الإجراءات'}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Array.isArray(subscribers) && subscribers.length > 0 ? (
+                        subscribers.map((subscriber, index) => {
+                          const subscriberId = subscriber._id || subscriber.id || `subscriber-${index}`;
+                          // Get phone from different possible field names
+                          const phone = subscriber.phone || subscriber.phoneNumber || subscriber.contact;
+                          const email = subscriber.email;
+                          const name = subscriber.name || '-';
+                          const isActive = subscriber.isActive !== false; // true if not explicitly false
+                          const source = subscriber.source || '-';
+                          const subscribedAt = subscriber.subscribedAt || subscriber.createdAt;
+                          const joinDate = subscribedAt
+                            ? new Date(subscribedAt).toLocaleDateString(language === 'en' ? 'en-US' : 'ar-SA', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                              })
+                            : '-';
+                          
+                          return (
+                            <tr key={subscriberId} className="border-b border-border hover:bg-secondary/30">
+                              <td className="p-4">
+                                <span className="text-sm font-medium">{name}</span>
+                              </td>
+                              <td className="p-4">
+                                {email ? (
+                                  <span className="text-sm">{email}</span>
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">-</span>
+                                )}
+                              </td>
+                              <td className="p-4">
+                                {phone ? (
+                                  <span className="text-sm">{phone}</span>
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">-</span>
+                                )}
+                              </td>
+                              <td className="p-4">
+                                <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
+                                  isActive 
+                                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                                    : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                }`}>
+                                  {isActive 
+                                    ? (language === 'en' ? 'Yes' : 'نعم') 
+                                    : (language === 'en' ? 'No' : 'لا')}
+                                </span>
+                              </td>
+                              <td className="p-4">
+                                <span className="text-sm text-muted-foreground">{source}</span>
+                              </td>
+                              <td className="p-4">
+                                <span className="text-sm">{joinDate}</span>
+                              </td>
+                              <td className="p-4">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeleteSubscriber(subscriberId)}
+                                  disabled={deletingId === subscriberId}
+                                  className="text-red-500 hover:text-red-700"
+                                >
+                                  {deletingId === subscriberId ? (
+                                    <RefreshCw className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan={7} className="p-4 text-center text-muted-foreground">
+                            {language === 'en' 
+                              ? 'No subscribers yet' 
+                              : 'لا يوجد مشتركون بعد'}
                           </td>
                         </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={3} className="p-4 text-center text-muted-foreground">
-                          {language === 'en' 
-                            ? 'No subscribers yet' 
-                            : 'لا يوجد مشتركون بعد'}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </main>
       </div>
       
-      {/* Broadcast Modal */}
-      {showBroadcastModal && (
+      {/* Broadcast Modal - Commented out until POST /api/subscribers/broadcast endpoint is implemented */}
+      {/* {showBroadcastModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <Card className="w-full max-w-2xl glass-card relative">
             <Button
@@ -286,7 +587,7 @@ export const Subscribers = () => {
             </CardContent>
           </Card>
         </div>
-      )}
+      )} */}
     </div>
   );
 };

@@ -39,7 +39,9 @@ http.interceptors.response.use(
       const url = error.config?.url || '';
       if (url.includes('/auth/verify') || url.includes('/admin/me')) {
         // Silently handle 404 for these optional endpoints
-        // Don't log to console as they're expected
+        // Mark error as silent to prevent console logging
+        error.silent = true;
+        // Don't log to console - these are expected 404s
       } else {
         // Log other 404 errors normally
         console.error('404 Error:', error.config?.url);

@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { useApp } from "@/context/AppContext";
 import { getDashboardText } from "@/locales/dashboard";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Upload, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Save, Upload, Image as ImageIcon, Loader2 } from "lucide-react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -18,10 +18,15 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { addPortfolioWork, updatePortfolioWork, getPortfolioWorkById } from "@/services/portfolioApi";
 
 const AddWork = () => {
+  const { id } = useParams<{ id: string }>();
   const { language } = useApp();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const isEditMode = !!id;
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -29,7 +34,36 @@ const AddWork = () => {
     date: "",
     image: null as File | null,
     imagePreview: "",
+    existingImage: "",
   });
+
+  useEffect(() => {
+    if (isEditMode && id) {
+      fetchWorkData();
+    }
+  }, [id, isEditMode]);
+
+  const fetchWorkData = async () => {
+    if (!id) return;
+    try {
+      setFetching(true);
+      const work = await getPortfolioWorkById(id);
+      setFormData({
+        title: work.title || "",
+        description: work.description || "",
+        category: work.category || "",
+        date: work.date || "",
+        image: null,
+        imagePreview: typeof work.image === 'string' ? work.image : "",
+        existingImage: typeof work.image === 'string' ? work.image : "",
+      });
+    } catch (error) {
+      console.error("Failed to fetch work:", error);
+      navigate("/engineer/portfolio");
+    } finally {
+      setFetching(false);
+    }
+  };
 
   const categories = [
     { value: "Architecture", label: language === "en" ? "Architecture" : "الهندسة المعمارية" },
@@ -56,15 +90,68 @@ const AddWork = () => {
         ...prev,
         image: file,
         imagePreview: URL.createObjectURL(file),
+        existingImage: "", // Clear existing image when new one is selected
       }));
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
-    console.log("Work submitted:", formData);
-    navigate("/engineer/portfolio");
+    try {
+      setLoading(true);
+      
+      // Create FormData if image exists, otherwise send JSON
+      if (formData.image) {
+        const formDataToSend = new FormData();
+        formDataToSend.append("title", formData.title);
+        formDataToSend.append("description", formData.description);
+        formDataToSend.append("category", formData.category);
+        formDataToSend.append("date", formData.date);
+        formDataToSend.append("image", formData.image);
+        
+        console.log("Sending FormData with image:", {
+          title: formData.title,
+          description: formData.description,
+          category: formData.category,
+          date: formData.date,
+          hasImage: !!formData.image
+        });
+        
+        if (isEditMode && id) {
+          const result = await updatePortfolioWork(id, formDataToSend);
+          console.log("Update result:", result);
+        } else {
+          const result = await addPortfolioWork(formDataToSend);
+          console.log("Add result:", result);
+        }
+      } else {
+        const workData = {
+          title: formData.title,
+          description: formData.description,
+          category: formData.category,
+          date: formData.date,
+        };
+        
+        console.log("Sending JSON data:", workData);
+        
+        if (isEditMode && id) {
+          const result = await updatePortfolioWork(id, workData);
+          console.log("Update result:", result);
+        } else {
+          const result = await addPortfolioWork(workData);
+          console.log("Add result:", result);
+        }
+      }
+      
+      // Wait a bit before navigating to ensure data is saved
+      await new Promise(resolve => setTimeout(resolve, 500));
+      navigate("/engineer/portfolio");
+    } catch (error) {
+      console.error(`Failed to ${isEditMode ? 'update' : 'add'} work:`, error);
+      // Error toast is handled in the API function
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -101,7 +188,9 @@ const AddWork = () => {
             <BreadcrumbSeparator className="text-hexa-text-light" />
             <BreadcrumbItem>
               <BreadcrumbPage className="text-hexa-secondary font-semibold">
-                {getDashboardText("addWork", language)}
+                {isEditMode 
+                  ? (language === "en" ? "Edit Work" : "تعديل العمل")
+                  : getDashboardText("addWork", language)}
               </BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
@@ -119,10 +208,14 @@ const AddWork = () => {
           </Button>
           <div className="flex-1">
             <h1 className="text-3xl font-bold text-hexa-text-dark">
-              {getDashboardText("addWork", language)}
+              {isEditMode 
+                ? (language === "en" ? "Edit Work" : "تعديل العمل")
+                : getDashboardText("addWork", language)}
             </h1>
             <p className="text-hexa-text-light mt-1">
-              {language === "en" ? "Add a new work to your portfolio" : "أضف عملاً جديداً إلى معرض أعمالك"}
+              {isEditMode
+                ? (language === "en" ? "Update your work information" : "قم بتحديث معلومات عملك")
+                : (language === "en" ? "Add a new work to your portfolio" : "أضف عملاً جديداً إلى معرض أعمالك")}
             </p>
           </div>
         </div>
@@ -138,6 +231,14 @@ const AddWork = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {fetching ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 text-hexa-secondary animate-spin" />
+                <span className="ml-3 text-hexa-text-light">
+                  {language === "en" ? "Loading work data..." : "جاري تحميل بيانات العمل..."}
+                </span>
+              </div>
+            ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Work Title */}
               <div className="space-y-2.5">
@@ -218,13 +319,13 @@ const AddWork = () => {
               {/* Work Image */}
               <div className="space-y-2.5">
                 <Label htmlFor="image" className="text-hexa-text-dark text-base font-medium">
-                  {getDashboardText("workImage", language)} *
+                  {getDashboardText("workImage", language)} {!isEditMode && "*"}
                 </Label>
                 <div className="space-y-4">
-                  {formData.imagePreview ? (
+                  {formData.imagePreview || formData.existingImage ? (
                     <div className="relative">
                       <img
-                        src={formData.imagePreview}
+                        src={formData.imagePreview || formData.existingImage}
                         alt="Preview"
                         className="w-full h-64 object-cover rounded-lg border border-hexa-border"
                       />
@@ -237,6 +338,7 @@ const AddWork = () => {
                             ...prev,
                             image: null,
                             imagePreview: "",
+                            existingImage: "",
                           }));
                         }}
                         className="absolute top-2 right-2 border-hexa-border bg-hexa-card text-hexa-text-light hover:bg-hexa-secondary hover:text-black hover:border-hexa-secondary"
@@ -260,7 +362,7 @@ const AddWork = () => {
                         type="file"
                         accept="image/*"
                         onChange={handleImageChange}
-                        required
+                        required={!isEditMode}
                         className="hidden"
                       />
                       <p className="text-sm text-hexa-text-light mt-2">
@@ -283,13 +385,28 @@ const AddWork = () => {
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-hexa-secondary hover:bg-hexa-secondary/90 text-black font-semibold h-11 px-6"
+                  disabled={loading}
+                  className="bg-hexa-secondary hover:bg-hexa-secondary/90 text-black font-semibold h-11 px-6 disabled:opacity-50"
                 >
-                  <Save className={`w-4 h-4 ${language === "ar" ? "ml-2" : "mr-2"}`} />
-                  {language === "en" ? "Add Work" : "إضافة العمل"}
+                  {loading ? (
+                    <>
+                      <Loader2 className={`w-4 h-4 animate-spin ${language === "ar" ? "ml-2" : "mr-2"}`} />
+                      {isEditMode 
+                        ? (language === "en" ? "Updating..." : "جاري التحديث...")
+                        : (language === "en" ? "Adding..." : "جاري الإضافة...")}
+                    </>
+                  ) : (
+                    <>
+                      <Save className={`w-4 h-4 ${language === "ar" ? "ml-2" : "mr-2"}`} />
+                      {isEditMode 
+                        ? (language === "en" ? "Update Work" : "تحديث العمل")
+                        : (language === "en" ? "Add Work" : "إضافة العمل")}
+                    </>
+                  )}
                 </Button>
               </div>
             </form>
+            )}
           </CardContent>
         </Card>
       </div>

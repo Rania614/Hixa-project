@@ -195,28 +195,45 @@ const CompanyLanding = () => {
     setSubmitting(true);
 
     try {
-      // Prepare form data
+      const serviceId = selectedService?._id || selectedService?.id;
+      
+      // Always use FormData to support image uploads
       const formData = new FormData();
+      
+      // Required fields based on API structure
       formData.append('email', email);
-      formData.append('service', JSON.stringify({
-        _id: selectedService?._id || selectedService?.id,
-        title_en: selectedService?.title_en || selectedService?.title?.en,
-        title_ar: selectedService?.title_ar || selectedService?.title?.ar,
-        name: selectedService?.name,
-      }));
-      formData.append('section', JSON.stringify({
-        title: section.title,
-        description: section.description,
-        textarea: section.textarea,
-      }));
-
+      formData.append('title', section.title || ''); // Required
+      
+      // Service ID - required
+      if (serviceId) {
+        formData.append('serviceId', serviceId);
+      }
+      
+      // Optional fields matching backend structure
+      if (section.description) {
+        formData.append('description', section.description);
+      }
+      if (section.textarea) {
+        formData.append('orderDetails', section.textarea); // Backend expects 'orderDetails' not 'details'
+      }
+      
       // Add image if available
       if (section.image) {
         formData.append('image', section.image);
       }
 
+      // Log data being sent (for debugging)
+      console.log('Sending order data:', {
+        email,
+        serviceId,
+        title: section.title,
+        description: section.description,
+        orderDetails: section.textarea,
+        hasImage: !!section.image
+      });
+
       // Send to API
-      await http.post('/orders', formData, {
+      await http.post('/service-orders', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -228,10 +245,20 @@ const CompanyLanding = () => {
       handleCloseModal();
     } catch (error: any) {
       console.error('Error submitting order:', error);
-      toast.error(
-        error.response?.data?.message || 
-        (language === 'en' ? 'Failed to submit order. Please try again.' : 'فشل إرسال الطلب. يرجى المحاولة مرة أخرى.')
-      );
+      console.error('Error response:', error.response?.data);
+      
+      // Show detailed error message
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error ||
+                          (error.response?.status === 400 
+                            ? (language === 'en' 
+                              ? 'Invalid data. Please check all fields and try again.' 
+                              : 'بيانات غير صحيحة. يرجى التحقق من جميع الحقول والمحاولة مرة أخرى.')
+                            : (language === 'en' 
+                              ? 'Failed to submit order. Please try again.' 
+                              : 'فشل إرسال الطلب. يرجى المحاولة مرة أخرى.'));
+      
+      toast.error(errorMessage);
     } finally {
       setSubmitting(false);
     }

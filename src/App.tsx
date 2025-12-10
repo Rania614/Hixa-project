@@ -29,6 +29,7 @@ import CreateProject from "./pages/client-dashboard/CreateProject";
 import EngineerProfileView from "./pages/client-dashboard/EngineerProfileView";
 
 // Engineer Dashboard
+import EngineerLogin from "./pages/engineer-dashboard/EngineerLogin";
 import EngineerDashboard from "./pages/engineer-dashboard/EngineerDashboard";
 import AvailableProjects from "./pages/engineer-dashboard/AvailableProjects";
 import EngineerProjects from "./pages/engineer-dashboard/EngineerProjects";
@@ -253,6 +254,14 @@ const AppRoutes = () => {
       <Route path="/client/profile" element={<ClientProfile />} />
       
       {/* Engineer Dashboard Routes */}
+      <Route 
+        path="/engineer/login" 
+        element={
+          <PublicRoute>
+            <EngineerLogin />
+          </PublicRoute>
+        } 
+      />
       <Route path="/engineer/dashboard" element={<EngineerDashboard />} />
       <Route path="/engineer/available-projects" element={<AvailableProjects />} />
       <Route path="/engineer/projects" element={<EngineerProjects />} />
@@ -262,6 +271,7 @@ const AppRoutes = () => {
       <Route path="/engineer/notifications" element={<EngineerNotifications />} />
       <Route path="/engineer/portfolio" element={<EngineerPortfolio />} />
       <Route path="/engineer/portfolio/add" element={<AddWork />} />
+      <Route path="/engineer/portfolio/:id/edit" element={<AddWork />} />
       <Route path="/engineer/portfolio/:id" element={<WorkDetails />} />
       <Route path="/engineer/profile" element={<EngineerProfile />} />
       

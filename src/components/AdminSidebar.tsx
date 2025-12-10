@@ -45,11 +45,11 @@ export const AdminSidebar = () => {
       icon: ShoppingCart,
       label: language === 'en' ? 'Service Orders' : 'طلبات الخدمات'
     },
-    // {
-    //   to: "/admin/subscribers",
-    //   icon: Mail,
-    //   label: language === 'en' ? 'Subscribers' : 'المشتركون'
-    // },
+    {
+      to: "/admin/subscribers",
+      icon: Mail,
+      label: language === 'en' ? 'Subscribers' : 'المشتركون'
+    },
     // {
     //   to: "/admin/messages",
     //   icon: MessageSquare,

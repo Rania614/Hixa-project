@@ -1,5 +1,5 @@
 import { useApp } from '@/context/AppContext';
-import { Instagram, MessageCircle, Twitter, Send } from 'lucide-react';
+import { Instagram, MessageCircle, Twitter, Send, Facebook } from 'lucide-react';
 
 export const Footer = () => {
   const { content, language } = useApp();
@@ -8,7 +8,8 @@ export const Footer = () => {
     instagram: 'https://www.instagram.com/hixa_groups?utm_source=qr&igsh=MWo1MG03Z3c0NmF4cQ==',
     whatsapp: 'https://chat.whatsapp.com/LQrlGeLPOFjGlhN7d1Tl52',
     twitter: 'https://x.com/HIXAGroup',
-    telegram: 'https://t.me/projectsco'
+    telegram: 'https://t.me/projectsco',
+    facebook: 'https://www.facebook.com/share/1FpuCgzK8y/'
   };
 
   return (
@@ -74,6 +75,15 @@ export const Footer = () => {
               aria-label="Telegram"
             >
               <Send className="w-5 h-5" />
+            </a>
+            <a 
+              href={socialLinks.facebook}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
+              aria-label="Facebook"
+            >
+              <Facebook className="w-5 h-5" />
             </a>
           </div>
         </div>

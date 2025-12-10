@@ -89,18 +89,39 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (token) {
         try {
           // Try to verify token with API - check if admin is authenticated
+          // Suppress console errors for these optional endpoints by using validateStatus
           try {
-            await http.get('/auth/verify');
-            setIsAuthenticated(true);
+            const verifyResponse = await http.get('/auth/verify', {
+              validateStatus: () => true, // Don't throw for any status code
+            });
+            // If status is 200-299, user is authenticated
+            if (verifyResponse.status >= 200 && verifyResponse.status < 300) {
+              setIsAuthenticated(true);
+            } else if (verifyResponse.status === 404) {
+              // Endpoint doesn't exist, try admin/me
+              throw { response: { status: 404 }, silent: true };
+            } else {
+              setIsAuthenticated(true);
+            }
           } catch (verifyError: any) {
             // If verify endpoint doesn't exist (404), try admin/me endpoint
-            if (verifyError.response?.status === 404) {
+            if (verifyError.response?.status === 404 || verifyError.silent) {
               try {
-                await http.get('/admin/me');
-                setIsAuthenticated(true);
+                const meResponse = await http.get('/admin/me', {
+                  validateStatus: () => true, // Don't throw for any status code
+                });
+                // If status is 200-299, user is authenticated
+                if (meResponse.status >= 200 && meResponse.status < 300) {
+                  setIsAuthenticated(true);
+                } else if (meResponse.status === 404) {
+                  // Both endpoints don't exist - keep token for development
+                  setIsAuthenticated(true);
+                } else {
+                  setIsAuthenticated(true);
+                }
               } catch (meError: any) {
                 // If both endpoints don't exist (404), keep token (fallback for development)
-                if (meError.response?.status === 404) {
+                if (meError.response?.status === 404 || meError.silent) {
                   // Endpoints don't exist - keep token for development
                   // Silently handle 404 - endpoints may not be implemented yet
                   setIsAuthenticated(true);
@@ -124,14 +145,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           }
         } catch (error: any) {
           // Network error or other issue - check if it's a 404 (endpoint doesn't exist)
-          if (error.response?.status === 404) {
+          if (error.response?.status === 404 || error.silent) {
             // Endpoint doesn't exist - keep token for development
             // Silently handle 404 - endpoints may not be implemented yet
             setIsAuthenticated(true);
           } else {
             // Other network error - keep token for now
             // Only log non-404 errors
-            if (error.response?.status !== 404) {
+            if (error.response?.status !== 404 && !error.silent) {
               console.warn('Auth check failed:', error.message || error);
             }
             setIsAuthenticated(true);
