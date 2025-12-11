@@ -18,6 +18,7 @@ import CompanyLanding from "./pages/CompanyLanding";
 import AuthPage from "./pages/AuthPage";
 
 // Client Dashboard
+import ClientLogin from "./pages/client-dashboard/ClientLogin";
 import ClientDashboard from "./pages/client-dashboard/ClientDashboard";
 import ClientProjects from "./pages/client-dashboard/ClientProjects";
 import ClientMessages from "./pages/client-dashboard/ClientMessages";
@@ -124,7 +125,13 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   
   // Must have both authentication state and valid token
   if (!isAuthorized) {
-    return <Navigate to="/admin/login" replace state={{ from: location }} />;
+    // Redirect to appropriate login page based on route
+    const loginPath = location.pathname.startsWith('/client/') 
+      ? '/client/login' 
+      : location.pathname.startsWith('/engineer/')
+      ? '/engineer/login'
+      : '/admin/login';
+    return <Navigate to={loginPath} replace state={{ from: location }} />;
   }
   
   return <>{children}</>;
@@ -164,7 +171,13 @@ const PublicRoute = ({ children, allowWhenAuthenticated = false }: { children: R
   
   // For login/auth pages, redirect to dashboard if already authenticated
   if (isAuthorized) {
-    return <Navigate to="/admin/dashboard" replace />;
+    // Redirect to appropriate dashboard based on login page
+    const dashboardPath = location.pathname.includes('/client/login')
+      ? '/client/dashboard'
+      : location.pathname.includes('/engineer/login')
+      ? '/engineer/dashboard'
+      : '/admin/dashboard';
+    return <Navigate to={dashboardPath} replace />;
   }
   
   return <>{children}</>;
@@ -244,15 +257,86 @@ const AppRoutes = () => {
       />
       
       {/* Client Dashboard Routes */}
-      <Route path="/client/dashboard" element={<ClientDashboard />} />
-      <Route path="/client/projects" element={<ClientProjects />} />
-      <Route path="/client/projects/new" element={<CreateProject />} />
-      <Route path="/client/projects/:id" element={<ProjectDetails />} />
-      <Route path="/client/engineers/:id" element={<EngineerProfileView />} />
-      <Route path="/client/messages" element={<ClientMessages />} />
-      <Route path="/client/notifications" element={<ClientNotifications />} />
-      <Route path="/client/contracts" element={<ClientContracts />} />
-      <Route path="/client/profile" element={<ClientProfile />} />
+      <Route 
+        path="/client/login" 
+        element={
+          <PublicRoute>
+            <ClientLogin />
+          </PublicRoute>
+        } 
+      />
+      <Route 
+        path="/client/dashboard" 
+        element={
+          <ProtectedRoute>
+            <ClientDashboard />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/client/projects" 
+        element={
+          <ProtectedRoute>
+            <ClientProjects />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/client/projects/new" 
+        element={
+          <ProtectedRoute>
+            <CreateProject />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/client/projects/:id" 
+        element={
+          <ProtectedRoute>
+            <ProjectDetails />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/client/engineers/:id" 
+        element={
+          <ProtectedRoute>
+            <EngineerProfileView />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/client/messages" 
+        element={
+          <ProtectedRoute>
+            <ClientMessages />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/client/notifications" 
+        element={
+          <ProtectedRoute>
+            <ClientNotifications />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/client/contracts" 
+        element={
+          <ProtectedRoute>
+            <ClientContracts />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/client/profile" 
+        element={
+          <ProtectedRoute>
+            <ClientProfile />
+          </ProtectedRoute>
+        } 
+      />
       
       {/* Engineer Dashboard Routes */}
       <Route 

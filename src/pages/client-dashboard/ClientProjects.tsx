@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { useApp } from "@/context/AppContext";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, MessageSquare, FileText, Eye, Plus } from "lucide-react";
+import { MapPin, MessageSquare, FileText, Eye, Plus, Loader2 } from "lucide-react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -16,51 +16,118 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { http } from "@/services/http";
+import { toast } from "@/components/ui/sonner";
 
 const ClientProjects = () => {
   const { language } = useApp();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("all");
+  const [projects, setProjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock projects data
-  const projects = [
-    {
-      id: 1,
-      title: "Residential Building Design",
-      type: "Architecture",
-      location: "Riyadh, Saudi Arabia",
-      status: "inProgress",
-      engineer: "Ahmed Al-Mansouri",
-      proposals: 5,
-    },
-    {
-      id: 2,
-      title: "Office Complex Construction",
-      type: "Construction",
-      location: "Dubai, UAE",
-      status: "waitingForEngineers",
-      engineer: null,
-      proposals: 12,
-    },
-    {
-      id: 3,
-      title: "Bridge Engineering Project",
-      type: "Civil Engineering",
-      location: "Jeddah, Saudi Arabia",
-      status: "pendingReview",
-      engineer: null,
-      proposals: 0,
-    },
-    {
-      id: 4,
-      title: "Industrial Plant Design",
-      type: "Mechanical Engineering",
-      location: "Dammam, Saudi Arabia",
-      status: "completed",
-      engineer: "Fatima Al-Zahra",
-      proposals: 8,
-    },
-  ];
+  // Fetch projects from API
+  const fetchProjects = async () => {
+    try {
+      setLoading(true);
+      
+      // Try different possible endpoints (baseURL already includes /api)
+      let response;
+      const possibleEndpoints = [
+        '/projects',  // Try /projects first (most common)
+        '/client/projects',  // Try /client/projects as fallback
+      ];
+      
+      let lastError;
+      for (const endpoint of possibleEndpoints) {
+        try {
+          response = await http.get(endpoint);
+          if (response && response.data) {
+            console.log(`✅ Successfully fetched from ${endpoint}`);
+            break; // Success, exit loop
+          }
+        } catch (err: any) {
+          lastError = err;
+          console.warn(`⚠️ Failed to fetch from ${endpoint}:`, err.response?.status || err.message);
+          // Continue to next endpoint
+          continue;
+        }
+      }
+      
+      if (!response || !response.data) {
+        throw lastError || new Error('No valid endpoint found');
+      }
+      
+      // Transform API data to match component structure
+      const projectsData = Array.isArray(response.data) 
+        ? response.data 
+        : (response.data.projects || response.data.items || response.data.data || []);
+      
+      const transformedProjects = projectsData.map((project: any) => ({
+        id: project._id || project.id,
+        title: project.title || project.name || '',
+        type: project.projectType || project.category || project.type || '',
+        location: project.location || '',
+        status: mapStatusToComponent(project.status),
+        engineer: project.assignedEngineer?.name || project.assignedEngineer || null,
+        proposals: project.proposalsCount || project.proposals?.length || 0,
+        description: project.description || '',
+        requirements: project.requirements || '',
+        budget: project.budget || null,
+        deadline: project.deadline || null,
+        attachments: project.attachments || [],
+        tags: project.tags || [],
+        isActive: project.isActive !== false,
+        ...project // Keep original data for details page
+      }));
+      
+      setProjects(transformedProjects);
+    } catch (error: any) {
+      console.error('Error fetching projects:', error);
+      const errorMessage = error.response?.data?.message || error.message || '';
+      
+      // Don't show error toast if it's just a 404 - endpoint might not be implemented yet
+      if (error.response?.status !== 404) {
+        toast.error(
+          language === 'en' 
+            ? `Failed to load projects${errorMessage ? ': ' + errorMessage : ''}` 
+            : `فشل تحميل المشاريع${errorMessage ? ': ' + errorMessage : ''}`
+        );
+      } else {
+        console.warn('Projects endpoint not found - this is expected if backend endpoint is not implemented yet');
+      }
+      
+      // Keep empty array on error
+      setProjects([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Map API status to component status
+  const mapStatusToComponent = (status: string) => {
+    if (!status) return 'pendingReview';
+    
+    const statusLower = status.toLowerCase();
+    const statusMap: Record<string, string> = {
+      'draft': 'pendingReview',
+      'pending': 'pendingReview',
+      'pending_review': 'pendingReview',
+      'waiting_for_engineers': 'waitingForEngineers',
+      'waiting': 'waitingForEngineers',
+      'in_progress': 'inProgress',
+      'inprogress': 'inProgress',
+      'active': 'inProgress',
+      'completed': 'completed',
+      'done': 'completed',
+      'review': 'pendingReview'
+    };
+    return statusMap[statusLower] || 'pendingReview';
+  };
+
+  useEffect(() => {
+    fetchProjects();
+  }, []);
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -155,8 +222,29 @@ const ClientProjects = () => {
           </TabsList>
 
           <TabsContent value={activeTab} className="mt-6">
-            <div className="grid gap-6 grid-cols-1">
-              {filteredProjects.map((project) => (
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-hexa-secondary" />
+                <span className="ml-3 text-hexa-text-light">
+                  {language === "en" ? "Loading projects..." : "جاري تحميل المشاريع..."}
+                </span>
+              </div>
+            ) : filteredProjects.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-hexa-text-light text-lg">
+                  {language === "en" ? "No projects found" : "لا توجد مشاريع"}
+                </p>
+                <Button
+                  onClick={() => navigate("/client/projects/new")}
+                  className="mt-4 bg-hexa-secondary hover:bg-hexa-secondary/90 text-black shadow-md font-semibold"
+                >
+                  <Plus className="w-4 h-4 ms-2" />
+                  {getDashboardText("createNewProject", language)}
+                </Button>
+              </div>
+            ) : (
+              <div className="grid gap-6 grid-cols-1">
+                {filteredProjects.map((project) => (
                 <Card 
                   key={project.id} 
                   className="group hover:shadow-xl hover:border-hexa-secondary/60 transition-all duration-300 cursor-pointer bg-hexa-card border-hexa-border overflow-hidden"
@@ -262,8 +350,9 @@ const ClientProjects = () => {
                     </div>
                   </div>
                 </Card>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>

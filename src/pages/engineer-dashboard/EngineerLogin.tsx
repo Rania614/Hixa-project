@@ -142,13 +142,18 @@ const EngineerLogin = () => {
     <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-gradient-to-br from-background via-secondary/20 to-background">
       <Card className="w-full max-w-md glass-card relative z-10 border-hexa-border">
         <CardHeader className="text-center">
+          <div className="mb-2">
+            <p className="text-sm font-semibold text-hexa-secondary uppercase tracking-wider">
+              {language === 'en' ? 'Engineer Login' : 'تسجيل دخول المهندس'}
+            </p>
+          </div>
           <div className="mx-auto mb-4 w-16 h-16 bg-hexa-secondary/10 flex items-center justify-center hexagon">
             <HexagonIcon size="xl" className="text-hexa-secondary">
               <Wrench className="h-8 w-8 text-hexa-secondary" />
             </HexagonIcon>
           </div>
           <CardTitle className="text-3xl font-bold text-hexa-text-dark">
-            {language === 'en' ? 'Engineer Login' : 'تسجيل دخول المهندس'}
+            {language === 'en' ? 'Login' : 'تسجيل الدخول'}
           </CardTitle>
           <CardDescription className="text-hexa-text-light">
             {language === 'en' 

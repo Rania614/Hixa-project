@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { User, Handshake, X, Wrench, Building, ArrowLeft } from 'lucide-react';
+import { http } from '@/services/http';
+import { toast } from '@/components/ui/sonner';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -41,14 +43,114 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
   const [companyName, setCompanyName] = useState('');
   const [specialization, setSpecialization] = useState('');
   const [licenseNumber, setLicenseNumber] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simple mock authentication - just check if email and password are filled
-    if (email && password) {
-      // Call onAuthSuccess which will set authenticated and navigate to dashboard
-      // Don't call onClose() here - navigation will happen automatically
-      onAuthSuccess();
+    setError('');
+    
+    if (!email || !password) {
+      setError('Please enter email and password');
+      return;
+    }
+
+    if (isLogin) {
+      // Login
+      try {
+        setLoading(true);
+        const response = await http.post('/auth/login', { email, password });
+        
+        if (response.data && response.data.token) {
+          // Save token
+          localStorage.setItem('token', response.data.token);
+          
+          // Set authenticated
+          setIsAuthenticated(true);
+          
+          // Call onAuthSuccess which will navigate to appropriate dashboard
+          onAuthSuccess();
+        } else {
+          setError('Invalid response from server');
+        }
+      } catch (err: any) {
+        console.error('Login failed:', err);
+        const errorMessage = err.response?.data?.message || 
+                           err.response?.data?.error || 
+                           err.message || 
+                           'Login failed. Please check your credentials.';
+        setError(errorMessage);
+        toast.error(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      // Registration
+      if (!name || !email || !password) {
+        setError('Please fill in all required fields');
+        return;
+      }
+      
+      if (password !== confirmPassword) {
+        setError('Passwords do not match');
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const registrationData: any = {
+          email,
+          password,
+          name,
+        };
+
+        // Add role-specific data
+        if (role === 'client') {
+          registrationData.role = 'client';
+          if (companyName) {
+            registrationData.companyName = companyName;
+          }
+        } else if (role === 'partner') {
+          registrationData.role = 'partner';
+          if (partnerType) {
+            registrationData.partnerType = partnerType;
+          }
+          if (companyName) {
+            registrationData.companyName = companyName;
+          }
+          if (specialization) {
+            registrationData.specialization = specialization;
+          }
+          if (licenseNumber) {
+            registrationData.licenseNumber = licenseNumber;
+          }
+        }
+
+        const response = await http.post('/auth/register', registrationData);
+        
+        if (response.data && response.data.token) {
+          // Save token
+          localStorage.setItem('token', response.data.token);
+          
+          // Set authenticated
+          setIsAuthenticated(true);
+          
+          // Call onAuthSuccess which will navigate to appropriate dashboard
+          onAuthSuccess();
+        } else {
+          setError('Registration successful but no token received');
+        }
+      } catch (err: any) {
+        console.error('Registration failed:', err);
+        const errorMessage = err.response?.data?.message || 
+                           err.response?.data?.error || 
+                           err.message || 
+                           'Registration failed. Please try again.';
+        setError(errorMessage);
+        toast.error(errorMessage);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -184,11 +286,18 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
                   />
                 </div>
                 
+                {error && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">
+                    {error}
+                  </div>
+                )}
+                
                 <Button
                   type="submit"
+                  disabled={loading}
                   className="w-full bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold"
                 >
-                  Sign In
+                  {loading ? 'Signing in...' : 'Sign In'}
                 </Button>
               </form>
             </>

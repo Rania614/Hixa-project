@@ -112,6 +112,11 @@ const AdminLogin = () => {
     <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden">
       <Card className="w-full max-w-md glass-card relative z-10">
         <CardHeader className="text-center">
+          <div className="mb-2">
+            <p className="text-sm font-semibold text-gold uppercase tracking-wider">
+              Admin Login
+            </p>
+          </div>
           <div className="mx-auto mb-4 w-16 h-16 bg-gold/10 flex items-center justify-center hexagon">
             <HexagonIcon size="xl" className="text-gold">
               <Lock className="h-8 w-8 text-gold" />
