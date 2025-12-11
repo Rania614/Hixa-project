@@ -127,9 +127,9 @@ The admin panel allows editing all content in both languages:
 
 ### Content Storage
 All content is stored in React state (`AppContext.tsx`). For persistence:
-- Add Lovable Cloud for database storage
-- Or connect to external API
+- Connect to external API
 - Or use localStorage for client-side persistence
+- Or use any database storage solution
 
 ## 🌍 RTL/LTR Support
 
@@ -169,7 +169,7 @@ Deploy the `dist` folder to any static hosting service:
 - Vercel
 - Netlify
 - GitHub Pages
-- Lovable Cloud
+- Any static hosting service
 
 ## 📝 Notes
 
@@ -182,7 +182,6 @@ Deploy the `dist` folder to any static hosting service:
 
 ## 🔮 Future Enhancements
 
-- [ ] Connect to Lovable Cloud for data persistence
 - [ ] Add Light Mode toggle
 - [ ] Implement real authentication with JWT
 - [ ] Add file upload for project images

@@ -188,20 +188,9 @@ export const Header = () => {
                         <Handshake className="h-4 w-4" />
                         {language === 'en' ? 'Engineer Dashboard' : 'لوحة تحكم المهندس'}
                       </button> */}
-                      <div className="border-t border-border my-1" />
-                      <button
-                        onClick={() => {
-                          navigate('/admin/login');
-                          setShowPlatformDropdown(false);
-                        }}
-                        className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10"
-                      >
-                        <User className="h-4 w-4" />
-                        <span>{language === 'en' ? 'Log In' : 'تسجيل الدخول'}</span>
-                        <span className="text-xs text-muted-foreground font-normal ml-1">
-                          {language === 'en' ? 'Coming Soon' : 'قريباً'}
-                        </span>
-                      </button>
+                      <p className="text-sm text-muted-foreground text-center py-4 px-2">
+                        {language === 'en' ? 'Coming Soon' : 'قريباً'}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -276,20 +265,9 @@ export const Header = () => {
                           <Handshake className="h-4 w-4" />
                           {language === 'en' ? 'Engineer Dashboard' : 'لوحة تحكم المهندس'}
                         </button> */}
-                        <div className="border-t border-border my-1" />
-                        <button
-                          onClick={() => {
-                            navigate('/admin/login');
-                            setShowPlatformDropdown(false);
-                          }}
-                          className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10"
-                        >
-                          <User className="h-4 w-4" />
-                          <span>{language === 'en' ? 'Log In' : 'تسجيل الدخول'}</span>
-                          <span className="text-xs text-muted-foreground font-normal ml-1">
-                            {language === 'en' ? 'Coming Soon' : 'قريباً'}
-                          </span>
-                        </button>
+                        <p className="text-sm text-muted-foreground text-center py-4 px-2">
+                          {language === 'en' ? 'Coming Soon' : 'قريباً'}
+                        </p>
                       </div>
                     </div>
                   )}

@@ -193,6 +193,7 @@ const AppRoutes = () => {
           </PublicRoute>
         } 
       />
+      {/* Admin routes - Hidden from UI but accessible via direct URL */}
       <Route 
         path="/admin/login" 
         element={
