@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, X, Instagram, MessageCircle, Twitter, Send, Upload } from "lucide-react";
+import { Menu, X, Instagram, MessageCircle, Twitter, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -16,13 +16,6 @@ import { useApp } from "@/context/AppContext";
 import { http } from "@/services/http";
 import { toast } from "@/components/ui/sonner";
 
-interface OrderFormSection {
-  title: string;
-  description: string;
-  image: File | null;
-  imagePreview: string | null;
-  textarea: string;
-}
 
 const CompanyLanding = () => {
   const navigate = useNavigate();
@@ -30,14 +23,8 @@ const CompanyLanding = () => {
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<any>(null);
   const [email, setEmail] = useState("");
+  const [orderDetails, setOrderDetails] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [section, setSection] = useState<OrderFormSection>({
-    title: "",
-    description: "",
-    image: null,
-    imagePreview: null,
-    textarea: "",
-  });
   const { language } = useApp();
   const { hero, about, services, projects, cta, loading } = useLandingStore(
     useShallow((state) => ({
@@ -50,6 +37,102 @@ const CompanyLanding = () => {
     }))
   );
   const fetchLandingData = useLandingStore((state) => state.fetchLandingData);
+  
+  // Fetch services details from API (4 services, each with 4 sections)
+  const [servicesDetails, setServicesDetails] = useState<any[][]>([]);
+  
+  useEffect(() => {
+    const fetchServicesDetails = async () => {
+      try {
+        const response = await http.get('/content');
+        console.log('Full content response:', response.data);
+        const data = response.data?.servicesDetails || response.data?.services_details || [];
+        console.log('Services details from API:', data);
+        
+        // Ensure we have 4 services, each with 4 sections
+        const defaultServicesDetails: any[][] = Array(4).fill(null).map(() => 
+          Array(4).fill(null).map(() => ({
+            title_en: '',
+            title_ar: '',
+            image: '',
+            details_en: '',
+            details_ar: '',
+          }))
+        );
+        
+        // Merge API data with defaults
+        let mergedData = [...defaultServicesDetails];
+        if (Array.isArray(data) && data.length > 0) {
+          data.forEach((serviceSections: any[], serviceIndex: number) => {
+            if (serviceIndex < 4 && Array.isArray(serviceSections)) {
+              serviceSections.forEach((section: any, sectionIndex: number) => {
+                if (sectionIndex < 4) {
+                  mergedData[serviceIndex][sectionIndex] = {
+                    ...defaultServicesDetails[serviceIndex][sectionIndex],
+                    ...section,
+                  };
+                }
+              });
+            }
+          });
+        } else {
+          // Try to load from localStorage as fallback
+          const savedData = localStorage.getItem('servicesDetails');
+          if (savedData) {
+            try {
+              const parsed = JSON.parse(savedData);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                parsed.forEach((serviceSections: any[], serviceIndex: number) => {
+                  if (serviceIndex < 4 && Array.isArray(serviceSections)) {
+                    serviceSections.forEach((section: any, sectionIndex: number) => {
+                      if (sectionIndex < 4) {
+                        mergedData[serviceIndex][sectionIndex] = {
+                          ...defaultServicesDetails[serviceIndex][sectionIndex],
+                          ...section,
+                        };
+                      }
+                    });
+                  }
+                });
+              }
+            } catch (e) {
+              console.error('Error parsing saved data:', e);
+            }
+          }
+        }
+        
+        console.log('Final services details:', mergedData);
+        setServicesDetails(mergedData);
+      } catch (error) {
+        console.error('Error fetching services details:', error);
+        // Try to load from localStorage as fallback
+        const savedData = localStorage.getItem('servicesDetails');
+        if (savedData) {
+          try {
+            const parsed = JSON.parse(savedData);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setServicesDetails(parsed);
+              console.log('Services details from localStorage:', parsed);
+              return;
+            }
+          } catch (e) {
+            console.error('Error parsing saved data from localStorage:', e);
+          }
+        }
+        // Set default empty structure
+        setServicesDetails(Array(4).fill(null).map(() => 
+          Array(4).fill(null).map(() => ({
+            title_en: '',
+            title_ar: '',
+            image: '',
+            details_en: '',
+            details_ar: '',
+          }))
+        ));
+      }
+    };
+    fetchServicesDetails();
+  }, []);
 
   useEffect(() => {
     // Fetch real data from API immediately
@@ -148,41 +231,16 @@ const CompanyLanding = () => {
     setOrderModalOpen(true);
     // Reset form
     setEmail("");
-    setSection({
-      title: "",
-      description: "",
-      image: null,
-      imagePreview: null,
-      textarea: "",
-    });
+    setOrderDetails("");
   };
 
   const handleCloseModal = () => {
     setOrderModalOpen(false);
     setSelectedService(null);
+    setEmail("");
+    setOrderDetails("");
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSection((prev) => ({
-          ...prev,
-          image: file,
-          imagePreview: reader.result as string,
-        }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSectionChange = (field: keyof OrderFormSection, value: string) => {
-    setSection((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -197,66 +255,111 @@ const CompanyLanding = () => {
     try {
       const serviceId = selectedService?._id || selectedService?.id;
       
-      // Always use FormData to support image uploads
-      const formData = new FormData();
-      
-      // Required fields based on API structure
-      formData.append('email', email);
-      formData.append('title', section.title || ''); // Required
-      
-      // Service ID - required
-      if (serviceId) {
-        formData.append('serviceId', serviceId);
+      // Validate required fields
+      if (!serviceId) {
+        toast.error(language === 'en' ? 'Service ID is required' : 'معرف الخدمة مطلوب');
+        setSubmitting(false);
+        return;
       }
       
-      // Optional fields matching backend structure
-      if (section.description) {
-        formData.append('description', section.description);
-      }
-      if (section.textarea) {
-        formData.append('orderDetails', section.textarea); // Backend expects 'orderDetails' not 'details'
+      if (!orderDetails || !orderDetails.trim()) {
+        toast.error(language === 'en' ? 'Please enter your order details' : 'يرجى إدخال تفاصيل الطلب');
+        setSubmitting(false);
+        return;
       }
       
-      // Add image if available
-      if (section.image) {
-        formData.append('image', section.image);
+      // Use JSON instead of FormData since we're only sending text
+      const payload: any = {
+        email: email.trim(),
+        serviceId: String(serviceId),
+        orderDetails: orderDetails.trim(),
+      };
+      
+      // Add title if available (some backends require it)
+      const serviceTitle = getFieldValue(selectedService, "title", language) || selectedService?.name || "";
+      if (serviceTitle) {
+        payload.title = serviceTitle;
       }
 
       // Log data being sent (for debugging)
-      console.log('Sending order data:', {
-        email,
-        serviceId,
-        title: section.title,
-        description: section.description,
-        orderDetails: section.textarea,
-        hasImage: !!section.image
-      });
-
+      console.log('📤 ========== Sending Service Order ==========');
+      console.log('📤 Endpoint: /service-orders');
+      console.log('📤 Payload:', payload);
+      console.log('📤 Base URL:', import.meta.env.VITE_API_BASE_URL);
+      console.log('📤 Full URL will be:', `${import.meta.env.VITE_API_BASE_URL}/service-orders`);
+      
       // Send to API
-      await http.post('/service-orders', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const response = await http.post('/service-orders', payload);
+
+      // Log response (for debugging)
+      console.log('✅ ========== Service Order Response ==========');
+      console.log('✅ Response Status:', response.status);
+      console.log('✅ Response Status Text:', response.statusText);
+      console.log('✅ Response Data:', response.data);
+      console.log('✅ Response Headers:', response.headers);
+      console.log('✅ Full Response Object:', response);
+      console.log('✅ ===========================================');
 
       toast.success(language === 'en' ? 'Order submitted successfully!' : 'تم إرسال الطلب بنجاح!');
 
       // Close modal and reset form
       handleCloseModal();
     } catch (error: any) {
-      console.error('Error submitting order:', error);
-      console.error('Error response:', error.response?.data);
+      console.error('❌ ========== Service Order Error ==========');
+      console.error('❌ Error Object:', error);
+      console.error('❌ Error Message:', error.message);
+      console.error('❌ Error Response:', error.response);
+      console.error('❌ Error Response Data:', error.response?.data);
+      console.error('❌ Error Response Status:', error.response?.status);
+      console.error('❌ Error Response Status Text:', error.response?.statusText);
+      console.error('❌ Error Response Headers:', error.response?.headers);
+      console.error('❌ Request Config:', error.config);
+      console.error('❌ Request Data:', error.config?.data);
+      console.error('❌ Full Error:', JSON.stringify(error, null, 2));
+      
+      // Log backend error message if available
+      if (error.response?.data) {
+        console.error('❌ Backend Error Message:', error.response.data.message || error.response.data.error || error.response.data);
+        console.error('❌ Backend Error Details:', JSON.stringify(error.response.data, null, 2));
+      }
+      
+      console.error('❌ ===========================================');
       
       // Show detailed error message
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.error ||
-                          (error.response?.status === 400 
-                            ? (language === 'en' 
-                              ? 'Invalid data. Please check all fields and try again.' 
-                              : 'بيانات غير صحيحة. يرجى التحقق من جميع الحقول والمحاولة مرة أخرى.')
-                            : (language === 'en' 
-                              ? 'Failed to submit order. Please try again.' 
-                              : 'فشل إرسال الطلب. يرجى المحاولة مرة أخرى.'));
+      let errorMessage = '';
+      
+      if (error.response?.data) {
+        // Try to get error message from different possible fields
+        errorMessage = error.response.data.message || 
+                      error.response.data.error || 
+                      error.response.data.msg ||
+                      (typeof error.response.data === 'string' ? error.response.data : '');
+        
+        // If error is an object with details, try to extract more info
+        if (typeof error.response.data === 'object' && !errorMessage) {
+          const errorObj = error.response.data;
+          errorMessage = errorObj.errors?.map((e: any) => e.message || e.msg).join(', ') ||
+                        errorObj.details?.map((d: any) => d.message || d.msg).join(', ') ||
+                        JSON.stringify(errorObj);
+        }
+      }
+      
+      // Fallback messages
+      if (!errorMessage) {
+        if (error.response?.status === 400) {
+          errorMessage = language === 'en' 
+            ? 'Invalid data. Please check all fields and try again.' 
+            : 'بيانات غير صحيحة. يرجى التحقق من جميع الحقول والمحاولة مرة أخرى.';
+        } else if (error.response?.status === 500) {
+          errorMessage = language === 'en' 
+            ? 'Server error. Please try again later.' 
+            : 'خطأ في الخادم. يرجى المحاولة مرة أخرى لاحقاً.';
+        } else {
+          errorMessage = language === 'en' 
+            ? 'Failed to submit order. Please try again.' 
+            : 'فشل إرسال الطلب. يرجى المحاولة مرة أخرى.';
+        }
+      }
       
       toast.error(errorMessage);
     } finally {
@@ -496,12 +599,12 @@ const CompanyLanding = () => {
                   {shortDescription}
                 </p>
 
-                {/* Order Now Button */}
+                {/* Read More Button */}
                 <Button
                   className="mt-4 w-full bg-gold hover:bg-gold-dark text-black font-semibold py-2"
                   onClick={(e) => handleOrderNow(e, service)}
                 >
-                  {language === 'en' ? 'Order Now' : 'اطلب الآن'}
+                  {language === 'en' ? 'More Details' : 'المزيد من التفاصيل'}
                 </Button>
               </div>
                 );
@@ -805,104 +908,108 @@ const CompanyLanding = () => {
                 </div>
               )}
 
-              {/* Single Section Card */}
-              <div className="mb-6">
-                <div className="bg-muted/30 rounded-xl p-6 border border-border space-y-4">
-                  {/* Description */}
-                  <div>
-                    <label className="block text-sm font-medium text-card-foreground mb-2">
-                      {language === 'en' ? 'Description' : 'الوصف'}
-                    </label>
-                    <input
-                      type="text"
-                      value={section.description}
-                      onChange={(e) => handleSectionChange("description", e.target.value)}
-                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-card-foreground focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
-                      placeholder={language === 'en' ? 'Enter description...' : 'أدخل الوصف...'}
-                    />
-                  </div>
-
-                  {/* Title Input */}
-                  <div>
-                    <label className="block text-sm font-medium text-card-foreground mb-2">
-                      {language === 'en' ? 'Title' : 'العنوان'}
-                    </label>
-                    <input
-                      type="text"
-                      value={section.title}
-                      onChange={(e) => handleSectionChange("title", e.target.value)}
-                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-card-foreground focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
-                      placeholder={language === 'en' ? 'Enter title...' : 'أدخل العنوان...'}
-                    />
-                  </div>
-
-                  {/* Image Upload */}
-                  <div>
-                    <label className="block text-sm font-medium text-card-foreground mb-2">
-                      {language === 'en' ? 'Image' : 'الصورة'}
-                    </label>
-                    <div className="space-y-2">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                        id="image-upload"
-                      />
-                      <label
-                        htmlFor="image-upload"
-                        className="flex items-center justify-center w-full px-4 py-2 bg-background border border-border rounded-lg cursor-pointer hover:bg-muted transition-colors"
-                      >
-                        <Upload className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
-                          {section.image
-                            ? section.image.name
-                            : language === 'en'
-                            ? 'Choose image...'
-                            : 'اختر صورة...'}
-                        </span>
-                      </label>
-                      {section.imagePreview && (
-                        <div className="mt-2">
-                          <img
-                            src={section.imagePreview}
-                            alt="Preview"
-                            className="w-full h-32 object-cover rounded-lg border border-border"
-                          />
+              {/* Four Sections - Display Only (for selected service) */}
+              <div className="mb-6 space-y-6">
+                {(() => {
+                  // Get the service index from selectedService
+                  const serviceIndex = selectedService 
+                    ? safeServices.findIndex((s: any) => 
+                        String(s._id || s.id) === String(selectedService._id || selectedService.id)
+                      )
+                    : -1;
+                  
+                  // Get sections for this service (default to first service if not found)
+                  const serviceSections = serviceIndex >= 0 && serviceIndex < servicesDetails.length
+                    ? servicesDetails[serviceIndex]
+                    : (servicesDetails[0] || []);
+                  
+                  // Display 4 sections for the selected service
+                  return serviceSections.slice(0, 4).map((section: any, index: number) => {
+                    const sectionTitle = getFieldValue(section, "title", language) || section?.title_en || section?.title_ar || "";
+                    const sectionDetails = getFieldValue(section, "details", language) || section?.details_en || section?.details_ar || "";
+                    const sectionImage = section?.image || section?.imageUrl || "";
+                    
+                    return (
+                      <div key={index} className="bg-muted/30 rounded-xl p-6 border border-border space-y-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-semibold text-card-foreground">
+                            {sectionTitle || (language === 'en' ? `Section ${index + 1}` : `القسم ${index + 1}`)}
+                          </h3>
                         </div>
-                      )}
-                    </div>
-                  </div>
 
-                  {/* Textarea */}
-                  <div>
-                    <label className="block text-sm font-medium text-card-foreground mb-2">
-                      {language === 'en' ? 'Details' : 'التفاصيل'}
-                    </label>
-                    <textarea
-                      value={section.textarea}
-                      onChange={(e) => handleSectionChange("textarea", e.target.value)}
-                      rows={4}
-                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-card-foreground focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent resize-none"
-                      placeholder={language === 'en' ? 'Enter details...' : 'أدخل التفاصيل...'}
-                    />
-                  </div>
-                </div>
+                        {/* Image Display */}
+                        {sectionImage ? (
+                          <div>
+                            <img
+                              src={sectionImage}
+                              alt={sectionTitle || `Section ${index + 1}`}
+                              className="w-full h-48 object-cover rounded-lg border border-border"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-full h-48 bg-muted/50 rounded-lg border border-border flex items-center justify-center">
+                            <p className="text-muted-foreground text-sm">
+                              {language === 'en' ? 'No image' : 'لا توجد صورة'}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Details Display */}
+                        {sectionDetails ? (
+                          <div>
+                            <p className="text-card-foreground text-sm leading-relaxed whitespace-pre-wrap">
+                              {sectionDetails}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="text-muted-foreground text-sm italic">
+                            {language === 'en' ? 'No details available' : 'لا توجد تفاصيل متاحة'}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
 
-              {/* Email Field */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-card-foreground mb-2">
-                  {language === 'en' ? 'Email' : 'البريد الإلكتروني'}
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-card-foreground focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
-                  placeholder={language === 'en' ? 'your.email@example.com' : 'بريدك.الإلكتروني@example.com'}
-                />
+              {/* Order Form - Email and Details Only */}
+              <div className="mb-6 space-y-4">
+                <h3 className="text-lg font-semibold text-card-foreground mb-4">
+                  {language === 'en' ? 'Submit Your Order' : 'إرسال طلبك'}
+                </h3>
+                
+                {/* Email Field */}
+                <div>
+                  <label className="block text-sm font-medium text-card-foreground mb-2">
+                    {language === 'en' ? 'Email' : 'البريد الإلكتروني'} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg text-card-foreground focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
+                    placeholder={language === 'en' ? 'your.email@example.com' : 'بريدك.الإلكتروني@example.com'}
+                  />
+                </div>
+
+                {/* Order Details Textarea */}
+                <div>
+                  <label className="block text-sm font-medium text-card-foreground mb-2">
+                    {language === 'en' ? 'Order Details' : 'تفاصيل الطلب'} <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={orderDetails}
+                    onChange={(e) => setOrderDetails(e.target.value)}
+                    required
+                    rows={6}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg text-card-foreground focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent resize-none"
+                    placeholder={language === 'en' ? 'Please describe your order requirements...' : 'يرجى وصف متطلبات طلبك...'}
+                  />
+                </div>
               </div>
 
               {/* Submit Button */}
@@ -922,7 +1029,7 @@ const CompanyLanding = () => {
                 >
                   {submitting 
                     ? (language === 'en' ? 'Submitting...' : 'جاري الإرسال...')
-                    : (language === 'en' ? 'Submit Order' : 'إرسال الطلب')}
+                    : (language === 'en' ? 'Order Now' : 'اطلب الآن')}
                 </Button>
               </div>
             </form>

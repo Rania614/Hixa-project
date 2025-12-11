@@ -10,14 +10,49 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { HexagonIcon } from '@/components/ui/hexagon-icon';
-import { Plus, Trash2, ChevronUp, ChevronDown, ChevronDown as ChevronDownIcon } from 'lucide-react';
+import { Plus, Trash2, ChevronUp, ChevronDown, ChevronDown as ChevronDownIcon, Upload } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { http } from '@/services/http';
 import { toast } from '@/components/ui/sonner';
 
 const ContentManagement = () => {
   const [activeTab, setActiveTab] = useState('hero');
+  const [activeServiceIndex, setActiveServiceIndex] = useState(0); // 0, 1, 2, 3 (for 4 services)
+  const [activeSectionIndex, setActiveSectionIndex] = useState(0); // 0, 1, 2, 3 (for 4 sections per service)
   const { language } = useApp();
+  
+  // Structure: 4 services, each with 4 sections
+  const [servicesDetails, setServicesDetails] = useState<any[]>([
+    // Service 1 - 4 sections
+    [
+      { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
+      { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
+      { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
+      { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
+    ],
+    // Service 2 - 4 sections
+    [
+      { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
+      { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
+      { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
+      { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
+    ],
+    // Service 3 - 4 sections
+    [
+      { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
+      { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
+      { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
+      { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
+    ],
+    // Service 4 - 4 sections
+    [
+      { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
+      { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
+      { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
+      { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
+    ],
+  ]);
 
   const {
     hero,
@@ -51,7 +86,125 @@ const ContentManagement = () => {
   // جلب البيانات عند تحميل الصفحة
   useEffect(() => {
     fetchContent();
+    fetchOrderSections();
   }, []);
+
+  const fetchOrderSections = async () => {
+    try {
+      const response = await http.get('/content');
+      const data = response.data?.servicesDetails || response.data?.services_details || [];
+      if (data.length > 0 && Array.isArray(data[0])) {
+        // Data is already in correct format (array of arrays)
+        setServicesDetails(data);
+      } else {
+        // Try to load from localStorage as fallback
+        const savedData = localStorage.getItem('servicesDetails');
+        if (savedData) {
+          try {
+            const parsed = JSON.parse(savedData);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setServicesDetails(parsed);
+            }
+          } catch (e) {
+            console.error('Error parsing saved data:', e);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching services details:', error);
+      // Fallback to localStorage
+      const savedData = localStorage.getItem('servicesDetails');
+      if (savedData) {
+        try {
+          const parsed = JSON.parse(savedData);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setServicesDetails(parsed);
+          }
+        } catch (e) {
+          console.error('Error parsing saved data:', e);
+        }
+      }
+    }
+  };
+
+  const handleSectionChange = (serviceIndex: number, sectionIndex: number, field: string, value: string) => {
+    setServicesDetails((prev) => {
+      const newData = [...prev];
+      newData[serviceIndex] = [...newData[serviceIndex]];
+      newData[serviceIndex][sectionIndex] = {
+        ...newData[serviceIndex][sectionIndex],
+        [field]: value,
+      };
+      return newData;
+    });
+  };
+
+  const handleSectionImageUpload = async (serviceIndex: number, sectionIndex: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const response = await http.post('/content/upload-image', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const imageUrl = response.data?.url || response.data?.imageUrl || '';
+      handleSectionChange(serviceIndex, sectionIndex, 'image', imageUrl);
+      toast.success(language === 'en' ? 'Image uploaded successfully' : 'تم رفع الصورة بنجاح');
+    } catch (error: any) {
+      console.error('Error uploading image:', error);
+      toast.error(language === 'en' ? 'Failed to upload image' : 'فشل رفع الصورة');
+    }
+  };
+
+  const saveServicesDetails = async () => {
+    try {
+      // Save to localStorage first (as backup)
+      localStorage.setItem('servicesDetails', JSON.stringify(servicesDetails));
+      
+      // Try to save using the main content endpoint
+      try {
+        // First, get current content to preserve other data
+        const currentContent = await http.get('/content');
+        const updatedContent = {
+          ...currentContent.data,
+          servicesDetails: servicesDetails,
+        };
+        
+        // Save using PUT to /content with servicesDetails included
+        await http.put('/content', updatedContent);
+        toast.success(language === 'en' ? 'Services details saved successfully' : 'تم حفظ تفاصيل الخدمات بنجاح');
+        return;
+      } catch (putError: any) {
+        console.warn('PUT /content failed, trying alternative:', putError);
+        
+        // Try saving directly to services-details endpoint
+        try {
+          await http.put('/content/services-details', { servicesDetails });
+          toast.success(language === 'en' ? 'Services details saved successfully' : 'تم حفظ تفاصيل الخدمات بنجاح');
+          return;
+        } catch (secondError: any) {
+          console.warn('PUT /content/services-details also failed:', secondError);
+          // Data is already saved to localStorage, so show success with warning
+          toast.success(
+            language === 'en' 
+              ? 'Services details saved locally. Backend endpoint not available yet.' 
+              : 'تم حفظ تفاصيل الخدمات محلياً. الـ endpoint في الخادم غير متاح بعد.'
+          );
+        }
+      }
+    } catch (error: any) {
+      console.error('Error saving services details:', error);
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error ||
+                          (language === 'en' 
+                            ? 'Failed to save services details' 
+                            : 'فشل حفظ تفاصيل الخدمات');
+      toast.error(errorMessage);
+    }
+  };
 
   // تحديث اتجاه النص عند تغيير اللغة
   useEffect(() => {
@@ -80,10 +233,11 @@ const ContentManagement = () => {
           </h2>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-            <TabsList className="grid grid-cols-6 gap-2" style={{ direction: language === 'ar' ? 'rtl' : 'ltr' }}>
+            <TabsList className="grid grid-cols-7 gap-2" style={{ direction: language === 'ar' ? 'rtl' : 'ltr' }}>
               <TabsTrigger value="hero">{language === 'en' ? 'Hero' : 'البطل'}</TabsTrigger>
               <TabsTrigger value="about">{language === 'en' ? 'About' : 'حول'}</TabsTrigger>
               <TabsTrigger value="services">{language === 'en' ? 'Services' : 'الخدمات'}</TabsTrigger>
+              <TabsTrigger value="order-sections">{language === 'en' ? 'Services Details' : 'تفاصيل الخدمات'}</TabsTrigger>
               <TabsTrigger value="projects">{language === 'en' ? 'Projects' : 'المشاريع'}</TabsTrigger>
               <TabsTrigger value="partners">{language === 'en' ? 'Partners' : 'الشركاء'}</TabsTrigger>
               <TabsTrigger value="jobs">{language === 'en' ? 'Jobs' : 'الوظائف'}</TabsTrigger>
@@ -1538,6 +1692,167 @@ const ContentManagement = () => {
                     {loading ? (language === 'en' ? 'Saving...' : 'جاري الحفظ...') : (language === 'en' ? 'Save All Jobs' : 'حفظ كل الوظائف')}
                 </Button>
                 </div>
+              </Card>
+            </TabsContent>
+
+            {/* Order Sections Tab - Contains 4 sub-sections */}
+            <TabsContent value="order-sections">
+              <Card className="p-6">
+                <CardHeader>
+                  <CardTitle>{language === 'en' ? 'Services Details' : 'تفاصيل الخدمات'}</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {language === 'en' ? 'Manage the 4 service details sections displayed in the order modal' : 'إدارة الأقسام الأربعة لتفاصيل الخدمات المعروضة في نموذج الطلب'}
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {/* Level 1: Service Tabs (4 services) */}
+                  <Tabs value={String(activeServiceIndex)} onValueChange={(val) => {
+                    setActiveServiceIndex(Number(val));
+                    setActiveSectionIndex(0); // Reset to first section when switching services
+                  }} className="space-y-6">
+                    <TabsList className="grid grid-cols-4 gap-2 w-full">
+                      {[0, 1, 2, 3].map((serviceIndex) => {
+                        const service = safeServices[serviceIndex];
+                        const serviceTitle = service 
+                          ? (service.title_en || service.title_ar || service.name || `Service ${serviceIndex + 1}`)
+                          : (language === 'en' ? `Service ${serviceIndex + 1}` : `الخدمة ${serviceIndex + 1}`);
+                        const displayTitle = serviceTitle.length > 15 ? `${serviceTitle.substring(0, 12)}...` : serviceTitle;
+                        return (
+                          <TabsTrigger key={serviceIndex} value={String(serviceIndex)} className="flex flex-col items-center gap-1">
+                            <span className="text-xs font-medium">{displayTitle}</span>
+                          </TabsTrigger>
+                        );
+                      })}
+                    </TabsList>
+
+                    {/* Level 2: For each service, show 4 sections */}
+                    {[0, 1, 2, 3].map((serviceIndex) => (
+                      <TabsContent key={serviceIndex} value={String(serviceIndex)}>
+                        {/* Level 2: Section Tabs (4 sections per service) */}
+                        <Tabs value={String(activeSectionIndex)} onValueChange={(val) => setActiveSectionIndex(Number(val))} className="space-y-6">
+                          <TabsList className="grid grid-cols-4 gap-2 w-full">
+                            {[0, 1, 2, 3].map((sectionIndex) => (
+                              <TabsTrigger key={sectionIndex} value={String(sectionIndex)}>
+                                {language === 'en' ? `Section ${sectionIndex + 1}` : `القسم ${sectionIndex + 1}`}
+                              </TabsTrigger>
+                            ))}
+                          </TabsList>
+
+                          {/* Section Content */}
+                          {[0, 1, 2, 3].map((sectionIndex) => {
+                            const section = servicesDetails[serviceIndex]?.[sectionIndex] || { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' };
+                            return (
+                              <TabsContent key={sectionIndex} value={String(sectionIndex)}>
+                                <Card className="p-4">
+                                  <CardContent className="space-y-4 pt-6">
+                                    {/* Title English */}
+                                    <div>
+                                      <label className="block text-sm font-medium mb-2">
+                                        {language === 'en' ? 'Title (English)' : 'العنوان (إنجليزي)'}
+                                      </label>
+                                      <Input
+                                        value={section.title_en || ''}
+                                        onChange={(e) => handleSectionChange(serviceIndex, sectionIndex, 'title_en', e.target.value)}
+                                        placeholder={language === 'en' ? 'Enter title in English...' : 'أدخل العنوان بالإنجليزية...'}
+                                      />
+                                    </div>
+
+                                    {/* Title Arabic */}
+                                    <div>
+                                      <label className="block text-sm font-medium mb-2">
+                                        {language === 'en' ? 'Title (Arabic)' : 'العنوان (عربي)'}
+                                      </label>
+                                      <Input
+                                        value={section.title_ar || ''}
+                                        onChange={(e) => handleSectionChange(serviceIndex, sectionIndex, 'title_ar', e.target.value)}
+                                        placeholder={language === 'en' ? 'Enter title in Arabic...' : 'أدخل العنوان بالعربية...'}
+                                      />
+                                    </div>
+
+                                    {/* Image */}
+                                    <div>
+                                      <label className="block text-sm font-medium mb-2">
+                                        {language === 'en' ? 'Image' : 'الصورة'}
+                                      </label>
+                                      <div className="space-y-2">
+                                        <input
+                                          type="file"
+                                          accept="image/*"
+                                          onChange={(e) => handleSectionImageUpload(serviceIndex, sectionIndex, e)}
+                                          className="hidden"
+                                          id={`service-${serviceIndex}-section-${sectionIndex}-image`}
+                                        />
+                                        <label
+                                          htmlFor={`service-${serviceIndex}-section-${sectionIndex}-image`}
+                                          className="flex items-center justify-center w-full px-4 py-2 bg-background border border-border rounded-lg cursor-pointer hover:bg-muted transition-colors"
+                                        >
+                                          <Upload className="h-4 w-4 mr-2" />
+                                          <span className="text-sm">
+                                            {section.image
+                                              ? (language === 'en' ? 'Change image...' : 'تغيير الصورة...')
+                                              : (language === 'en' ? 'Choose image...' : 'اختر صورة...')}
+                                          </span>
+                                        </label>
+                                        {section.image && (
+                                          <div className="mt-2">
+                                            <img
+                                              src={section.image}
+                                              alt={`Service ${serviceIndex + 1} - Section ${sectionIndex + 1}`}
+                                              className="w-full h-48 object-cover rounded-lg border border-border"
+                                            />
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Details English */}
+                                    <div>
+                                      <label className="block text-sm font-medium mb-2">
+                                        {language === 'en' ? 'Details (English)' : 'التفاصيل (إنجليزي)'}
+                                      </label>
+                                      <Textarea
+                                        value={section.details_en || ''}
+                                        onChange={(e) => handleSectionChange(serviceIndex, sectionIndex, 'details_en', e.target.value)}
+                                        placeholder={language === 'en' ? 'Enter details in English...' : 'أدخل التفاصيل بالإنجليزية...'}
+                                        rows={6}
+                                      />
+                                    </div>
+
+                                    {/* Details Arabic */}
+                                    <div>
+                                      <label className="block text-sm font-medium mb-2">
+                                        {language === 'en' ? 'Details (Arabic)' : 'التفاصيل (عربي)'}
+                                      </label>
+                                      <Textarea
+                                        value={section.details_ar || ''}
+                                        onChange={(e) => handleSectionChange(serviceIndex, sectionIndex, 'details_ar', e.target.value)}
+                                        placeholder={language === 'en' ? 'Enter details in Arabic...' : 'أدخل التفاصيل بالعربية...'}
+                                        rows={6}
+                                      />
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              </TabsContent>
+                            );
+                          })}
+                        </Tabs>
+                      </TabsContent>
+                    ))}
+                  </Tabs>
+
+                  {/* Save All Button */}
+                  <div className="mt-6">
+                    <Button
+                      onClick={saveServicesDetails}
+                      disabled={loading}
+                      className="w-full"
+                    >
+                      {loading
+                        ? (language === 'en' ? 'Saving...' : 'جاري الحفظ...')
+                        : (language === 'en' ? 'Save All Services Details' : 'حفظ كل تفاصيل الخدمات')}
+                    </Button>
+                  </div>
+                </CardContent>
               </Card>
             </TabsContent>
           </Tabs>
