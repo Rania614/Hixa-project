@@ -83,42 +83,275 @@ const ContentManagement = () => {
     setContent,
   } = useContentStore();
 
+  // Helper لتجنب الأخطاء لو services أو projects أو partners أو jobs مش Array
+  const servicesData = Array.isArray(services) ? { items: services } : (services || { items: [] });
+  const safeServices = Array.isArray(servicesData.items) ? servicesData.items : [];
+  const projectsData = Array.isArray(projects) ? { items: projects } : (projects || { items: [] });
+  const safeProjects = Array.isArray(projectsData.items) ? projectsData.items : [];
+  const partnersData = Array.isArray(partners) ? { items: partners } : (partners || { items: [] });
+  const safePartners = Array.isArray(partnersData.items) ? partnersData.items : [];
+  const jobsData = Array.isArray(jobs) ? { items: jobs } : (jobs || { items: [] });
+  const safeJobs = Array.isArray(jobsData.items) ? jobsData.items : [];
+
   // جلب البيانات عند تحميل الصفحة
   useEffect(() => {
     fetchContent();
-    fetchOrderSections();
   }, []);
+
+  // Fetch services details after services are loaded
+  useEffect(() => {
+    if (safeServices.length > 0) {
+      fetchOrderSections();
+    }
+  }, [safeServices.length]);
 
   const fetchOrderSections = async () => {
     try {
-      const response = await http.get('/api/content');
-      const data = response.data?.servicesDetails || response.data?.services_details || [];
-      if (data.length > 0 && Array.isArray(data[0])) {
-        // Data is already in correct format (array of arrays)
-        setServicesDetails(data);
+      console.log('🔄 Fetching services details from API...');
+      
+      // First, fetch services to get their IDs (in case we need to fetch individual service details)
+      await fetchContent();
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const currentServices = Array.isArray(services) ? services : (services?.items || []);
+      
+      // Try to fetch services details from API (same approach as CompanyLanding.tsx)
+      let data: any[] = [];
+      
+      // Try /content/services-details first (but expect it might not exist)
+      try {
+        console.log('🔄 Trying to fetch services details from /content/services-details');
+        const response = await http.get('/content/services-details');
+        console.log('✅ Services details response from /content/services-details:', response.data);
+        data = response.data?.servicesDetails || response.data?.services_details || response.data || [];
+      } catch (servicesDetailsErr: any) {
+        // If that fails (expected), try /content and extract servicesDetails
+        if (servicesDetailsErr.response?.status === 404) {
+          // Silently continue - this endpoint is expected to not exist
+          console.log('ℹ️ /content/services-details not found (expected), trying /content');
+    try {
+      const response = await http.get('/content');
+            console.log('✅ Full content response from /content:', response.data);
+            console.log('📋 Response keys:', Object.keys(response.data || {}));
+            console.log('🔍 Checking for services details:', {
+              servicesDetails: response.data?.servicesDetails,
+              services_details: response.data?.services_details,
+              services: response.data?.services,
+              servicesDetails: response.data?.services?.details,
+            });
+            
+            // Check if details are in services.details
+            const servicesDetails = response.data?.services?.details;
+            if (Array.isArray(servicesDetails) && servicesDetails.length > 0) {
+              console.log('✅ Found services.details array:', servicesDetails);
+              // Group details by categoryKey (service identifier)
+              const groupedDetails: { [key: string]: any[] } = {};
+              servicesDetails.forEach((detail: any) => {
+                const categoryKey = detail.categoryKey || 'general';
+                if (!groupedDetails[categoryKey]) {
+                  groupedDetails[categoryKey] = [];
+                }
+                groupedDetails[categoryKey].push(detail);
+              });
+              
+              // Convert to array format (4 services, each with 4 sections)
+              const servicesArray = Object.values(groupedDetails);
+              data = servicesArray.slice(0, 4).map((serviceDetails: any[]) => {
+                // Sort by sectionKey and take first 4
+                const sorted = serviceDetails.sort((a, b) => {
+                  const aKey = a.sectionKey || '';
+                  const bKey = b.sectionKey || '';
+                  return aKey.localeCompare(bKey);
+                });
+                return sorted.slice(0, 4);
+              });
+              console.log('📦 Grouped and formatted data:', data);
       } else {
+              data = response.data?.servicesDetails || response.data?.services_details || [];
+            }
+            console.log('📦 Extracted data:', data);
+          } catch (contentErr: any) {
+            // If /content also fails, try fetching individual service details
+            if (contentErr.response?.status === 404) {
+              console.log('⚠️ /content not found, trying to fetch individual service details');
+              // Try to fetch details for each service using /content/services/details/{serviceId}
+              if (currentServices.length > 0) {
+                try {
+                  const detailsPromises = currentServices.slice(0, 4).map(async (service: any, index: number) => {
+                    const serviceId = service._id || service.id;
+                    if (!serviceId) {
+                      console.warn(`Service ${index + 1} has no ID, skipping...`);
+                      return null;
+                    }
+                    
+                    try {
+                      console.log(`🔄 Fetching details for service ${index + 1} (ID: ${serviceId}) from /content/services/details/${serviceId}`);
+                      const response = await http.get(`/content/services/details/${serviceId}`);
+                      const details = response.data?.sections || response.data?.details || response.data || [];
+                      console.log(`✅ Service ${index + 1} details fetched:`, details);
+                      return Array.isArray(details) && details.length > 0 ? details : null;
+                    } catch (err: any) {
+                      if (err.response?.status === 404) {
+                        console.log(`⚠️ Service ${index + 1} details not found (404)`);
+                        return null;
+                      }
+                      console.error(`❌ Error fetching service ${index + 1} details:`, err);
+                      return null;
+                    }
+                  });
+                  
+                  const fetchedDetails = await Promise.all(detailsPromises);
+                  const validDetails = fetchedDetails.filter(d => d !== null);
+                  
+                  if (validDetails.length > 0) {
+                    console.log('✅ Fetched individual service details:', validDetails);
+                    data = validDetails;
+                  } else {
+                    // If individual fetch also fails, try /content/services
+                    console.log('⚠️ Individual service details not found, trying /content/services');
+                    try {
+                      const servicesResponse = await http.get('/content/services');
+                      console.log('✅ Services response from /content/services:', servicesResponse.data);
+                      data = servicesResponse.data?.servicesDetails || servicesResponse.data?.services_details || [];
+                    } catch (servicesErr) {
+                      console.warn('⚠️ Could not fetch services details from API');
+                      data = [];
+                    }
+                  }
+                } catch (individualErr) {
+                  console.error('❌ Error fetching individual service details:', individualErr);
+                  data = [];
+                }
+              } else {
+                console.log('⚠️ No services found, trying /content/services');
+                try {
+                  const servicesResponse = await http.get('/content/services');
+                  console.log('✅ Services response from /content/services:', servicesResponse.data);
+                  data = servicesResponse.data?.servicesDetails || servicesResponse.data?.services_details || [];
+                } catch (servicesErr) {
+                  console.warn('⚠️ Could not fetch services details from API');
+                  data = [];
+                }
+              }
+            } else {
+              throw contentErr;
+            }
+          }
+        } else {
+          throw servicesDetailsErr;
+        }
+      }
+      
+      console.log('📦 Services details from API:', data);
+      console.log('📊 Data type:', Array.isArray(data) ? 'Array' : typeof data);
+      console.log('📊 Data length:', Array.isArray(data) ? data.length : 'N/A');
+      
+      // Ensure we have 4 services, each with 4 sections
+      const defaultServicesDetails: any[][] = Array(4).fill(null).map(() => 
+        Array(4).fill(null).map(() => ({
+          title_en: '',
+          title_ar: '',
+          image: '',
+          details_en: '',
+          details_ar: '',
+          categoryKey: 'general',
+          sectionKey: '',
+        }))
+      );
+      
+      // Merge API data with defaults
+      let mergedData = [...defaultServicesDetails];
+      if (Array.isArray(data) && data.length > 0) {
+        console.log('✅ Using services details from API');
+        data.forEach((serviceSections: any[], serviceIndex: number) => {
+          if (serviceIndex < 4 && Array.isArray(serviceSections)) {
+            serviceSections.forEach((section: any, sectionIndex: number) => {
+              if (sectionIndex < 4) {
+                mergedData[serviceIndex][sectionIndex] = {
+                  ...defaultServicesDetails[serviceIndex][sectionIndex],
+                  ...section,
+                  // Preserve categoryKey and sectionKey from API
+                  categoryKey: section.categoryKey || 'general',
+                  sectionKey: section.sectionKey || `section${sectionIndex + 1}`,
+                };
+              }
+            });
+          }
+        });
+      } else {
+        console.log('⚠️ No services details found in API response, trying localStorage...');
         // Try to load from localStorage as fallback
         const savedData = localStorage.getItem('servicesDetails');
         if (savedData) {
           try {
             const parsed = JSON.parse(savedData);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              setServicesDetails(parsed);
+              console.log('✅ Using services details from localStorage');
+              parsed.forEach((serviceSections: any[], serviceIndex: number) => {
+                if (serviceIndex < 4 && Array.isArray(serviceSections)) {
+                  serviceSections.forEach((section: any, sectionIndex: number) => {
+                    if (sectionIndex < 4) {
+                      mergedData[serviceIndex][sectionIndex] = {
+                        ...defaultServicesDetails[serviceIndex][sectionIndex],
+                        ...section,
+                        // Preserve categoryKey and sectionKey
+                        categoryKey: section.categoryKey || 'general',
+                        sectionKey: section.sectionKey || `section${sectionIndex + 1}`,
+                      };
+                    }
+                  });
+                }
+              });
+            } else {
+              console.log('⚠️ localStorage data is not a valid array');
             }
           } catch (e) {
-            console.error('Error parsing saved data:', e);
+            console.error('❌ Error parsing saved data:', e);
           }
+        } else {
+          console.log('⚠️ No services details in localStorage, using empty defaults');
         }
       }
+      
+      setServicesDetails(mergedData.slice(0, 4));
+      console.log('✅ Services details loaded successfully');
     } catch (error) {
-      console.error('Error fetching services details:', error);
+      console.error('❌ Error fetching services details:', error);
       // Fallback to localStorage
       const savedData = localStorage.getItem('servicesDetails');
       if (savedData) {
         try {
           const parsed = JSON.parse(savedData);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            setServicesDetails(parsed);
+            // Ensure we have 4 services, each with 4 sections
+            const defaultServicesDetails: any[][] = Array(4).fill(null).map(() => 
+              Array(4).fill(null).map(() => ({
+                title_en: '',
+                title_ar: '',
+                image: '',
+                details_en: '',
+                details_ar: '',
+                categoryKey: 'general',
+                sectionKey: '',
+              }))
+            );
+            let mergedData = [...defaultServicesDetails];
+            parsed.forEach((serviceSections: any[], serviceIndex: number) => {
+              if (serviceIndex < 4 && Array.isArray(serviceSections)) {
+                serviceSections.forEach((section: any, sectionIndex: number) => {
+                  if (sectionIndex < 4) {
+                    mergedData[serviceIndex][sectionIndex] = {
+                      ...defaultServicesDetails[serviceIndex][sectionIndex],
+                      ...section,
+                      // Preserve categoryKey and sectionKey
+                      categoryKey: section.categoryKey || 'general',
+                      sectionKey: section.sectionKey || `section${sectionIndex + 1}`,
+                    };
+                  }
+                });
+              }
+            });
+            setServicesDetails(mergedData.slice(0, 4));
+            console.log('✅ Services details loaded from localStorage');
           }
         } catch (e) {
           console.error('Error parsing saved data:', e);
@@ -147,15 +380,52 @@ const ContentManagement = () => {
     formData.append('image', file);
 
     try {
-      const response = await http.post('/api/content/upload-image', formData, {
+      // Try multiple upload endpoints
+      const uploadEndpoints = [
+        '/content/upload-image',
+        '/content/upload',
+        '/upload-image',
+        '/upload',
+      ];
+      
+      let response;
+      let lastError;
+      
+      for (const endpoint of uploadEndpoints) {
+        try {
+          console.log(`🔄 Trying to upload image to ${endpoint}`);
+          response = await http.post(endpoint, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      const imageUrl = response.data?.url || response.data?.imageUrl || '';
+          console.log(`✅ Image uploaded successfully via ${endpoint}:`, response.data);
+          break;
+        } catch (err: any) {
+          lastError = err;
+          if (err.response?.status !== 404) {
+            // If it's not 404, throw immediately (might be 400, 413, etc.)
+            throw err;
+          }
+          // Silently continue - 404 is expected for upload endpoints
+          // Don't log to avoid console noise
+        }
+      }
+      
+      if (!response) {
+        throw lastError || new Error('All upload endpoints failed');
+      }
+      
+      const imageUrl = response.data?.url || response.data?.imageUrl || response.data?.data?.url || '';
+      if (imageUrl) {
       handleSectionChange(serviceIndex, sectionIndex, 'image', imageUrl);
       toast.success(language === 'en' ? 'Image uploaded successfully' : 'تم رفع الصورة بنجاح');
+      } else {
+        throw new Error('No image URL returned from server');
+      }
     } catch (error: any) {
       console.error('Error uploading image:', error);
-      toast.error(language === 'en' ? 'Failed to upload image' : 'فشل رفع الصورة');
+      const errorMessage = error.response?.data?.message || error.message || 
+        (language === 'en' ? 'Failed to upload image. Please use image URL instead.' : 'فشل رفع الصورة. يرجى استخدام رابط الصورة بدلاً من ذلك.');
+      toast.error(errorMessage);
     }
   };
 
@@ -164,44 +434,191 @@ const ContentManagement = () => {
       // Save to localStorage first (as backup)
       localStorage.setItem('servicesDetails', JSON.stringify(servicesDetails));
       
-      // Try to save using the main content endpoint
+      console.log('💾 Saving services details to API...');
+      
+      // Get services from store to get their IDs
+      const currentServices = Array.isArray(services) ? services : (services?.items || []);
+      
+      // Try to save to /content/services-details first
       try {
-        // First, get current content to preserve other data
-        const currentContent = await http.get('/api/content');
-        const updatedContent = {
-          ...currentContent.data,
-          servicesDetails: servicesDetails,
-        };
-        
-        // Save using PUT to /content with servicesDetails included
-        await http.put('/api/content', updatedContent);
-        toast.success(language === 'en' ? 'Services details saved successfully' : 'تم حفظ تفاصيل الخدمات بنجاح');
-        return;
-      } catch (putError: any) {
-        console.warn('PUT /content failed, trying alternative:', putError);
-        
-        // Try saving directly to services-details endpoint
-        try {
-          await http.put('/api/content/services-details', { servicesDetails });
-          toast.success(language === 'en' ? 'Services details saved successfully' : 'تم حفظ تفاصيل الخدمات بنجاح');
+        console.log('🔄 Trying to save to /content/services-details');
+          await http.put('/content/services-details', { servicesDetails });
+        console.log('✅ Services details saved to /content/services-details');
+        toast.success(
+          language === 'en' 
+            ? 'Services details saved successfully' 
+            : 'تم حفظ تفاصيل الخدمات بنجاح'
+        );
           return;
-        } catch (secondError: any) {
-          console.warn('PUT /content/services-details also failed:', secondError);
-          // Data is already saved to localStorage, so show success with warning
+      } catch (servicesDetailsErr: any) {
+        // If that fails, try to save individual service details
+        if (servicesDetailsErr.response?.status === 404) {
+          console.log('⚠️ /content/services-details not found, trying to save individual service details');
+          
+          if (currentServices.length > 0) {
+            // Try to save details for each service using /content/services/details/{serviceId}
+            const savePromises = currentServices.slice(0, 4).map(async (service: any, index: number) => {
+              const serviceId = service._id || service.id;
+              if (!serviceId) {
+                console.warn(`Service ${index + 1} has no ID, skipping...`);
+                return { success: false, serviceIndex: index };
+              }
+              
+              const serviceDetails = servicesDetails[index] || [];
+              
+              try {
+                // Save each section individually using categoryKey + sectionKey
+                // Try two approaches: with ID in URL, and with categoryKey + sectionKey in body
+                const sectionPromises = serviceDetails.map(async (section: any, sectionIndex: number) => {
+                  try {
+                    // Skip empty sections (backend requires title_en to be non-empty)
+                    const titleEn = (section.title_en || '').trim();
+                    if (!titleEn) {
+                      console.log(`⏭️ Skipping section ${sectionIndex + 1} for service ${index + 1} (title_en is empty)`);
+                      return { success: true, sectionIndex, skipped: true };
+                    }
+                    
+                    console.log(`💾 Saving section ${sectionIndex + 1} for service ${index + 1} (ID: ${serviceId})`);
+                    
+                    // Use categoryKey + sectionKey from existing data, or use defaults
+                    // categoryKey should be like "general" or service identifier
+                    // sectionKey should be like "section1", "section2", etc.
+                    const categoryKey = section.categoryKey || 'general';
+                    const sectionKey = section.sectionKey || `section${sectionIndex + 1}`;
+                    
+                    const payload = {
+                      categoryKey: categoryKey,
+                      sectionKey: sectionKey,
+                      title_en: titleEn,
+                      title_ar: (section.title_ar || '').trim(),
+                      image: (section.image || '').trim(),
+                      details_en: (section.details_en || '').trim(),
+                      details_ar: (section.details_ar || '').trim(),
+                    };
+                    console.log(`📦 Payload for section ${sectionIndex + 1}:`, JSON.stringify(payload, null, 2));
+                    
+                    // Use /content/services/details/any with categoryKey + sectionKey in body
+                    // This matches the backend API: PUT update Services section BY categoryKey + sectionKey
+                    let response;
+                    try {
+                      response = await http.put(`/content/services/details/any`, payload);
+                      console.log(`✅ Section ${sectionIndex + 1} saved successfully via /any:`, response.data);
+                    } catch (anyErr: any) {
+                      // If /any fails, try with serviceId in URL (PUT update Services section BY ID)
+                      if (anyErr.response?.status === 404 || anyErr.response?.status === 400) {
+                        console.log(`⚠️ /any endpoint failed (${anyErr.response?.status}), trying with serviceId in URL...`);
+                        // For BY ID approach, send data without categoryKey and sectionKey
+                        // But skip if title_en is empty (backend validation)
+                        if (!titleEn) {
+                          console.log(`⏭️ Skipping section ${sectionIndex + 1} (title_en is empty for BY ID approach)`);
+                          return { success: true, sectionIndex, skipped: true };
+                        }
+                        
+                        const payloadById = {
+                          title_en: titleEn,
+                          title_ar: (section.title_ar || '').trim(),
+                          image: (section.image || '').trim(),
+                          details_en: (section.details_en || '').trim(),
+                          details_ar: (section.details_ar || '').trim(),
+                        };
+                        response = await http.put(`/content/services/details/${serviceId}`, payloadById);
+                        console.log(`✅ Section ${sectionIndex + 1} saved successfully via ID:`, response.data);
+                      } else {
+                        throw anyErr;
+                      }
+                    }
+                    
+                    return { success: true, sectionIndex };
+                  } catch (sectionErr: any) {
+                    if (sectionErr.response?.status === 400) {
+                      console.error(`❌ Bad Request (400) for section ${sectionIndex + 1}:`, {
+                        status: sectionErr.response?.status,
+                        data: sectionErr.response?.data,
+                        message: sectionErr.response?.data?.message,
+                        fullError: sectionErr.response,
+                      });
+                    } else {
+                      console.error(`❌ Error saving section ${sectionIndex + 1}:`, sectionErr);
+                    }
+                    return { success: false, sectionIndex, error: sectionErr };
+                  }
+                });
+                
+                const sectionResults = await Promise.all(sectionPromises);
+                const successCount = sectionResults.filter(r => r.success).length;
+                const failCount = sectionResults.filter(r => !r.success).length;
+                
+                if (successCount > 0) {
+                  console.log(`✅ Service ${index + 1}: ${successCount} section(s) saved successfully`);
+                }
+                if (failCount > 0) {
+                  console.log(`⚠️ Service ${index + 1}: ${failCount} section(s) failed`);
+                }
+                
+                return { 
+                  success: successCount > 0, 
+                  serviceIndex: index, 
+                  sectionResults 
+                };
+              } catch (err: any) {
+                if (err.response?.status === 404) {
+                  console.log(`⚠️ Service ${index + 1} details endpoint not found (404)`);
+                } else if (err.response?.status === 400) {
+                  console.error(`❌ Bad Request (400) for service ${index + 1}:`, {
+                    status: err.response?.status,
+                    statusText: err.response?.statusText,
+                    data: err.response?.data,
+                    message: err.response?.data?.message,
+                    errors: err.response?.data?.errors,
+                    fullResponse: err.response,
+                  });
+                  console.error(`❌ Full error for service ${index + 1}:`, err);
+                } else {
+                  console.error(`❌ Error saving service ${index + 1} details:`, err);
+                }
+                return { success: false, serviceIndex: index, error: err };
+              }
+            });
+            
+            const results = await Promise.all(savePromises);
+            const successCount = results.filter(r => r.success).length;
+            const failCount = results.filter(r => !r.success).length;
+            
+            if (successCount > 0) {
+              console.log(`✅ Saved ${successCount} service(s) details successfully`);
           toast.success(
             language === 'en' 
-              ? 'Services details saved locally. Backend endpoint not available yet.' 
-              : 'تم حفظ تفاصيل الخدمات محلياً. الـ endpoint في الخادم غير متاح بعد.'
-          );
+                  ? `Services details saved successfully (${successCount} service${successCount > 1 ? 's' : ''})` 
+                  : `تم حفظ تفاصيل الخدمات بنجاح (${successCount} خدمة)`
+              );
+              
+              // If some failed, show warning but don't try fallback (CORS + 413 issues)
+              if (failCount > 0) {
+                console.warn(`⚠️ ${failCount} service(s) failed to save. Data saved locally in localStorage.`);
+                toast.warning(
+                  language === 'en' 
+                    ? `${failCount} service(s) could not be saved. Data saved locally.` 
+                    : `لم يتم حفظ ${failCount} خدمة. تم حفظ البيانات محلياً.`
+                );
+              }
+              return;
+            }
+          }
+          
+          // If individual save failed or no services, show error
+          console.error('❌ Individual service details save failed');
+          throw new Error('Failed to save services details. Please try again.');
+        } else {
+          throw servicesDetailsErr;
         }
       }
     } catch (error: any) {
-      console.error('Error saving services details:', error);
+      console.error('❌ Error saving services details:', error);
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.error ||
                           (language === 'en' 
-                            ? 'Failed to save services details' 
-                            : 'فشل حفظ تفاصيل الخدمات');
+                            ? 'Failed to save services details. Data saved locally.' 
+                            : 'فشل حفظ تفاصيل الخدمات. تم حفظ البيانات محلياً.');
       toast.error(errorMessage);
     }
   };
@@ -211,16 +628,6 @@ const ContentManagement = () => {
     document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.lang = language;
   }, [language]);
-
-  // Helper لتجنب الأخطاء لو services أو projects أو partners أو jobs مش Array
-  const servicesData = Array.isArray(services) ? { items: services } : (services || { items: [] });
-  const safeServices = Array.isArray(servicesData.items) ? servicesData.items : [];
-  const projectsData = Array.isArray(projects) ? { items: projects } : (projects || { items: [] });
-  const safeProjects = Array.isArray(projectsData.items) ? projectsData.items : [];
-  const partnersData = Array.isArray(partners) ? { items: partners } : (partners || { items: [] });
-  const safePartners = Array.isArray(partnersData.items) ? partnersData.items : [];
-  const jobsData = Array.isArray(jobs) ? { items: jobs } : (jobs || { items: [] });
-  const safeJobs = Array.isArray(jobsData.items) ? jobsData.items : [];
 
   return (
     <div className="flex min-h-screen">
@@ -912,7 +1319,7 @@ const ContentManagement = () => {
                                         formData.append('folder', 'hixa/projects');
 
                                         // Upload image to API
-                                        const uploadResponse = await http.post('/api/content/upload', formData);
+                                        const uploadResponse = await http.post('/content/upload', formData);
 
                                         // Get uploaded image URL - try different response formats
                                         const imageUrl = uploadResponse.data?.url || 
@@ -1237,7 +1644,7 @@ const ContentManagement = () => {
                                         formData.append('folder', 'hixa/partners');
 
                                         // Upload image to API
-                                        const uploadResponse = await http.post('/api/content/upload', formData);
+                                        const uploadResponse = await http.post('/content/upload', formData);
 
                                         // Get uploaded image URL - try different response formats
                                         const imageUrl = uploadResponse.data?.url || 

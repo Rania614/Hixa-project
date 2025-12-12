@@ -88,7 +88,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
   fetchContent: async () => {
     set({ loading: true });
     try {
-      const response = await http.get("/api/content");
+      const response = await http.get("/content");
       const data = response.data;
       
       // Normalize services structure - handle both { items: [] } and [] formats
@@ -141,7 +141,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
   updateHero: async (hero) => {
     set({ loading: true });
     try {
-      await http.put("/api/content/hero", hero);
+      await http.put("/content/hero", hero);
       set({ hero });
       toast({ title: "Hero Updated Successfully" });
     } catch (err) {
@@ -188,7 +188,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
           : [],
       };
 
-      await http.put("/api/content/about", payload);
+      await http.put("/content/about", payload);
       // Preserve subtitle fields in local state even though API doesn't accept them
       set({ about: { ...(about || {}), ...payload, subtitle_en: descriptionEn, subtitle_ar: descriptionAr } });
       toast({ title: "About Updated Successfully" });
@@ -226,7 +226,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
           : [],
       };
       
-      await http.put("/api/content/services", payload);
+      await http.put("/content/services", payload);
       // Preserve _id from original items for local state
       const updatedServices = {
         ...services,
@@ -281,7 +281,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
     });
     
     try {
-      const res = await http.post("/api/content/services/items", service);
+      const res = await http.post("/content/services/items", service);
       // Replace temp service with real one from API
       set({ 
         services: { 
@@ -316,7 +316,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
   deleteService: async (id) => {
     set({ loading: true });
     try {
-      await http.delete(`/api/content/services/items/${id}`);
+      await http.delete(`/content/services/items/${id}`);
       const currentServices = get().services;
       const servicesData = Array.isArray(currentServices) 
         ? { items: currentServices } 
@@ -380,7 +380,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
         })),
       };
       
-      await http.put("/api/content/services", payload);
+      await http.put("/content/services", payload);
       toast({ title: "Service Reordered Successfully" });
     } catch (err) {
       console.error(err);
@@ -419,7 +419,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
           : [],
       };
       
-      await http.put("/api/content/projects", payload);
+      await http.put("/content/projects", payload);
       // Preserve _id from original items for local state
       const updatedProjects = {
         ...projects,
@@ -457,7 +457,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
   addProject: async (project) => {
     set({ loading: true });
     try {
-      const res = await http.post("/api/content/projects/items", project);
+      const res = await http.post("/content/projects/items", project);
       const currentProjects = get().projects;
       const projectsData = Array.isArray(currentProjects) 
         ? { items: currentProjects } 
@@ -485,7 +485,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
   deleteProject: async (id) => {
     set({ loading: true });
     try {
-      await http.delete(`/api/content/projects/items/${id}`);
+      await http.delete(`/content/projects/items/${id}`);
       const currentProjects = get().projects;
       const projectsData = Array.isArray(currentProjects) 
         ? { items: currentProjects } 
@@ -549,7 +549,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
         })),
       };
       
-      await http.put("/api/content/projects", payload);
+      await http.put("/content/projects", payload);
       toast({ title: "Project Reordered Successfully" });
     } catch (err) {
       console.error(err);
@@ -576,7 +576,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
         subtitle_ar: partners?.subtitle_ar ?? "",
       };
       
-      await http.put("/api/content/partners", headerPayload);
+      await http.put("/content/partners", headerPayload);
       
       // Update each partner item individually to avoid 413 errors with large base64 images
       if (Array.isArray(partners?.items) && partners.items.length > 0) {
@@ -608,7 +608,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
               isActive: item.isActive ?? true,
             };
             try {
-              await http.post("/api/content/partners/items", itemPayload);
+              await http.post("/content/partners/items", itemPayload);
             } catch (itemErr: any) {
               console.error(`Error adding partner item:`, itemErr);
               const errorMsg = itemErr.response?.data?.message || itemErr.message || 'Failed to add partner';
@@ -631,7 +631,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
           };
           
           try {
-            await http.put(`/api/content/partners/items/${itemId}`, itemPayload);
+            await http.put(`/content/partners/items/${itemId}`, itemPayload);
           } catch (itemErr: any) {
             console.error(`Error updating partner item ${itemId}:`, itemErr);
             // If it's a 413 error, show helpful message
@@ -679,7 +679,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
         isActive: partner.isActive ?? true,
       };
       
-      const res = await http.post("/api/content/partners/items", payload);
+      const res = await http.post("/content/partners/items", payload);
       const currentPartners = get().partners;
       const partnersData = Array.isArray(currentPartners) 
         ? { items: currentPartners } 
@@ -709,7 +709,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
   deletePartner: async (id) => {
     set({ loading: true });
     try {
-      await http.delete(`/api/content/partners/items/${id}`);
+      await http.delete(`/content/partners/items/${id}`);
       const currentPartners = get().partners;
       const partnersData = Array.isArray(currentPartners) 
         ? { items: currentPartners } 
@@ -812,7 +812,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
       };
       
       // Try PUT /content/jobs with all items (like services)
-      await http.put("/api/content/jobs", payload);
+      await http.put("/content/jobs", payload);
       
       // Preserve _id from original items for local state
       const updatedJobs = {
@@ -870,11 +870,11 @@ export const useContentStore = create<ContentState>((set, get) => ({
       // Try POST /content/jobs/items first (like services/projects/partners)
       let res;
       try {
-        res = await http.post("/api/content/jobs/items", payload);
+        res = await http.post("/content/jobs/items", payload);
       } catch (itemsErr: any) {
         // If that fails with 404, try POST /content/jobs
         if (itemsErr.response?.status === 404) {
-          res = await http.post("/api/content/jobs", payload);
+          res = await http.post("/content/jobs", payload);
         } else {
           throw itemsErr;
         }
@@ -929,16 +929,16 @@ export const useContentStore = create<ContentState>((set, get) => ({
       
       // Try DELETE /content/jobs/items/{id} first (like projects/partners)
       try {
-        await http.delete(`/api/content/jobs/items/${id}`);
+        await http.delete(`/content/jobs/items/${id}`);
       } catch (pathErr: any) {
         // If that fails with 404, try DELETE /content/jobs with id in body
         if (pathErr.response?.status === 404) {
           try {
-            await http.delete(`/api/content/jobs`, { data: { _id: id } });
+            await http.delete(`/content/jobs`, { data: { _id: id } });
           } catch (bodyErr: any) {
             // If that also fails, try DELETE /content/jobs/items with id in body
             if (bodyErr.response?.status === 404) {
-              await http.delete(`/api/content/jobs/items`, { data: { _id: id } });
+              await http.delete(`/content/jobs/items`, { data: { _id: id } });
             } else {
               throw bodyErr;
             }

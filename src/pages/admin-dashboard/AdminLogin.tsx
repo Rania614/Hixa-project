@@ -47,7 +47,6 @@ const AdminLogin = () => {
       // Try different possible login endpoints
       let res;
       const loginEndpoints = [
-        { path: '/api/auth/login', name: '/api/auth/login' },
         { path: '/auth/login', name: '/auth/login' },
         { path: '/admin/login', name: '/admin/login' },
         { path: '/login', name: '/login' },

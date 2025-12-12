@@ -44,7 +44,7 @@ export const Subscribers = () => {
 
   const fetchStatistics = async () => {
     try {
-      const response = await http.get('/api/subscribers/statistics');
+      const response = await http.get('/subscribers/statistics');
       const stats = response.data;
       
       setStatistics({
@@ -62,7 +62,7 @@ export const Subscribers = () => {
     setSubscribersLoading(true);
     try {
       // Use /api/subscribers endpoint (works correctly)
-      const response = await http.get('/api/subscribers');
+      const response = await http.get('/subscribers');
       let subscribersData = response.data;
       
       console.log('Subscribers response:', subscribersData);
@@ -122,14 +122,14 @@ export const Subscribers = () => {
       
       // Try DELETE endpoint first (actual deletion)
       try {
-        await http.delete(`/api/subscribers/${subscriberId}`);
+        await http.delete(`/subscribers/${subscriberId}`);
         deleted = true;
         console.log('Subscriber deleted via DELETE endpoint');
       } catch (error1: any) {
         // If DELETE fails (404 or other), try unsubscribe endpoint (sets isActive: false)
         if (error1.response?.status === 404) {
           try {
-            await http.post('/api/subscribers/unsubscribe', { id: subscriberId });
+            await http.post('/subscribers/unsubscribe', { id: subscriberId });
             deleted = true;
             console.log('Subscriber unsubscribed via unsubscribe endpoint');
           } catch (error2: any) {
@@ -164,7 +164,7 @@ export const Subscribers = () => {
 
   const handleExportCSV = async () => {
     try {
-      const response = await http.get('/api/subscribers/export', {
+      const response = await http.get('/subscribers/export', {
         responseType: 'blob'
       });
       
@@ -200,7 +200,7 @@ export const Subscribers = () => {
       
       try {
         // First try: /api/subscribers/broadcast
-        response = await http.post('/api/subscribers/broadcast', {
+        response = await http.post('/subscribers/broadcast', {
           subject: { en: broadcastSubjectEn, ar: broadcastSubjectAr },
           message: { en: broadcastMessageEn, ar: broadcastMessageAr }
         });
@@ -208,7 +208,7 @@ export const Subscribers = () => {
         console.log('First endpoint failed, trying /subscribers/subscribe/broadcast...');
         try {
           // Second try: /api/subscribers/subscribe/broadcast
-          response = await http.post('/api/subscribers/subscribe/broadcast', {
+          response = await http.post('/subscribers/subscribe/broadcast', {
             subject: { en: broadcastSubjectEn, ar: broadcastSubjectAr },
             message: { en: broadcastMessageEn, ar: broadcastMessageAr }
           });
@@ -216,7 +216,7 @@ export const Subscribers = () => {
           console.log('Second endpoint failed, trying /subscribers/send-broadcast...');
           try {
             // Third try: /api/subscribers/send-broadcast
-            response = await http.post('/api/subscribers/send-broadcast', {
+            response = await http.post('/subscribers/send-broadcast', {
               subject: { en: broadcastSubjectEn, ar: broadcastSubjectAr },
               message: { en: broadcastMessageEn, ar: broadcastMessageAr }
             });

@@ -58,12 +58,22 @@ http.interceptors.response.use(
         window.location.href = '/admin/login';
       }
     }
-    // Suppress 404 errors from console for optional endpoints (auth/verify, admin/me)
-    // These endpoints may not be implemented yet
+    // Suppress 404 errors from console for optional endpoints
+    // These endpoints may not be implemented yet or are expected to not exist
     if (error.response?.status === 404) {
       const url = error.config?.url || '';
-      if (url.includes('/auth/verify') || url.includes('/admin/me')) {
-        // Silently handle 404 for these optional endpoints
+      const expected404Endpoints = [
+        '/auth/verify',
+        '/admin/me',
+        '/content/services-details', // Expected to not exist - we use /content instead
+        '/content/upload-image', // Expected to not exist - we try multiple upload endpoints
+        '/content/upload', // Expected to not exist - we try multiple upload endpoints
+        '/upload-image', // Expected to not exist - we try multiple upload endpoints
+        '/upload', // Expected to not exist - we try multiple upload endpoints
+      ];
+      
+      if (expected404Endpoints.some(endpoint => url.includes(endpoint))) {
+        // Silently handle 404 for these optional/expected endpoints
         // Mark error as silent to prevent console logging
         error.silent = true;
         // Don't log to console - these are expected 404s

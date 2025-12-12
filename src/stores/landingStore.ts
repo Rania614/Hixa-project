@@ -131,7 +131,7 @@ export const useLandingStore = create<LandingState>((set) => ({
       
       // Try to fetch from /content first (if it exists)
       try {
-        const response = await http.get("/api/content");
+        const response = await http.get("/content");
         console.log("✅ API Response received from /content:", response.data);
         
         const mapped = mapPayload(response.data);
@@ -150,38 +150,38 @@ export const useLandingStore = create<LandingState>((set) => ({
         if (contentErr.response?.status === 404) {
           console.log("⚠️ /content endpoint not found, fetching from separate endpoints...");
           console.log("📡 Endpoints to fetch:", {
-            hero: `${http.defaults.baseURL}/api/content/hero`,
-            about: `${http.defaults.baseURL}/api/content/about`,
-            services: `${http.defaults.baseURL}/api/content/services`,
-            projects: `${http.defaults.baseURL}/api/content/projects`,
-            partners: `${http.defaults.baseURL}/api/content/partners`,
-            jobs: `${http.defaults.baseURL}/api/content/jobs`,
+            hero: `${http.defaults.baseURL}/content/hero`,
+            about: `${http.defaults.baseURL}/content/about`,
+            services: `${http.defaults.baseURL}/content/services`,
+            projects: `${http.defaults.baseURL}/content/projects`,
+            partners: `${http.defaults.baseURL}/content/partners`,
+            jobs: `${http.defaults.baseURL}/content/jobs`,
           });
           
           // Fetch from separate endpoints in parallel
           const [heroRes, aboutRes, servicesRes, projectsRes, partnersRes, jobsRes] = await Promise.allSettled([
-            http.get("/api/content/hero").catch((err) => {
-              console.error("❌ Failed to fetch /api/content/hero:", err.response?.status, err.message);
+            http.get("/content/hero").catch((err) => {
+              console.error("❌ Failed to fetch /content/hero:", err.response?.status, err.message);
               return { data: null };
             }),
-            http.get("/api/content/about").catch((err) => {
-              console.error("❌ Failed to fetch /api/content/about:", err.response?.status, err.message);
+            http.get("/content/about").catch((err) => {
+              console.error("❌ Failed to fetch /content/about:", err.response?.status, err.message);
               return { data: null };
             }),
-            http.get("/api/content/services").catch((err) => {
-              console.error("❌ Failed to fetch /api/content/services:", err.response?.status, err.message);
+            http.get("/content/services").catch((err) => {
+              console.error("❌ Failed to fetch /content/services:", err.response?.status, err.message);
               return { data: null };
             }),
-            http.get("/api/content/projects").catch((err) => {
-              console.error("❌ Failed to fetch /api/content/projects:", err.response?.status, err.message);
+            http.get("/content/projects").catch((err) => {
+              console.error("❌ Failed to fetch /content/projects:", err.response?.status, err.message);
               return { data: null };
             }),
-            http.get("/api/content/partners").catch((err) => {
-              console.error("❌ Failed to fetch /api/content/partners:", err.response?.status, err.message);
+            http.get("/content/partners").catch((err) => {
+              console.error("❌ Failed to fetch /content/partners:", err.response?.status, err.message);
               return { data: null };
             }),
-            http.get("/api/content/jobs").catch((err) => {
-              console.error("❌ Failed to fetch /api/content/jobs:", err.response?.status, err.message);
+            http.get("/content/jobs").catch((err) => {
+              console.error("❌ Failed to fetch /content/jobs:", err.response?.status, err.message);
               return { data: null };
             }),
           ]);

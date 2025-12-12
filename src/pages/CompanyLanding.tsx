@@ -25,6 +25,7 @@ const CompanyLanding = () => {
   const [email, setEmail] = useState("");
   const [orderDetails, setOrderDetails] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [expandedCardIndex, setExpandedCardIndex] = useState<number | null>(null);
   const { language } = useApp();
   const { hero, about, services, projects, cta, loading } = useLandingStore(
     useShallow((state) => ({
@@ -49,21 +50,21 @@ const CompanyLanding = () => {
         
         // Try /content/services-details first
         try {
-          const response = await http.get('/api/content/services-details');
+          const response = await http.get('/content/services-details');
           console.log('Services details response:', response.data);
           data = response.data?.servicesDetails || response.data?.services_details || response.data || [];
         } catch (servicesDetailsErr: any) {
           // If that fails, try /content and extract servicesDetails
           if (servicesDetailsErr.response?.status === 404) {
             try {
-              const response = await http.get('/api/content');
+              const response = await http.get('/content');
               console.log('Full content response:', response.data);
               data = response.data?.servicesDetails || response.data?.services_details || [];
             } catch (contentErr: any) {
               // If /content also fails, try /content/services
               if (contentErr.response?.status === 404) {
                 try {
-                  const servicesResponse = await http.get('/api/content/services');
+                  const servicesResponse = await http.get('/content/services');
                   console.log('Services response:', servicesResponse.data);
                   // Extract servicesDetails if it exists in services data
                   data = servicesResponse.data?.servicesDetails || servicesResponse.data?.services_details || [];
@@ -332,13 +333,13 @@ const CompanyLanding = () => {
 
       // Log data being sent (for debugging)
       console.log('📤 ========== Sending Service Order ==========');
-      console.log('📤 Endpoint: /api/service-orders');
+      console.log('📤 Endpoint: /service-orders');
       console.log('📤 Payload:', payload);
       console.log('📤 Base URL:', import.meta.env.VITE_API_BASE_URL);
-      console.log('📤 Full URL will be:', `${import.meta.env.VITE_API_BASE_URL}/api/service-orders`);
+      console.log('📤 Full URL will be:', `${import.meta.env.VITE_API_BASE_URL}/service-orders`);
       
       // Send to API
-      const response = await http.post('/api/service-orders', payload);
+      const response = await http.post('/service-orders', payload);
 
       // Log response (for debugging)
       console.log('✅ ========== Service Order Response ==========');
@@ -492,12 +493,12 @@ const CompanyLanding = () => {
         <div className="container mx-auto">
           <div className="text-center mb-12 sm:mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4 transition-all duration-300">{aboutTitle}</h2>
-            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl sm:max-w-3xl mx-auto transition-all duration-300">
+            <p className="text-lg sm:text-xl text-muted-foreground max-w-4xl sm:max-w-5xl lg:max-w-6xl mx-auto transition-all duration-300">
               {aboutSubtitle}
             </p>
           </div>
           {aboutValues.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 items-start">
               {aboutValues.map((value: any, index: number) => {
                 const valueTitle =
                   getFieldValue(value, "title", language) ||
@@ -511,7 +512,7 @@ const CompanyLanding = () => {
                 return (
                   <div 
                     key={index} 
-                    className="bg-card text-card-foreground border border-border rounded-xl p-6 sm:p-8 transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-xl hover:shadow-gold/20 hover:bg-card/80 cursor-pointer group flex flex-col min-h-[220px] sm:min-h-[240px]"
+                    className={`bg-card text-card-foreground border border-border rounded-xl p-6 sm:p-8 transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-xl hover:shadow-gold/20 hover:bg-card/80 cursor-pointer group flex flex-col ${expandedCardIndex === index ? 'min-h-auto' : 'min-h-[220px] sm:min-h-[240px]'}`}
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => {
@@ -521,7 +522,7 @@ const CompanyLanding = () => {
                     }}
                   >
                     {/* Numbered Circle and Title - Better Alignment */}
-                    <div className="flex items-start gap-4 mb-4 sm:mb-5">
+                    <div className="flex items-start gap-4 mb-4 sm:mb-5 flex-shrink-0">
                       <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gold rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-gold-dark transition-colors duration-300">
                         <span className="text-primary-foreground font-bold text-lg sm:text-xl">{index + 1}</span>
                       </div>
@@ -530,18 +531,34 @@ const CompanyLanding = () => {
                       </h3>
                     </div>
                     
-                    {/* Description */}
-                    <p className="text-muted-foreground text-sm sm:text-base leading-relaxed flex-grow">
-                      {valueDescription}
-                    </p>
+                    {/* Description - Limited to 2 lines with Read More */}
+                    <div>
+                      <p className={`text-muted-foreground text-sm sm:text-base leading-relaxed ${expandedCardIndex === index ? '' : 'line-clamp-2'}`}>
+                        {valueDescription}
+                      </p>
+                      {valueDescription && valueDescription.length > 100 && (
+                        <button
+                          className="mt-2 text-gold hover:text-gold-dark text-sm font-medium transition-colors duration-300"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // If this card is already expanded, close it. Otherwise, expand this one and close others
+                            setExpandedCardIndex(expandedCardIndex === index ? null : index);
+                          }}
+                        >
+                          {expandedCardIndex === index
+                            ? (language === 'en' ? 'Read Less' : 'اقرأ أقل')
+                            : (language === 'en' ? 'Read More' : 'اقرأ المزيد')}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
             </div>
           ) : (
             aboutDescription && (
-              <div className="glass-card p-6 sm:p-8 rounded-xl max-w-3xl mx-auto text-center">
-                <p className="text-muted-foreground text-base sm:text-lg">{aboutDescription}</p>
+              <div className="glass-card p-6 sm:p-8 rounded-xl w-full">
+                <p className={`text-muted-foreground text-base sm:text-lg leading-relaxed ${language === 'ar' ? 'text-right' : 'text-left'}`}>{aboutDescription}</p>
               </div>
             )
           )}
@@ -854,7 +871,7 @@ const CompanyLanding = () => {
                     <span className="text-2xl">📞</span>
                   </div>
                   <h3 className="font-bold text-lg mb-2">{language === 'en' ? 'Phone' : 'الهاتف'}</h3>
-                  <p className="text-muted-foreground">+966 50 123 4567</p>
+                  <p className="text-muted-foreground">+966504131885</p>
                 </div>
                 
                 <div className="glass-card p-6 rounded-xl text-center hover:scale-105 transition-transform">
@@ -862,7 +879,7 @@ const CompanyLanding = () => {
                     <span className="text-2xl">📍</span>
                   </div>
                   <h3 className="font-bold text-lg mb-2">{language === 'en' ? 'Location' : 'الموقع'}</h3>
-                  <p className="text-muted-foreground">Riyadh, Saudi Arabia</p>
+                  <p className="text-muted-foreground">Saudi Arabia</p>
                 </div>
               </div>
 
