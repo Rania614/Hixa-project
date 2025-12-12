@@ -281,7 +281,7 @@ const mockData = {
 };
 
 // API base URL - adjust this to your actual API endpoint
-const API_BASE_URL = '/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 // Helper function to make HTTP requests
 const apiRequest = async (endpoint, options = {}) => {

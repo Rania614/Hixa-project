@@ -91,7 +91,7 @@ const ContentManagement = () => {
 
   const fetchOrderSections = async () => {
     try {
-      const response = await http.get('/content');
+      const response = await http.get('/api/content');
       const data = response.data?.servicesDetails || response.data?.services_details || [];
       if (data.length > 0 && Array.isArray(data[0])) {
         // Data is already in correct format (array of arrays)
@@ -147,7 +147,7 @@ const ContentManagement = () => {
     formData.append('image', file);
 
     try {
-      const response = await http.post('/content/upload-image', formData, {
+      const response = await http.post('/api/content/upload-image', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       const imageUrl = response.data?.url || response.data?.imageUrl || '';
@@ -167,14 +167,14 @@ const ContentManagement = () => {
       // Try to save using the main content endpoint
       try {
         // First, get current content to preserve other data
-        const currentContent = await http.get('/content');
+        const currentContent = await http.get('/api/content');
         const updatedContent = {
           ...currentContent.data,
           servicesDetails: servicesDetails,
         };
         
         // Save using PUT to /content with servicesDetails included
-        await http.put('/content', updatedContent);
+        await http.put('/api/content', updatedContent);
         toast.success(language === 'en' ? 'Services details saved successfully' : 'تم حفظ تفاصيل الخدمات بنجاح');
         return;
       } catch (putError: any) {
@@ -182,7 +182,7 @@ const ContentManagement = () => {
         
         // Try saving directly to services-details endpoint
         try {
-          await http.put('/content/services-details', { servicesDetails });
+          await http.put('/api/content/services-details', { servicesDetails });
           toast.success(language === 'en' ? 'Services details saved successfully' : 'تم حفظ تفاصيل الخدمات بنجاح');
           return;
         } catch (secondError: any) {
@@ -912,7 +912,7 @@ const ContentManagement = () => {
                                         formData.append('folder', 'hixa/projects');
 
                                         // Upload image to API
-                                        const uploadResponse = await http.post('/content/upload', formData);
+                                        const uploadResponse = await http.post('/api/content/upload', formData);
 
                                         // Get uploaded image URL - try different response formats
                                         const imageUrl = uploadResponse.data?.url || 
@@ -1237,7 +1237,7 @@ const ContentManagement = () => {
                                         formData.append('folder', 'hixa/partners');
 
                                         // Upload image to API
-                                        const uploadResponse = await http.post('/content/upload', formData);
+                                        const uploadResponse = await http.post('/api/content/upload', formData);
 
                                         // Get uploaded image URL - try different response formats
                                         const imageUrl = uploadResponse.data?.url || 

@@ -44,9 +44,42 @@ const CompanyLanding = () => {
   useEffect(() => {
     const fetchServicesDetails = async () => {
       try {
-        const response = await http.get('/content');
-        console.log('Full content response:', response.data);
-        const data = response.data?.servicesDetails || response.data?.services_details || [];
+        // Try to fetch services details from API
+        let data = null;
+        
+        // Try /content/services-details first
+        try {
+          const response = await http.get('/api/content/services-details');
+          console.log('Services details response:', response.data);
+          data = response.data?.servicesDetails || response.data?.services_details || response.data || [];
+        } catch (servicesDetailsErr: any) {
+          // If that fails, try /content and extract servicesDetails
+          if (servicesDetailsErr.response?.status === 404) {
+            try {
+              const response = await http.get('/api/content');
+              console.log('Full content response:', response.data);
+              data = response.data?.servicesDetails || response.data?.services_details || [];
+            } catch (contentErr: any) {
+              // If /content also fails, try /content/services
+              if (contentErr.response?.status === 404) {
+                try {
+                  const servicesResponse = await http.get('/api/content/services');
+                  console.log('Services response:', servicesResponse.data);
+                  // Extract servicesDetails if it exists in services data
+                  data = servicesResponse.data?.servicesDetails || servicesResponse.data?.services_details || [];
+                } catch (servicesErr) {
+                  console.warn('Could not fetch services details from API');
+                  data = [];
+                }
+              } else {
+                throw contentErr;
+              }
+            }
+          } else {
+            throw servicesDetailsErr;
+          }
+        }
+        
         console.log('Services details from API:', data);
         
         // Ensure we have 4 services, each with 4 sections
@@ -136,8 +169,24 @@ const CompanyLanding = () => {
 
   useEffect(() => {
     // Fetch real data from API immediately
+    console.log("🔄 CompanyLanding: Fetching landing data...");
     fetchLandingData();
   }, [fetchLandingData]);
+
+  // Debug: Log data changes
+  useEffect(() => {
+    console.log("📊 CompanyLanding: Current store data:", {
+      hero,
+      about,
+      services,
+      projects,
+      loading,
+      hasHero: !!hero,
+      hasAbout: !!about,
+      servicesCount: Array.isArray(services) ? services.length : 0,
+      projectsCount: Array.isArray(projects) ? projects.length : 0,
+    });
+  }, [hero, about, services, projects, loading]);
 
   // Show skeleton loading while fetching data
   if (loading && !hero && !about) {

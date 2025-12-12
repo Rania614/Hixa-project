@@ -44,7 +44,36 @@ const AdminLogin = () => {
 
     try {
       // Only allow admin login - verify credentials with API
-      const res = await api.post('/auth/login', { email, password });
+      // Try different possible login endpoints
+      let res;
+      const loginEndpoints = [
+        { path: '/api/auth/login', name: '/api/auth/login' },
+        { path: '/auth/login', name: '/auth/login' },
+        { path: '/admin/login', name: '/admin/login' },
+        { path: '/login', name: '/login' },
+      ];
+      
+      let lastError: any = null;
+      for (const endpoint of loginEndpoints) {
+        try {
+          console.log(`🔄 Trying login endpoint: ${endpoint.name}`);
+          res = await api.post(endpoint.path, { email, password });
+          console.log(`✅ Login successful via ${endpoint.name}`);
+          break; // Success, exit loop
+        } catch (err: any) {
+          lastError = err;
+          console.log(`❌ ${endpoint.name} failed:`, err.response?.status || err.message);
+          // If it's not a 404, don't try other endpoints (it's a real error like 401)
+          if (err.response?.status !== 404) {
+            throw err;
+          }
+        }
+      }
+      
+      // If we tried all endpoints and none worked, throw the last error
+      if (!res) {
+        throw lastError || new Error('All login endpoints failed');
+      }
 
       // Check if response has token and user is admin
       if (res.data && res.data.token) {

@@ -1,7 +1,10 @@
 import axios from "axios";
 
+const baseURL = import.meta.env.VITE_API_BASE_URL;
+console.log("🌐 HTTP Service initialized with baseURL:", baseURL);
+
 export const http = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: baseURL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -22,13 +25,30 @@ http.interceptors.request.use((config) => {
       delete config.headers.common['Content-Type'];
     }
   }
+  
+  // Log request for debugging
+  console.log(`📤 HTTP Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`, {
+    baseURL: config.baseURL,
+    url: config.url,
+    fullURL: `${config.baseURL}${config.url}`,
+    data: config.data,
+  });
+  
   return config;
 });
 
 // Handle 401 errors - redirect to login if token is invalid
 // Suppress 404 errors from console (they're expected for optional endpoints)
 http.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Log successful response for debugging
+    console.log(`✅ HTTP Response: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
+      status: response.status,
+      statusText: response.statusText,
+      data: response.data,
+    });
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401) {
       // Token is invalid or expired
