@@ -332,13 +332,13 @@ const CompanyLanding = () => {
 
       // Log data being sent (for debugging)
       console.log('📤 ========== Sending Service Order ==========');
-      console.log('📤 Endpoint: /service-orders');
+      console.log('📤 Endpoint: /api/service-orders');
       console.log('📤 Payload:', payload);
       console.log('📤 Base URL:', import.meta.env.VITE_API_BASE_URL);
-      console.log('📤 Full URL will be:', `${import.meta.env.VITE_API_BASE_URL}/service-orders`);
+      console.log('📤 Full URL will be:', `${import.meta.env.VITE_API_BASE_URL}/api/service-orders`);
       
       // Send to API
-      const response = await http.post('/service-orders', payload);
+      const response = await http.post('/api/service-orders', payload);
 
       // Log response (for debugging)
       console.log('✅ ========== Service Order Response ==========');

@@ -47,7 +47,7 @@ const Orders = () => {
   const fetchOrders = async () => {
     setOrdersLoading(true);
     try {
-      const response = await http.get('/service-orders');
+      const response = await http.get('/api/service-orders');
       // Handle different response structures
       let ordersData = response.data;
       
@@ -81,7 +81,7 @@ const Orders = () => {
   // جلب طلب محدد
   const fetchOrderById = async (orderId: string) => {
     try {
-      const response = await http.get(`/service-orders/${orderId}`);
+      const response = await http.get(`/api/service-orders/${orderId}`);
       return response.data;
     } catch (error: any) {
       console.error('Error fetching order:', error);
@@ -104,7 +104,7 @@ const Orders = () => {
     setDeleteDialogOpen(false);
     
     try {
-      await http.delete(`/service-orders/${orderToDelete}`);
+      await http.delete(`/api/service-orders/${orderToDelete}`);
       toast.success(language === 'en' ? 'Order deleted successfully' : 'تم حذف الطلب بنجاح');
       // إعادة جلب الطلبات بعد الحذف
       await fetchOrders();
@@ -123,7 +123,7 @@ const Orders = () => {
   // تحديث طلب
   const handleUpdateOrder = async (orderId: string, updatedData: Partial<Order>) => {
     try {
-      await http.put(`/service-orders/${orderId}`, updatedData);
+      await http.put(`/api/service-orders/${orderId}`, updatedData);
       toast.success(language === 'en' ? 'Order updated successfully' : 'تم تحديث الطلب بنجاح');
       // إعادة جلب الطلبات بعد التحديث
       await fetchOrders();
