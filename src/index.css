@@ -162,6 +162,78 @@
     background: transparent;
   }
 
+  /* Custom Scrollbar Styling - Matches Site Identity */
+  /* Webkit browsers (Chrome, Safari, Edge) */
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+    border-left: 1px solid hsl(var(--border));
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--gold) / 0.3);
+    border-radius: 6px;
+    border: 2px solid hsl(var(--background));
+    transition: background 0.2s ease;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--gold) / 0.5);
+  }
+
+  ::-webkit-scrollbar-thumb:active {
+    background: hsl(var(--gold));
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: hsl(var(--background));
+  }
+
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--gold) / 0.3) hsl(var(--background));
+  }
+
+  *:hover {
+    scrollbar-color: hsl(var(--gold) / 0.5) hsl(var(--background));
+  }
+
+  /* Dark theme scrollbar */
+  .dark ::-webkit-scrollbar-track {
+    background: hsl(var(--hexa-bg));
+    border-left: 1px solid hsl(var(--hexa-border));
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background: hsl(var(--gold) / 0.4);
+    border: 2px solid hsl(var(--hexa-bg));
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--gold) / 0.6);
+  }
+
+  .dark ::-webkit-scrollbar-thumb:active {
+    background: hsl(var(--gold));
+  }
+
+  .dark ::-webkit-scrollbar-corner {
+    background: hsl(var(--hexa-bg));
+  }
+
+  .dark * {
+    scrollbar-color: hsl(var(--gold) / 0.4) hsl(var(--hexa-bg));
+  }
+
+  .dark *:hover {
+    scrollbar-color: hsl(var(--gold) / 0.6) hsl(var(--hexa-bg));
+  }
+
   /* Custom color utilities */
   .bg-cyan {
     background-color: hsl(var(--cyan));

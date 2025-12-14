@@ -66,11 +66,18 @@ http.interceptors.response.use(
         '/auth/verify',
         '/admin/me',
         '/content/services-details', // Expected to not exist - we use /content instead
+        '/content/services/details', // Expected to not exist - backend endpoint not implemented
         '/content/upload-image', // Expected to not exist - we try multiple upload endpoints
         '/content/upload', // Expected to not exist - we try multiple upload endpoints
         '/upload-image', // Expected to not exist - we try multiple upload endpoints
         '/upload', // Expected to not exist - we try multiple upload endpoints
       ];
+      
+      // Don't suppress 404 errors for services details endpoints - we want to see them
+      // The correct endpoints are:
+      // - /content/services/items/{serviceId}/details/{detailId} (PUT)
+      // - /content/services/items/{serviceId}/details (POST)
+      // These should work, so we want to see errors if they don't
       
       if (expected404Endpoints.some(endpoint => url.includes(endpoint))) {
         // Silently handle 404 for these optional/expected endpoints

@@ -15,13 +15,18 @@ import { useShallow } from "zustand/react/shallow";
 import { useApp } from "@/context/AppContext";
 import { http } from "@/services/http";
 import { toast } from "@/components/ui/sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 
 const CompanyLanding = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [orderModalOpen, setOrderModalOpen] = useState(false);
+  const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedService, setSelectedService] = useState<any>(null);
+  const [selectedProject, setSelectedProject] = useState<any>(null);
   const [email, setEmail] = useState("");
   const [orderDetails, setOrderDetails] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -40,7 +45,9 @@ const CompanyLanding = () => {
   const fetchLandingData = useLandingStore((state) => state.fetchLandingData);
   
   // Fetch services details from API (4 services, each with 4 sections)
+  // Store as both array (for backward compatibility) and map (for serviceId lookup)
   const [servicesDetails, setServicesDetails] = useState<any[][]>([]);
+  const [servicesDetailsMap, setServicesDetailsMap] = useState<{ [serviceId: string]: any[] }>({});
   
   useEffect(() => {
     const fetchServicesDetails = async () => {
@@ -56,21 +63,246 @@ const CompanyLanding = () => {
         } catch (servicesDetailsErr: any) {
           // If that fails, try /content and extract servicesDetails
           if (servicesDetailsErr.response?.status === 404) {
-            try {
-              const response = await http.get('/content');
-              console.log('Full content response:', response.data);
-              data = response.data?.servicesDetails || response.data?.services_details || [];
+      try {
+        const response = await http.get('/content');
+        console.log('Full content response:', response.data);
+              console.log('📋 Response keys:', Object.keys(response.data || {}));
+              console.log('🔍 Checking for services details:', {
+                servicesDetails: response.data?.servicesDetails,
+                services_details: response.data?.services_details,
+                services: response.data?.services,
+                servicesDetailsInServices: response.data?.services?.details,
+              });
+              
+              // Check if details are in services.details (this is where they're saved)
+              const servicesDetails = response.data?.services?.details;
+              if (Array.isArray(servicesDetails) && servicesDetails.length > 0) {
+                console.log('✅ Found services.details array:', servicesDetails);
+                
+                // Helper function to normalize IDs for comparison
+                const normalizeId = (id: any): string => {
+                  if (!id) return '';
+                  // Handle ObjectId objects (MongoDB)
+                  if (id.toString && typeof id.toString === 'function') {
+                    return id.toString();
+                  }
+                  return String(id);
+                };
+                
+                // Get services to map categoryKey to serviceId
+                // Use services from response first, then fallback to safeServices
+                const servicesItems = response.data?.services?.items || safeServices || [];
+                
+                console.log('🔍 Services items for mapping:', servicesItems.map((s: any) => ({
+                  normalizedId: normalizeId(s._id || s.id),
+                  title: s.title_en || s.title_ar,
+                  _id: s._id,
+                  rawId: s.id,
+                })));
+                
+                // Group details by serviceId - use serviceItemId first, then categoryKey
+                const detailsByServiceId: { [serviceId: string]: any[] } = {};
+                
+                // Initialize empty arrays for all services
+                servicesItems.forEach((service: any) => {
+                  const serviceId = normalizeId(service._id || service.id);
+                  if (serviceId) {
+                    detailsByServiceId[serviceId] = [];
+                  }
+                });
+                
+                console.log('🔍 Initialized detailsByServiceId for serviceIds:', Object.keys(detailsByServiceId));
+                console.log('🔍 Normalized service IDs:', servicesItems.map((s: any) => normalizeId(s._id || s.id)));
+                
+                servicesDetails.forEach((detail: any) => {
+                  let targetServiceId: string | null = null;
+                  
+                  // Helper function to normalize IDs for comparison
+                  const normalizeId = (id: any): string => {
+                    if (!id) return '';
+                    // Handle ObjectId objects (MongoDB)
+                    if (id.toString && typeof id.toString === 'function') {
+                      return id.toString();
+                    }
+                    return String(id);
+                  };
+                  
+                  // Priority 1: Use serviceItemId if available (most reliable)
+                  if (detail.serviceItemId) {
+                    const normalizedServiceItemId = normalizeId(detail.serviceItemId);
+                    // Find matching service by comparing normalized IDs
+                    const matchingService = servicesItems.find((s: any) => {
+                      const serviceId = normalizeId(s._id || s.id);
+                      return serviceId === normalizedServiceItemId;
+                    });
+                    if (matchingService) {
+                      targetServiceId = normalizeId(matchingService._id || matchingService.id);
+                    }
+                  }
+                  
+                  // Priority 2: Use categoryKey if it matches a serviceId
+                  if (!targetServiceId && detail.categoryKey) {
+                    const normalizedCategoryKey = normalizeId(detail.categoryKey);
+                    // Check if categoryKey matches any serviceId
+                    const matchingService = servicesItems.find((s: any) => {
+                      const serviceId = normalizeId(s._id || s.id);
+                      return serviceId === normalizedCategoryKey;
+                    });
+                    if (matchingService) {
+                      targetServiceId = normalizeId(matchingService._id || matchingService.id);
+                    }
+                  }
+                  
+                  // Only add detail if we found a matching service
+                  if (targetServiceId && detailsByServiceId[targetServiceId]) {
+                    detailsByServiceId[targetServiceId].push(detail);
+                    console.log(`✅ Matched detail ${detail._id} to service ${targetServiceId} (section: ${detail.sectionKey})`);
+                  } else {
+                    console.warn('⚠️ Detail not matched to any service:', {
+                      detailId: detail._id,
+                      categoryKey: detail.categoryKey,
+                      serviceItemId: detail.serviceItemId,
+                      normalizedCategoryKey: detail.categoryKey ? normalizeId(detail.categoryKey) : null,
+                      normalizedServiceItemId: detail.serviceItemId ? normalizeId(detail.serviceItemId) : null,
+                      availableServiceIds: servicesItems.map((s: any) => normalizeId(s._id || s.id)),
+                    });
+                  }
+                });
+                
+                // Sort details by sectionKey for each service
+                Object.keys(detailsByServiceId).forEach(serviceId => {
+                  detailsByServiceId[serviceId].sort((a, b) => {
+                    const aKey = a.sectionKey || '';
+                    const bKey = b.sectionKey || '';
+                    return aKey.localeCompare(bKey);
+                  });
+                  // Limit to 4 sections per service
+                  detailsByServiceId[serviceId] = detailsByServiceId[serviceId].slice(0, 4);
+                });
+                
+                // Store the map for serviceId-based lookup
+                setServicesDetailsMap(detailsByServiceId);
+                console.log('✅ Services details map created from /content:', detailsByServiceId);
+                
+                // Convert to array format (matching service order) for backward compatibility
+                // Map details to services in the same order as servicesItems
+                data = servicesItems.slice(0, 4).map((service: any) => {
+                  const serviceId = service._id || service.id;
+                  return serviceId ? (detailsByServiceId[serviceId] || []) : [];
+                });
+                console.log('📦 Grouped and formatted data from services.details (by service order):', data);
+                console.log('📊 Details count per service:', Object.keys(detailsByServiceId).map(serviceId => ({
+                  serviceId,
+                  count: detailsByServiceId[serviceId].length,
+                })));
+              } else {
+                // Fallback to old format
+                data = response.data?.servicesDetails || response.data?.services_details || [];
+                console.log('📦 Using fallback data format:', data);
+              }
             } catch (contentErr: any) {
-              // If /content also fails, try /content/services
+              // If /content also fails, try fetching individual service details
               if (contentErr.response?.status === 404) {
-                try {
-                  const servicesResponse = await http.get('/content/services');
-                  console.log('Services response:', servicesResponse.data);
-                  // Extract servicesDetails if it exists in services data
-                  data = servicesResponse.data?.servicesDetails || servicesResponse.data?.services_details || [];
-                } catch (servicesErr) {
-                  console.warn('Could not fetch services details from API');
-                  data = [];
+                console.log('⚠️ /content not found, trying to fetch individual service details');
+                // Get services from landing store to get their IDs
+                const landingServices = Array.isArray(services) 
+                  ? services 
+                  : (services && typeof services === 'object' && 'items' in services && Array.isArray((services as any).items))
+                  ? (services as any).items
+                  : [];
+                
+                if (landingServices.length > 0) {
+                  try {
+                    // Fetch details for each service by its ID and map them correctly
+                    const detailsPromises = landingServices.slice(0, 4).map(async (service: any, index: number) => {
+                      const serviceId = service._id || service.id;
+                      if (!serviceId) {
+                        console.warn(`Service ${index + 1} has no ID, skipping...`);
+                        return { serviceId: null, serviceIndex: index, details: null };
+                      }
+                      
+                      try {
+                        // Use the correct endpoint: /content/services/items/{serviceId}/details
+                        console.log(`🔄 Fetching details for service ${index + 1} (ID: ${serviceId}) from /content/services/items/${serviceId}/details`);
+                        const response = await http.get(`/content/services/items/${serviceId}/details`);
+                        // The response should be an array of details directly, or wrapped in a data property
+                        const details = Array.isArray(response.data) 
+                          ? response.data 
+                          : (response.data?.sections || response.data?.details || response.data?.items || []);
+                        console.log(`✅ Service ${index + 1} (ID: ${serviceId}) details fetched:`, details);
+                        // Return object with serviceId, serviceIndex, and details array
+                        return { 
+                          serviceId, 
+                          serviceIndex: index, 
+                          details: Array.isArray(details) && details.length > 0 ? details : [] 
+                        };
+                      } catch (err: any) {
+                        if (err.response?.status === 404) {
+                          console.log(`⚠️ Service ${index + 1} (ID: ${serviceId}) details not found (404) - This service may not have details yet`);
+                          return { serviceId, serviceIndex: index, details: [] };
+                        }
+                        console.error(`❌ Error fetching service ${index + 1} (ID: ${serviceId}) details:`, err);
+                        return { serviceId, serviceIndex: index, details: [] };
+                      }
+                    });
+                    
+                    const fetchedDetailsResults = await Promise.all(detailsPromises);
+                    
+                    // Create a map to store details by serviceId for easy lookup
+                    const detailsByServiceId: { [key: string]: any[] } = {};
+                    fetchedDetailsResults.forEach(result => {
+                      if (result.serviceId && result.details) {
+                        detailsByServiceId[result.serviceId] = result.details;
+                      }
+                    });
+                    
+                    // Store the map for serviceId-based lookup
+                    setServicesDetailsMap(detailsByServiceId);
+                    console.log('✅ Services details map created:', detailsByServiceId);
+                    
+                    // Build data array matching service order (by index) for backward compatibility
+                    const orderedDetails = fetchedDetailsResults
+                      .sort((a, b) => a.serviceIndex - b.serviceIndex)
+                      .map(result => result.details || []);
+                    
+                    if (orderedDetails.some(d => d.length > 0)) {
+                      console.log('✅ Fetched individual service details:', orderedDetails);
+                      data = orderedDetails;
+                    } else {
+                      // If individual fetch also fails, try /content/services
+                      console.log('⚠️ Individual service details not found, trying /content/services');
+                      try {
+                        const servicesResponse = await http.get('/content/services');
+                        console.log('Services response:', servicesResponse.data);
+                        // Extract servicesDetails if it exists in services data
+                        data = servicesResponse.data?.servicesDetails || servicesResponse.data?.services_details || [];
+                      } catch (servicesErr) {
+                        console.warn('Could not fetch services details from API');
+                        data = [];
+                      }
+                    }
+                  } catch (individualErr) {
+                    console.error('❌ Error fetching individual service details:', individualErr);
+                    // Try /content/services as fallback
+                    try {
+                      const servicesResponse = await http.get('/content/services');
+                      console.log('Services response:', servicesResponse.data);
+                      data = servicesResponse.data?.servicesDetails || servicesResponse.data?.services_details || [];
+                    } catch (servicesErr) {
+                      console.warn('Could not fetch services details from API');
+                      data = [];
+                    }
+                  }
+                } else {
+                  // If no services, try /content/services
+                  try {
+                    const servicesResponse = await http.get('/content/services');
+                    console.log('Services response:', servicesResponse.data);
+                    data = servicesResponse.data?.servicesDetails || servicesResponse.data?.services_details || [];
+                  } catch (servicesErr) {
+                    console.warn('Could not fetch services details from API');
+                    data = [];
+                  }
                 }
               } else {
                 throw contentErr;
@@ -94,49 +326,32 @@ const CompanyLanding = () => {
           }))
         );
         
-        // Merge API data with defaults
-        let mergedData = [...defaultServicesDetails];
-        if (Array.isArray(data) && data.length > 0) {
-          data.forEach((serviceSections: any[], serviceIndex: number) => {
-            if (serviceIndex < 4 && Array.isArray(serviceSections)) {
-              serviceSections.forEach((section: any, sectionIndex: number) => {
-                if (sectionIndex < 4) {
-                  mergedData[serviceIndex][sectionIndex] = {
-                    ...defaultServicesDetails[serviceIndex][sectionIndex],
-                    ...section,
-                  };
-                }
-              });
-            }
-          });
-        } else {
-          // Try to load from localStorage as fallback
-          const savedData = localStorage.getItem('servicesDetails');
-          if (savedData) {
-            try {
-              const parsed = JSON.parse(savedData);
-              if (Array.isArray(parsed) && parsed.length > 0) {
-                parsed.forEach((serviceSections: any[], serviceIndex: number) => {
-                  if (serviceIndex < 4 && Array.isArray(serviceSections)) {
-                    serviceSections.forEach((section: any, sectionIndex: number) => {
-                      if (sectionIndex < 4) {
-                        mergedData[serviceIndex][sectionIndex] = {
-                          ...defaultServicesDetails[serviceIndex][sectionIndex],
-                          ...section,
-                        };
-                      }
-                    });
-                  }
-                });
-              }
-            } catch (e) {
-              console.error('Error parsing saved data:', e);
-            }
-          }
-        }
+        // The servicesDetailsMap is already set above from the API response
+        // We just need to build the array format for backward compatibility
+        // Get services to build array format
+        const landingServices = Array.isArray(services) 
+          ? services 
+          : (services && typeof services === 'object' && 'items' in services && Array.isArray((services as any).items))
+          ? (services as any).items
+          : [];
         
-        console.log('Final services details:', mergedData);
-        setServicesDetails(mergedData);
+        // Build array format for backward compatibility (from map)
+        const arrayFormat: any[][] = [];
+        landingServices.slice(0, 4).forEach((service: any) => {
+          const serviceId = service._id || service.id;
+          if (serviceId && servicesDetailsMap[serviceId]) {
+            arrayFormat.push(servicesDetailsMap[serviceId]);
+          } else {
+            arrayFormat.push([
+              { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
+              { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
+              { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
+              { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
+            ]);
+          }
+        });
+        setServicesDetails(arrayFormat);
+        console.log('✅ Final services details array format:', arrayFormat);
       } catch (error) {
         console.error('Error fetching services details:', error);
         // Try to load from localStorage as fallback
@@ -166,12 +381,65 @@ const CompanyLanding = () => {
       }
     };
     fetchServicesDetails();
+    
+    // Refetch services details when page becomes visible (user returns from dashboard)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log("🔄 Page visible again, refetching services details...");
+        fetchServicesDetails();
+      }
+    };
+    
+    // Refetch services details when window gets focus
+    const handleFocus = () => {
+      console.log("🔄 Window focused, refetching services details...");
+      fetchServicesDetails();
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   useEffect(() => {
     // Fetch real data from API immediately
     console.log("🔄 CompanyLanding: Fetching landing data...");
     fetchLandingData();
+    
+    // Refetch data when page becomes visible (user returns to tab)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log("🔄 Page visible again, refetching landing data...");
+        fetchLandingData();
+      }
+    };
+    
+    // Refetch data when window gets focus (user switches back to tab)
+    const handleFocus = () => {
+      console.log("🔄 Window focused, refetching landing data...");
+      fetchLandingData();
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    
+    // Listen for services update event from dashboard
+    const handleServicesUpdated = () => {
+      console.log("📢 Services updated event received, refetching landing data...");
+      fetchLandingData();
+    };
+    
+    window.addEventListener('servicesUpdated', handleServicesUpdated);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('servicesUpdated', handleServicesUpdated);
+    };
   }, [fetchLandingData]);
 
   // Debug: Log data changes
@@ -188,6 +456,32 @@ const CompanyLanding = () => {
       projectsCount: Array.isArray(projects) ? projects.length : 0,
     });
   }, [hero, about, services, projects, loading]);
+
+  // Handle services structure - can be array or object with items array
+  // services can be:
+  // 1. Array directly: [service1, service2, ...]
+  // 2. Object with items: { items: [service1, service2, ...], title_en, title_ar, ... }
+  const safeServices = Array.isArray(services) 
+    ? services 
+    : (services && typeof services === 'object' && 'items' in services && Array.isArray((services as any).items))
+    ? (services as any).items
+    : [];
+  
+  // Extract services metadata (title, subtitle) if services is an object
+  const servicesMetadata = services && typeof services === 'object' && !Array.isArray(services)
+    ? services
+    : null;
+  
+  // Debug: Log services data
+  useEffect(() => {
+    console.log('🔍 CompanyLanding: Services data changed:', {
+      services,
+      safeServices,
+      safeServicesCount: safeServices.length,
+      servicesType: Array.isArray(services) ? 'array' : typeof services,
+      hasItems: services && typeof services === 'object' && 'items' in services,
+    });
+  }, [services, safeServices]);
 
   // Show skeleton loading while fetching data
   if (loading && !hero && !about) {
@@ -245,13 +539,6 @@ const CompanyLanding = () => {
   const aboutDescription =
     getFieldValue(about, "description", language) ||
     getFieldValue(about, "details", language);
-
-  // Handle services structure - can be array or object with items array
-  const safeServices = Array.isArray(services) 
-    ? services 
-    : (services && typeof services === 'object' && 'items' in services && Array.isArray((services as any).items))
-    ? (services as any).items
-    : [];
   const safeProjects = Array.isArray(projects) ? projects : [];
   const aboutValues = Array.isArray(about?.values)
     ? about.values
@@ -534,8 +821,8 @@ const CompanyLanding = () => {
                     {/* Description - Limited to 2 lines with Read More */}
                     <div>
                       <p className={`text-muted-foreground text-sm sm:text-base leading-relaxed ${expandedCardIndex === index ? '' : 'line-clamp-2'}`}>
-                        {valueDescription}
-                      </p>
+                      {valueDescription}
+                    </p>
                       {valueDescription && valueDescription.length > 100 && (
                         <button
                           className="mt-2 text-gold hover:text-gold-dark text-sm font-medium transition-colors duration-300"
@@ -570,69 +857,77 @@ const CompanyLanding = () => {
         <div className="container mx-auto">
           <div className="text-center mb-12 sm:mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              {getFieldValue(services, "title", language) || 
+              {servicesMetadata 
+                ? (language === 'en' 
+                    ? (servicesMetadata.title_en || servicesMetadata.title) 
+                    : (servicesMetadata.title_ar || servicesMetadata.title))
+                : getFieldValue(services, "title", language) || 
                (language === 'en' ? 'Our Services' : 'خدماتنا')}
             </h2>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl sm:max-w-3xl mx-auto">
-              {getFieldValue(services, "subtitle", language) || 
+              {servicesMetadata 
+                ? (language === 'en' 
+                    ? (servicesMetadata.subtitle_en || servicesMetadata.subtitle) 
+                    : (servicesMetadata.subtitle_ar || servicesMetadata.subtitle))
+                : getFieldValue(services, "subtitle", language) || 
                (language === 'en' 
                 ? 'We provide cutting-edge solutions tailored to your business needs'
                 : 'نوفر حلولاً متطورة مصممة خصيصاً لاحتياجات عملك')}
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-            {safeServices
-              .slice()
-              .sort((a: any, b: any) => (a?.order || 0) - (b?.order || 0))
-              .map((service: any) => {
-                const serviceTitle =
-                  getFieldValue(service, "title", language) ||
-                  service?.name ||
-                  "Service";
-                const serviceDescription =
-                  getFieldValue(service, "description", language) ||
-                  service?.details ||
-                  "";
-                // Check for code in multiple possible locations - code is not localized, it's a direct field
-                const serviceCode = service?.code || 
-                                   service?.serviceCode || 
-                                   service?.codeValue || 
-                                   "";
-                
-                // Debug: uncomment to check service data in browser console
-                // console.log('Service:', { 
-                //   id: service._id || service.id, 
-                //   title: serviceTitle,
-                //   code: serviceCode, 
-                //   codeRaw: service?.code,
-                //   allKeys: Object.keys(service)
-                // });
-                
-                // Use code if available and not empty, otherwise use first letter of title
-                const serviceDisplay = (serviceCode && String(serviceCode).trim() !== "") 
-                  ? String(serviceCode).trim() 
-                  : (serviceTitle?.charAt(0) || "S");
-                const serviceLink = service?.link || service?.url || service?.href;
+            {safeServices.length > 0 ? (
+              safeServices
+                .slice()
+                .sort((a: any, b: any) => (a?.order || 0) - (b?.order || 0))
+                .map((service: any, index: number) => {
+                  console.log(`🔍 Rendering service ${index + 1}:`, {
+                    service,
+                    title_en: service?.title_en,
+                    title_ar: service?.title_ar,
+                    description_en: service?.description_en,
+                    description_ar: service?.description_ar,
+                  });
+                  
+                  const serviceTitle =
+                    getFieldValue(service, "title", language) ||
+                    service?.name ||
+                    "Service";
+                  const serviceDescription =
+                    getFieldValue(service, "description", language) ||
+                    service?.details ||
+                    "";
+                  // Check for code in multiple possible locations - code is not localized, it's a direct field
+                  const serviceCode = service?.code || 
+                                     service?.serviceCode || 
+                                     service?.codeValue || 
+                                     "";
+                  
+                  // Use code if available and not empty, otherwise use first letter of title
+                  const serviceDisplay = (serviceCode && String(serviceCode).trim() !== "") 
+                    ? String(serviceCode).trim() 
+                    : (serviceTitle?.charAt(0) || "S");
+                  const serviceLink = service?.link || service?.url || service?.href;
 
-                // Truncate description to 2 lines
-                const truncateDescription = (text: string, maxLength: number = 120) => {
-                  if (text.length <= maxLength) return text;
-                  return text.substring(0, maxLength).trim() + '...';
-                };
+                  // Truncate description to 2 lines
+                  const truncateDescription = (text: string, maxLength: number = 120) => {
+                    if (text.length <= maxLength) return text;
+                    return text.substring(0, maxLength).trim() + '...';
+                  };
 
-                const shortDescription = truncateDescription(serviceDescription);
+                  const shortDescription = truncateDescription(serviceDescription);
 
-                const handleServiceClick = () => {
-                  if (serviceLink) {
-                    if (serviceLink.startsWith('http://') || serviceLink.startsWith('https://')) {
-                      window.open(serviceLink, '_blank', 'noopener,noreferrer');
-                    } else {
-                      navigate(serviceLink);
+                  const handleServiceClick = () => {
+                    if (serviceLink) {
+                      if (serviceLink.startsWith('http://') || serviceLink.startsWith('https://')) {
+                        window.open(serviceLink, '_blank', 'noopener,noreferrer');
+                      } else {
+                        navigate(serviceLink);
+                      }
                     }
-                  }
-                };
+                  };
 
-                return (
+                  return (
               <div 
                 key={service._id || service.id} 
                 className="bg-card text-card-foreground rounded-xl border border-border p-6 sm:p-8 transition-all duration-300 ease-in-out hover:scale-[1.03] hover:shadow-xl hover:shadow-gold/20 hover:bg-card/80 cursor-pointer group flex flex-col"
@@ -673,8 +968,20 @@ const CompanyLanding = () => {
                   {language === 'en' ? 'More Details' : 'المزيد من التفاصيل'}
                 </Button>
               </div>
-                );
-              })}
+                  );
+                })
+            ) : (
+              <div className="col-span-full text-center py-8">
+                <p className="text-muted-foreground">
+                  {language === 'en' ? 'No services available' : 'لا توجد خدمات متاحة'}
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {language === 'en' 
+                    ? `Debug: safeServices.length = ${safeServices.length}, services type = ${Array.isArray(services) ? 'array' : typeof services}`
+                    : `تصحيح: عدد الخدمات = ${safeServices.length}, نوع البيانات = ${Array.isArray(services) ? 'array' : typeof services}`}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -705,15 +1012,15 @@ const CompanyLanding = () => {
                 const projectLink = project?.link || project?.url || project?.href;
 
                 const handleCardClick = () => {
-                  if (projectLink) {
-                    // Check if it's an external link (starts with http:// or https://)
-                    if (projectLink.startsWith('http://') || projectLink.startsWith('https://')) {
-                      window.open(projectLink, '_blank', 'noopener,noreferrer');
-                    } else {
-                      // Internal link - navigate using React Router
-                      navigate(projectLink);
-                    }
-                  }
+                  // Open project details modal instead of navigating
+                  setSelectedProject(project);
+                  setProjectModalOpen(true);
+                };
+
+                const handleViewDetailsClick = (e: React.MouseEvent) => {
+                  e.stopPropagation(); // Prevent card click
+                  setSelectedProject(project);
+                  setProjectModalOpen(true);
                 };
 
                 // Truncate description to 2 lines
@@ -777,7 +1084,10 @@ const CompanyLanding = () => {
                   
                   {/* View Details Button */}
                   <div className="mt-auto">
-                    <span className={`inline-flex items-center text-sm font-medium text-muted-foreground group-hover:text-gold transition-colors duration-300 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                    <button
+                      onClick={handleViewDetailsClick}
+                      className={`inline-flex items-center text-sm font-medium text-muted-foreground group-hover:text-gold transition-colors duration-300 ${language === 'ar' ? 'flex-row-reverse' : ''}`}
+                    >
                       {language === 'en' ? 'View details' : 'عرض التفاصيل'}
                       <svg 
                         className={`w-4 h-4 transition-transform duration-300 ${language === 'en' ? 'ml-2 group-hover:translate-x-1' : 'mr-2 group-hover:-translate-x-1'} ${language === 'ar' ? 'rotate-180' : ''}`}
@@ -788,7 +1098,7 @@ const CompanyLanding = () => {
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
-                    </span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -953,6 +1263,109 @@ const CompanyLanding = () => {
       <Footer />
       <Chatbot />
 
+      {/* Project Details Modal */}
+      <Dialog open={projectModalOpen} onOpenChange={setProjectModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className={`text-2xl font-bold ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+              {selectedProject ? (
+                getFieldValue(selectedProject, "title", language) ||
+                selectedProject?.name ||
+                "Project"
+              ) : ""}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedProject && (
+            <div className="space-y-6 mt-4">
+              {/* Project Image */}
+              {selectedProject?.image || selectedProject?.imageUrl || selectedProject?.photo || selectedProject?.thumbnail ? (
+                <div className="w-full cursor-pointer group" onClick={() => {
+                  const imageUrl = selectedProject.image || selectedProject.imageUrl || selectedProject.photo || selectedProject.thumbnail;
+                  setSelectedImage(imageUrl);
+                  setImageModalOpen(true);
+                }}>
+                  <div className="relative overflow-hidden rounded-lg border border-border">
+                    <img
+                      src={selectedProject.image || selectedProject.imageUrl || selectedProject.photo || selectedProject.thumbnail}
+                      alt={getFieldValue(selectedProject, "title", language) || "Project"}
+                      className="w-full h-64 sm:h-80 object-cover transition-transform duration-300 group-hover:scale-105"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-white text-sm font-medium bg-black/50 px-4 py-2 rounded-lg">
+                        {language === 'en' ? 'Click to view full size' : 'اضغط لعرض الصورة كاملة'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Project Description */}
+              <div>
+                <h3 className="text-lg font-semibold mb-2 text-card-foreground">
+                  {language === 'en' ? 'Description' : 'الوصف'}
+                </h3>
+                <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                  {getFieldValue(selectedProject, "description", language) ||
+                   selectedProject?.details ||
+                   selectedProject?.description_en ||
+                   selectedProject?.description_ar ||
+                   (language === 'en' ? 'No description available' : 'لا يوجد وصف متاح')}
+                </p>
+              </div>
+
+              {/* Project Link (if available) */}
+              {selectedProject?.link || selectedProject?.url || selectedProject?.href ? (
+                <div>
+                  <a
+                    href={selectedProject.link || selectedProject.url || selectedProject.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center text-gold hover:text-gold-dark transition-colors"
+                  >
+                    {language === 'en' ? 'Visit Project' : 'زيارة المشروع'}
+                    <svg 
+                      className={`w-4 h-4 ${language === 'en' ? 'ml-2' : 'mr-2'} ${language === 'ar' ? 'rotate-180' : ''}`}
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </a>
+                </div>
+              ) : null}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Full Size Image Modal */}
+      <Dialog open={imageModalOpen} onOpenChange={setImageModalOpen}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-none">
+          <div className="relative w-full h-full flex items-center justify-center">
+            {selectedImage && (
+              <img
+                src={selectedImage}
+                alt={language === 'en' ? 'Full size image' : 'صورة بحجم كامل'}
+                className="max-w-full max-h-[95vh] object-contain"
+                onClick={(e) => e.stopPropagation()}
+              />
+            )}
+            <button
+              onClick={() => setImageModalOpen(false)}
+              className={`absolute top-4 text-white hover:text-gold transition-colors duration-200 bg-black/50 rounded-full p-2 hover:bg-black/70 ${language === 'ar' ? 'left-4' : 'right-4'}`}
+              aria-label={language === 'en' ? 'Close' : 'إغلاق'}
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Order Modal */}
       {orderModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -995,17 +1408,26 @@ const CompanyLanding = () => {
               {/* Four Sections - Display Only (for selected service) */}
               <div className="mb-6 space-y-6">
                 {(() => {
-                  // Get the service index from selectedService
-                  const serviceIndex = selectedService 
-                    ? safeServices.findIndex((s: any) => 
-                        String(s._id || s.id) === String(selectedService._id || selectedService.id)
-                      )
-                    : -1;
+                  // Get the service ID from selectedService
+                  const selectedServiceId = selectedService?._id || selectedService?.id;
                   
-                  // Get sections for this service (default to first service if not found)
-                  const serviceSections = serviceIndex >= 0 && serviceIndex < servicesDetails.length
-                    ? servicesDetails[serviceIndex]
-                    : (servicesDetails[0] || []);
+                  // Get sections for this service using serviceId (preferred) or fallback to index
+                  let serviceSections: any[] = [];
+                  
+                  if (selectedServiceId && servicesDetailsMap[selectedServiceId]) {
+                    // Use serviceId-based lookup (most accurate)
+                    serviceSections = servicesDetailsMap[selectedServiceId];
+                    console.log(`✅ Found details for service ID ${selectedServiceId}:`, serviceSections);
+                  } else {
+                    // If serviceId not found in map, log warning and show empty sections
+                    console.warn(`⚠️ Service ID ${selectedServiceId} not found in servicesDetailsMap`);
+                    console.warn(`📊 Available service IDs in map:`, Object.keys(servicesDetailsMap));
+                    console.warn(`📊 Selected service:`, selectedService);
+                    
+                    // Return empty array instead of wrong data
+                    serviceSections = [];
+                    console.log(`⚠️ No details found for service ID ${selectedServiceId}, showing empty sections`);
+                  }
                   
                   // Display 4 sections for the selected service
                   return serviceSections.slice(0, 4).map((section: any, index: number) => {

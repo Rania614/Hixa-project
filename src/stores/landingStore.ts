@@ -72,12 +72,19 @@ const mapPayload = (payload: any) => {
     };
   }
 
-  // Handle services structure - can be { items: [] } or []
-  const services = payload.services?.items 
-    ? payload.services.items 
-    : Array.isArray(payload.services)
-    ? payload.services
-    : [];
+  // Handle services structure - can be { items: [], title_en, title_ar, ... } or []
+  // Keep the full services object if it has items, otherwise extract items if it's an array
+  let services: any;
+  if (payload.services?.items) {
+    // Keep the full object (includes title, subtitle, items, details)
+    services = payload.services;
+  } else if (Array.isArray(payload.services)) {
+    // If it's an array, wrap it in an object
+    services = { items: payload.services };
+  } else {
+    // Default to empty object with items array
+    services = { items: [] };
+  }
 
   // Handle projects structure - can be { items: [] } or []
   const projects = payload.projects?.items 
@@ -129,13 +136,22 @@ export const useLandingStore = create<LandingState>((set) => ({
     try {
       console.log("🔄 Fetching landing data from API...");
       
+      // Add cache busting to ensure fresh data
+      const cacheBuster = `?t=${Date.now()}`;
+      
       // Try to fetch from /content first (if it exists)
       try {
-        const response = await http.get("/content");
+        const response = await http.get(`/content${cacheBuster}`);
         console.log("✅ API Response received from /content:", response.data);
+        console.log("📦 Services in response:", response.data?.services);
+        console.log("📦 Services type:", typeof response.data?.services);
+        console.log("📦 Services is array:", Array.isArray(response.data?.services));
+        console.log("📦 Services has items:", response.data?.services?.items);
         
         const mapped = mapPayload(response.data);
         console.log("📦 Mapped payload:", mapped);
+        console.log("📦 Mapped services:", mapped.services);
+        console.log("📦 Mapped services count:", Array.isArray(mapped.services) ? mapped.services.length : 0);
 
         // Update with real data from API
         set({
@@ -168,7 +184,7 @@ export const useLandingStore = create<LandingState>((set) => ({
               console.error("❌ Failed to fetch /content/about:", err.response?.status, err.message);
               return { data: null };
             }),
-            http.get("/content/services").catch((err) => {
+            http.get(`/content/services${cacheBuster}`).catch((err) => {
               console.error("❌ Failed to fetch /content/services:", err.response?.status, err.message);
               return { data: null };
             }),
@@ -202,19 +218,42 @@ export const useLandingStore = create<LandingState>((set) => ({
             partners: partners ? `✅ (${Array.isArray(partners) ? partners.length : partners.items?.length || 0} items)` : "❌ null",
             jobs: jobs ? `✅ (${Array.isArray(jobs) ? jobs.length : jobs.items?.length || 0} items)` : "❌ null",
           });
+          
+          // Log services data in detail
+          if (services) {
+            console.log("📦 Services data received:", JSON.stringify(services, null, 2));
+            console.log("📦 Services items:", services.items || services);
+          } else {
+            console.log("⚠️ No services data received");
+          }
 
           // Combine all data
+          // Normalize services structure before passing to mapPayload
+          const normalizedServices = services?.items 
+            ? services 
+            : Array.isArray(services)
+            ? { items: services }
+            : null;
+          
           const combinedData = {
             hero,
             about,
-            services,
+            services: normalizedServices,
             projects,
             partners,
             jobs,
             cta: hero?.ctaSection || null,
           };
 
+          console.log("📦 Combined data before mapping:", {
+            services: normalizedServices,
+            servicesItems: normalizedServices?.items?.length || 0,
+          });
+
           const mapped = mapPayload(combinedData);
+          
+          console.log("📦 Mapped services:", mapped.services);
+          console.log("📦 Mapped services count:", Array.isArray(mapped.services) ? mapped.services.length : 0);
           console.log("📦 Mapped payload from separate endpoints:", mapped);
 
           // Update with real data from API
