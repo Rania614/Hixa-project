@@ -91,12 +91,8 @@ export const useContentStore = create<ContentState>((set, get) => ({
       const response = await http.get("/content");
       const data = response.data;
       
-      // Normalize services structure - handle both { items: [] } and [] formats
-      const services = data.services?.items 
-        ? data.services 
-        : Array.isArray(data.services)
-        ? { items: data.services }
-        : { items: [] };
+      // Services is now an object with item1, item2, item3, item4
+      const services = data.services || {};
       
       // Normalize projects structure - handle both { items: [] } and [] formats
       const projects = data.projects?.items 
@@ -205,139 +201,10 @@ export const useContentStore = create<ContentState>((set, get) => ({
   },
   
   updateServices: async (services) => {
-    // Don't set loading to true - it causes content to disappear
-    // set({ loading: true });
-    try {
-      const payload = {
-        title_en: services?.title_en ?? "",
-        title_ar: services?.title_ar ?? "",
-        subtitle_en: services?.subtitle_en ?? "",
-        subtitle_ar: services?.subtitle_ar ?? "",
-        items: Array.isArray(services?.items)
-          ? services.items.map((item) => {
-              // Remove _id, code, and other MongoDB fields, keep only allowed fields
-              return {
-                title_en: item.title_en ?? "",
-                title_ar: item.title_ar ?? "",
-                description_en: item.description_en ?? "",
-                description_ar: item.description_ar ?? "",
-                icon: item.icon ?? "",
-              };
-            })
-          : [],
-      };
-      
-      console.log('💾 Updating services via /content/services');
-      console.log('📦 Payload:', JSON.stringify(payload, null, 2));
-      console.log('📦 Services items count:', payload.items.length);
-      
-      const response = await http.put("/content/services", payload);
-      console.log('✅ Services updated successfully:', response.data);
-      console.log('📦 Response data:', JSON.stringify(response.data, null, 2));
-      console.log('📦 Response status:', response.status);
-      
-      // Try to fetch the updated services from backend to get correct IDs
-      let backendServices = null;
-      try {
-        console.log('🔄 Fetching updated services from backend to get correct IDs...');
-        const servicesResponse = await http.get("/content/services");
-        backendServices = servicesResponse.data;
-        console.log('✅ Fetched services from backend:', backendServices);
-      } catch (fetchErr: any) {
-        console.warn('⚠️ Could not fetch services from backend after save:', fetchErr);
-        // Continue with response data if available
-        if (response.data?.items) {
-          backendServices = response.data;
-        }
-      }
-      
-      // Always preserve _id from original items for local state
-      // This ensures the UI doesn't break even if backend response is different
-      const currentServices = get().services;
-      const currentItems = Array.isArray(currentServices) 
-        ? currentServices 
-        : (currentServices as any)?.items || [];
-      
-      // Preserve _id from original items for local state
-      // Use the services parameter passed in (which has the current UI state)
-      // Make sure we have items array - use current items if services.items is empty
-      const sourceItems = services.items && services.items.length > 0 
-        ? services.items 
-        : currentItems;
-      
-      // Merge backend IDs with local items
-      // Match services by title_en/title_ar instead of index to ensure correct mapping
-      const backendItems = backendServices?.items || response.data?.items || [];
-      const mergedItems = sourceItems.map((item: any, index: number) => {
-        const updatedItem = payload.items[index];
-        
-        // Try to find matching backend item by title (more reliable than index)
-        let backendItem = backendItems.find((bi: any) => 
-          (bi.title_en && item.title_en && bi.title_en === item.title_en) ||
-          (bi.title_ar && item.title_ar && bi.title_ar === item.title_ar) ||
-          (bi._id && item._id && String(bi._id) === String(item._id)) ||
-          (bi.id && item.id && String(bi.id) === String(item.id))
-        );
-        
-        // If not found by title, try by index as fallback
-        if (!backendItem && backendItems[index]) {
-          backendItem = backendItems[index];
-        }
-        
-        // Prefer backend _id if available, otherwise keep local _id
-        const itemId = backendItem?._id || backendItem?.id || item._id || item.id;
-        
-        console.log(`🔗 Matching service ${index + 1}:`, {
-          localTitle: item.title_en || item.title_ar,
-          localId: item._id || item.id,
-          backendId: backendItem?._id || backendItem?.id,
-          matchedId: itemId,
-        });
-        
-        return {
-          ...item, // Keep all original properties
-          ...updatedItem, // Override with new values from payload
-          _id: itemId, // Use backend ID if available
-          id: itemId, // Also set id field
-        };
-      });
-      
-      const updatedServices = {
-        ...services,
-        title_en: payload.title_en,
-        title_ar: payload.title_ar,
-        subtitle_en: payload.subtitle_en,
-        subtitle_ar: payload.subtitle_ar,
-        items: mergedItems,
-      };
-      
-      console.log('📦 Updated services state (with backend IDs):', updatedServices);
-      console.log('📦 Items count:', updatedServices.items?.length || 0);
-      console.log('📦 Items with IDs:', updatedServices.items.map((item: any) => ({ 
-        title: item.title_en, 
-        _id: item._id, 
-        id: item.id 
-      })));
-      set({ services: updatedServices, loading: false });
-      toast({ title: "Services Updated Successfully" });
-      
-      // Dispatch event to notify landing page to refresh
-      window.dispatchEvent(new CustomEvent('servicesUpdated'));
-      console.log('📢 Dispatched servicesUpdated event');
-    } catch (err: any) {
-      console.error("❌ Error updating services:", err);
-      console.error("❌ Error response:", err.response?.data);
-      console.error("❌ Error status:", err.response?.status);
-      console.error("❌ Error message:", err.response?.data?.message);
-      const errorMessage = err.response?.data?.message || err.message || "Failed to update services";
-      toast({ 
-        title: "Error updating services", 
-        description: errorMessage,
-        variant: "destructive" 
-      });
-    } finally {
-      set({ loading: false });
-    }
+    // Services is now an object with item1, item2, item3, item4
+    // Services are updated individually via PUT /content/services/:itemId
+    // This function just updates local state
+    set({ services: services || {} });
   },
   
   addService: async (service) => {

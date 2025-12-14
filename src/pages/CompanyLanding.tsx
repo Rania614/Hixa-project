@@ -221,32 +221,22 @@ const CompanyLanding = () => {
       try {
         console.log(`🔄 Fetching details for service ${serviceId}...`);
         
-        // Try the new endpoint first: /api/content/services/details/{id}
-        let response;
-        try {
-          console.log(`🔄 Trying endpoint: /api/content/services/details/${serviceId}`);
-          response = await http.get(`/api/content/services/details/${serviceId}`);
-          console.log(`✅ Successfully fetched from /api/content/services/details/${serviceId}`);
-        } catch (newEndpointError: any) {
-          if (newEndpointError.response?.status === 404) {
-            // If new endpoint returns 404, try the old endpoint as fallback
-            console.log(`⚠️ /api/content/services/details/${serviceId} returned 404, trying fallback endpoint...`);
-            console.log(`🔄 Trying fallback endpoint: /content/services/items/${serviceId}/details`);
-            response = await http.get(`/content/services/items/${serviceId}/details`);
-            console.log(`✅ Successfully fetched from fallback endpoint`);
-          } else {
-            throw newEndpointError;
-          }
-        }
+        // Use the correct endpoint: /content/services/items/{serviceId}/details
+        const response = await http.get(`/content/services/items/${serviceId}/details`);
+        console.log(`✅ Successfully fetched from /content/services/items/${serviceId}/details`);
         
         // Handle nested response shapes
+        // Backend returns: { message: "...", data: [...], count: ... }
+        // So we need to check response.data.data first (axios wraps it in response.data)
         let details: any[] = [];
         if (Array.isArray(response.data)) {
+          // Direct array response (unlikely but possible)
           details = response.data;
+        } else if (response.data?.data && Array.isArray(response.data.data)) {
+          // Backend standard response: { message, data: [...], count }
+          details = response.data.data;
         } else if (response.data?.items && Array.isArray(response.data.items)) {
           details = response.data.items;
-        } else if (response.data?.data && Array.isArray(response.data.data)) {
-          details = response.data.data;
         } else if (response.data?.details && Array.isArray(response.data.details)) {
           details = response.data.details;
         } else {
@@ -277,6 +267,10 @@ const CompanyLanding = () => {
         
         console.log(`✅ Fetched ${sortedDetails.length} details for service ${serviceId}`);
       } catch (error: any) {
+        console.error(`❌ Error fetching service details for ${serviceId}:`, error);
+        console.error(`❌ Error response:`, error.response?.data);
+        console.error(`❌ Error status:`, error.response?.status);
+        console.error(`❌ Full URL attempted:`, error.config?.baseURL + error.config?.url);
         if (error.response?.status === 404) {
           console.log(`ℹ️ No details found for service ${serviceId}`);
           // Set empty array for this service
