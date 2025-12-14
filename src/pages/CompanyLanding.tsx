@@ -45,365 +45,10 @@ const CompanyLanding = () => {
   const fetchLandingData = useLandingStore((state) => state.fetchLandingData);
   
   // Fetch services details from API (4 services, each with 4 sections)
-  // Store as both array (for backward compatibility) and map (for serviceId lookup)
-  const [servicesDetails, setServicesDetails] = useState<any[][]>([]);
+  // Store service details by serviceId
   const [servicesDetailsMap, setServicesDetailsMap] = useState<{ [serviceId: string]: any[] }>({});
   
-  useEffect(() => {
-    const fetchServicesDetails = async () => {
-      try {
-        // Try to fetch services details from API
-        let data = null;
-        
-        // Try /content/services-details first
-        try {
-          const response = await http.get('/content/services-details');
-          console.log('Services details response:', response.data);
-          data = response.data?.servicesDetails || response.data?.services_details || response.data || [];
-        } catch (servicesDetailsErr: any) {
-          // If that fails, try /content and extract servicesDetails
-          if (servicesDetailsErr.response?.status === 404) {
-      try {
-        const response = await http.get('/content');
-        console.log('Full content response:', response.data);
-              console.log('📋 Response keys:', Object.keys(response.data || {}));
-              console.log('🔍 Checking for services details:', {
-                servicesDetails: response.data?.servicesDetails,
-                services_details: response.data?.services_details,
-                services: response.data?.services,
-                servicesDetailsInServices: response.data?.services?.details,
-              });
-              
-              // Check if details are in services.details (this is where they're saved)
-              const servicesDetails = response.data?.services?.details;
-              if (Array.isArray(servicesDetails) && servicesDetails.length > 0) {
-                console.log('✅ Found services.details array:', servicesDetails);
-                
-                // Helper function to normalize IDs for comparison
-                const normalizeId = (id: any): string => {
-                  if (!id) return '';
-                  // Handle ObjectId objects (MongoDB)
-                  if (id.toString && typeof id.toString === 'function') {
-                    return id.toString();
-                  }
-                  return String(id);
-                };
-                
-                // Get services to map categoryKey to serviceId
-                // Use services from response first, then fallback to safeServices
-                const servicesItems = response.data?.services?.items || safeServices || [];
-                
-                console.log('🔍 Services items for mapping:', servicesItems.map((s: any) => ({
-                  normalizedId: normalizeId(s._id || s.id),
-                  title: s.title_en || s.title_ar,
-                  _id: s._id,
-                  rawId: s.id,
-                })));
-                
-                // Group details by serviceId - use serviceItemId first, then categoryKey
-                const detailsByServiceId: { [serviceId: string]: any[] } = {};
-                
-                // Initialize empty arrays for all services
-                servicesItems.forEach((service: any) => {
-                  const serviceId = normalizeId(service._id || service.id);
-                  if (serviceId) {
-                    detailsByServiceId[serviceId] = [];
-                  }
-                });
-                
-                console.log('🔍 Initialized detailsByServiceId for serviceIds:', Object.keys(detailsByServiceId));
-                console.log('🔍 Normalized service IDs:', servicesItems.map((s: any) => normalizeId(s._id || s.id)));
-                
-                servicesDetails.forEach((detail: any) => {
-                  let targetServiceId: string | null = null;
-                  
-                  // Helper function to normalize IDs for comparison
-                  const normalizeId = (id: any): string => {
-                    if (!id) return '';
-                    // Handle ObjectId objects (MongoDB)
-                    if (id.toString && typeof id.toString === 'function') {
-                      return id.toString();
-                    }
-                    return String(id);
-                  };
-                  
-                  // Priority 1: Use serviceItemId if available (most reliable)
-                  if (detail.serviceItemId) {
-                    const normalizedServiceItemId = normalizeId(detail.serviceItemId);
-                    // Find matching service by comparing normalized IDs
-                    const matchingService = servicesItems.find((s: any) => {
-                      const serviceId = normalizeId(s._id || s.id);
-                      return serviceId === normalizedServiceItemId;
-                    });
-                    if (matchingService) {
-                      targetServiceId = normalizeId(matchingService._id || matchingService.id);
-                    }
-                  }
-                  
-                  // Priority 2: Use categoryKey if it matches a serviceId
-                  if (!targetServiceId && detail.categoryKey) {
-                    const normalizedCategoryKey = normalizeId(detail.categoryKey);
-                    // Check if categoryKey matches any serviceId
-                    const matchingService = servicesItems.find((s: any) => {
-                      const serviceId = normalizeId(s._id || s.id);
-                      return serviceId === normalizedCategoryKey;
-                    });
-                    if (matchingService) {
-                      targetServiceId = normalizeId(matchingService._id || matchingService.id);
-                    }
-                  }
-                  
-                  // Only add detail if we found a matching service
-                  if (targetServiceId && detailsByServiceId[targetServiceId]) {
-                    detailsByServiceId[targetServiceId].push(detail);
-                    console.log(`✅ Matched detail ${detail._id} to service ${targetServiceId} (section: ${detail.sectionKey})`);
-                  } else {
-                    console.warn('⚠️ Detail not matched to any service:', {
-                      detailId: detail._id,
-                      categoryKey: detail.categoryKey,
-                      serviceItemId: detail.serviceItemId,
-                      normalizedCategoryKey: detail.categoryKey ? normalizeId(detail.categoryKey) : null,
-                      normalizedServiceItemId: detail.serviceItemId ? normalizeId(detail.serviceItemId) : null,
-                      availableServiceIds: servicesItems.map((s: any) => normalizeId(s._id || s.id)),
-                    });
-                  }
-                });
-                
-                // Sort details by sectionKey for each service
-                Object.keys(detailsByServiceId).forEach(serviceId => {
-                  detailsByServiceId[serviceId].sort((a, b) => {
-                    const aKey = a.sectionKey || '';
-                    const bKey = b.sectionKey || '';
-                    return aKey.localeCompare(bKey);
-                  });
-                  // Limit to 4 sections per service
-                  detailsByServiceId[serviceId] = detailsByServiceId[serviceId].slice(0, 4);
-                });
-                
-                // Store the map for serviceId-based lookup
-                setServicesDetailsMap(detailsByServiceId);
-                console.log('✅ Services details map created from /content:', detailsByServiceId);
-                
-                // Convert to array format (matching service order) for backward compatibility
-                // Map details to services in the same order as servicesItems
-                data = servicesItems.slice(0, 4).map((service: any) => {
-                  const serviceId = service._id || service.id;
-                  return serviceId ? (detailsByServiceId[serviceId] || []) : [];
-                });
-                console.log('📦 Grouped and formatted data from services.details (by service order):', data);
-                console.log('📊 Details count per service:', Object.keys(detailsByServiceId).map(serviceId => ({
-                  serviceId,
-                  count: detailsByServiceId[serviceId].length,
-                })));
-              } else {
-                // Fallback to old format
-                data = response.data?.servicesDetails || response.data?.services_details || [];
-                console.log('📦 Using fallback data format:', data);
-              }
-            } catch (contentErr: any) {
-              // If /content also fails, try fetching individual service details
-              if (contentErr.response?.status === 404) {
-                console.log('⚠️ /content not found, trying to fetch individual service details');
-                // Get services from landing store to get their IDs
-                const landingServices = Array.isArray(services) 
-                  ? services 
-                  : (services && typeof services === 'object' && 'items' in services && Array.isArray((services as any).items))
-                  ? (services as any).items
-                  : [];
-                
-                if (landingServices.length > 0) {
-                  try {
-                    // Fetch details for each service by its ID and map them correctly
-                    const detailsPromises = landingServices.slice(0, 4).map(async (service: any, index: number) => {
-                      const serviceId = service._id || service.id;
-                      if (!serviceId) {
-                        console.warn(`Service ${index + 1} has no ID, skipping...`);
-                        return { serviceId: null, serviceIndex: index, details: null };
-                      }
-                      
-                      try {
-                        // Use the correct endpoint: /content/services/items/{serviceId}/details
-                        console.log(`🔄 Fetching details for service ${index + 1} (ID: ${serviceId}) from /content/services/items/${serviceId}/details`);
-                        const response = await http.get(`/content/services/items/${serviceId}/details`);
-                        // The response should be an array of details directly, or wrapped in a data property
-                        const details = Array.isArray(response.data) 
-                          ? response.data 
-                          : (response.data?.sections || response.data?.details || response.data?.items || []);
-                        console.log(`✅ Service ${index + 1} (ID: ${serviceId}) details fetched:`, details);
-                        // Return object with serviceId, serviceIndex, and details array
-                        return { 
-                          serviceId, 
-                          serviceIndex: index, 
-                          details: Array.isArray(details) && details.length > 0 ? details : [] 
-                        };
-                      } catch (err: any) {
-                        if (err.response?.status === 404) {
-                          console.log(`⚠️ Service ${index + 1} (ID: ${serviceId}) details not found (404) - This service may not have details yet`);
-                          return { serviceId, serviceIndex: index, details: [] };
-                        }
-                        console.error(`❌ Error fetching service ${index + 1} (ID: ${serviceId}) details:`, err);
-                        return { serviceId, serviceIndex: index, details: [] };
-                      }
-                    });
-                    
-                    const fetchedDetailsResults = await Promise.all(detailsPromises);
-                    
-                    // Create a map to store details by serviceId for easy lookup
-                    const detailsByServiceId: { [key: string]: any[] } = {};
-                    fetchedDetailsResults.forEach(result => {
-                      if (result.serviceId && result.details) {
-                        detailsByServiceId[result.serviceId] = result.details;
-                      }
-                    });
-                    
-                    // Store the map for serviceId-based lookup
-                    setServicesDetailsMap(detailsByServiceId);
-                    console.log('✅ Services details map created:', detailsByServiceId);
-                    
-                    // Build data array matching service order (by index) for backward compatibility
-                    const orderedDetails = fetchedDetailsResults
-                      .sort((a, b) => a.serviceIndex - b.serviceIndex)
-                      .map(result => result.details || []);
-                    
-                    if (orderedDetails.some(d => d.length > 0)) {
-                      console.log('✅ Fetched individual service details:', orderedDetails);
-                      data = orderedDetails;
-                    } else {
-                      // If individual fetch also fails, try /content/services
-                      console.log('⚠️ Individual service details not found, trying /content/services');
-                      try {
-                        const servicesResponse = await http.get('/content/services');
-                        console.log('Services response:', servicesResponse.data);
-                        // Extract servicesDetails if it exists in services data
-                        data = servicesResponse.data?.servicesDetails || servicesResponse.data?.services_details || [];
-                      } catch (servicesErr) {
-                        console.warn('Could not fetch services details from API');
-                        data = [];
-                      }
-                    }
-                  } catch (individualErr) {
-                    console.error('❌ Error fetching individual service details:', individualErr);
-                    // Try /content/services as fallback
-                    try {
-                      const servicesResponse = await http.get('/content/services');
-                      console.log('Services response:', servicesResponse.data);
-                      data = servicesResponse.data?.servicesDetails || servicesResponse.data?.services_details || [];
-                    } catch (servicesErr) {
-                      console.warn('Could not fetch services details from API');
-                      data = [];
-                    }
-                  }
-                } else {
-                  // If no services, try /content/services
-                  try {
-                    const servicesResponse = await http.get('/content/services');
-                    console.log('Services response:', servicesResponse.data);
-                    data = servicesResponse.data?.servicesDetails || servicesResponse.data?.services_details || [];
-                  } catch (servicesErr) {
-                    console.warn('Could not fetch services details from API');
-                    data = [];
-                  }
-                }
-              } else {
-                throw contentErr;
-              }
-            }
-          } else {
-            throw servicesDetailsErr;
-          }
-        }
-        
-        console.log('Services details from API:', data);
-        
-        // Ensure we have 4 services, each with 4 sections
-        const defaultServicesDetails: any[][] = Array(4).fill(null).map(() => 
-          Array(4).fill(null).map(() => ({
-            title_en: '',
-            title_ar: '',
-            image: '',
-            details_en: '',
-            details_ar: '',
-          }))
-        );
-        
-        // The servicesDetailsMap is already set above from the API response
-        // We just need to build the array format for backward compatibility
-        // Get services to build array format
-        const landingServices = Array.isArray(services) 
-          ? services 
-          : (services && typeof services === 'object' && 'items' in services && Array.isArray((services as any).items))
-          ? (services as any).items
-          : [];
-        
-        // Build array format for backward compatibility (from map)
-        const arrayFormat: any[][] = [];
-        landingServices.slice(0, 4).forEach((service: any) => {
-          const serviceId = service._id || service.id;
-          if (serviceId && servicesDetailsMap[serviceId]) {
-            arrayFormat.push(servicesDetailsMap[serviceId]);
-          } else {
-            arrayFormat.push([
-              { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
-              { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
-              { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
-              { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
-            ]);
-          }
-        });
-        setServicesDetails(arrayFormat);
-        console.log('✅ Final services details array format:', arrayFormat);
-      } catch (error) {
-        console.error('Error fetching services details:', error);
-        // Try to load from localStorage as fallback
-        const savedData = localStorage.getItem('servicesDetails');
-        if (savedData) {
-          try {
-            const parsed = JSON.parse(savedData);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setServicesDetails(parsed);
-              console.log('Services details from localStorage:', parsed);
-              return;
-            }
-          } catch (e) {
-            console.error('Error parsing saved data from localStorage:', e);
-          }
-        }
-        // Set default empty structure
-        setServicesDetails(Array(4).fill(null).map(() => 
-          Array(4).fill(null).map(() => ({
-            title_en: '',
-            title_ar: '',
-            image: '',
-            details_en: '',
-            details_ar: '',
-          }))
-        ));
-      }
-    };
-    fetchServicesDetails();
-    
-    // Refetch services details when page becomes visible (user returns from dashboard)
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        console.log("🔄 Page visible again, refetching services details...");
-        fetchServicesDetails();
-      }
-    };
-    
-    // Refetch services details when window gets focus
-    const handleFocus = () => {
-      console.log("🔄 Window focused, refetching services details...");
-      fetchServicesDetails();
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, []);
+  // Service details are now fetched on-demand when modal opens (in handleOrderNow)
 
   useEffect(() => {
     // Fetch real data from API immediately
@@ -562,13 +207,88 @@ const CompanyLanding = () => {
     navigate("/platform");
   };
 
-  const handleOrderNow = (e: React.MouseEvent, service: any) => {
+  const handleOrderNow = async (e: React.MouseEvent, service: any) => {
     e.stopPropagation(); // Prevent card click
     setSelectedService(service);
     setOrderModalOpen(true);
     // Reset form
     setEmail("");
     setOrderDetails("");
+    
+    // Fetch service details by serviceId
+    const serviceId = service._id || service.id;
+    if (serviceId) {
+      try {
+        console.log(`🔄 Fetching details for service ${serviceId}...`);
+        
+        // Try the new endpoint first: /api/content/services/details/{id}
+        let response;
+        try {
+          console.log(`🔄 Trying endpoint: /api/content/services/details/${serviceId}`);
+          response = await http.get(`/api/content/services/details/${serviceId}`);
+          console.log(`✅ Successfully fetched from /api/content/services/details/${serviceId}`);
+        } catch (newEndpointError: any) {
+          if (newEndpointError.response?.status === 404) {
+            // If new endpoint returns 404, try the old endpoint as fallback
+            console.log(`⚠️ /api/content/services/details/${serviceId} returned 404, trying fallback endpoint...`);
+            console.log(`🔄 Trying fallback endpoint: /content/services/items/${serviceId}/details`);
+            response = await http.get(`/content/services/items/${serviceId}/details`);
+            console.log(`✅ Successfully fetched from fallback endpoint`);
+          } else {
+            throw newEndpointError;
+          }
+        }
+        
+        // Handle nested response shapes
+        let details: any[] = [];
+        if (Array.isArray(response.data)) {
+          details = response.data;
+        } else if (response.data?.items && Array.isArray(response.data.items)) {
+          details = response.data.items;
+        } else if (response.data?.data && Array.isArray(response.data.data)) {
+          details = response.data.data;
+        } else if (response.data?.details && Array.isArray(response.data.details)) {
+          details = response.data.details;
+        } else {
+          // Try to find any array property
+          const dataKeys = Object.keys(response.data || {});
+          for (const key of dataKeys) {
+            if (Array.isArray(response.data[key])) {
+              details = response.data[key];
+              break;
+            }
+          }
+        }
+        
+        // Sort by sectionKey and ensure we have 4 sections
+        const sortedDetails = details
+          .sort((a: any, b: any) => {
+            const aKey = a.sectionKey || '';
+            const bKey = b.sectionKey || '';
+            return aKey.localeCompare(bKey);
+          })
+          .slice(0, 4);
+        
+        // Update the map for this service
+        setServicesDetailsMap(prev => ({
+          ...prev,
+          [String(serviceId)]: sortedDetails
+        }));
+        
+        console.log(`✅ Fetched ${sortedDetails.length} details for service ${serviceId}`);
+      } catch (error: any) {
+        if (error.response?.status === 404) {
+          console.log(`ℹ️ No details found for service ${serviceId}`);
+          // Set empty array for this service
+          setServicesDetailsMap(prev => ({
+            ...prev,
+            [String(serviceId)]: []
+          }));
+        } else {
+          console.error(`❌ Error fetching details for service ${serviceId}:`, error);
+        }
+      }
+    }
   };
 
   const handleCloseModal = () => {

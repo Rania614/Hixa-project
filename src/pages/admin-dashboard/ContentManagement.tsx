@@ -28,23 +28,58 @@ const ContentManagement = () => {
   const [servicesDetails, setServicesDetails] = useState<{ [serviceId: string]: any[] }>({});
   
   // Helper function to get service details by serviceId
+  // Returns data as-is from state, no padding
   const getServiceDetails = (serviceId: string): any[] => {
-    if (!serviceId) return [];
-    return servicesDetails[serviceId] || [
-      { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
-      { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
-      { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
-      { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
-    ];
+    if (!serviceId) {
+      console.warn('⚠️ getServiceDetails called with empty serviceId');
+      return [];
+    }
+    
+    // Normalize serviceId for lookup (handle ObjectId)
+    const normalizeId = (id: any): string => {
+      if (!id) return '';
+      if (id.toString && typeof id.toString === 'function') {
+        return id.toString();
+      }
+      return String(id);
+    };
+    
+    const normalizedServiceId = normalizeId(serviceId);
+    
+    // Try to find details by normalized ID
+    const foundDetails = Object.keys(servicesDetails).find(key => {
+      const normalizedKey = normalizeId(key);
+      return normalizedKey === normalizedServiceId;
+    });
+    
+    if (foundDetails && servicesDetails[foundDetails]) {
+      const foundDetailsArray = servicesDetails[foundDetails];
+      console.log(`✅ Found details for serviceId ${normalizedServiceId}:`, foundDetailsArray);
+      console.log(`📊 Details count: ${foundDetailsArray.length}`);
+      if (foundDetailsArray.length > 0) {
+        console.log(`📋 First section:`, foundDetailsArray[0]);
+      }
+      return foundDetailsArray;
+    }
+    
+    console.warn(`⚠️ No details found for serviceId ${normalizedServiceId}, returning empty array`);
+    console.warn(`🔍 Available keys in servicesDetails:`, Object.keys(servicesDetails));
+    console.warn(`🔍 servicesDetails content:`, servicesDetails);
+    return [];
   };
   
   // Helper function to set service details by serviceId
   const setServiceDetails = (serviceId: string, details: any[]) => {
     if (!serviceId) return;
-    setServicesDetails(prev => ({
-      ...prev,
-      [serviceId]: details,
-    }));
+    console.log(`💾 Setting details for service ${serviceId}:`, details);
+    setServicesDetails(prev => {
+      const updated = {
+        ...prev,
+        [serviceId]: details,
+      };
+      console.log(`✅ State updated. Total services in state: ${Object.keys(updated).length}`);
+      return updated;
+    });
   };
 
   const {
@@ -105,389 +140,155 @@ const ContentManagement = () => {
   // Fetch services details after services are loaded
   useEffect(() => {
     if (safeServices.length > 0) {
+      console.log('🔄 Services loaded, fetching details...');
       fetchOrderSections();
     }
   }, [safeServices.length]);
-
-  // Ensure servicesDetails has 4 sections for each service
-  // This handles new services that don't have details yet
+  
+  // Also fetch details when Services Details tab is opened
   useEffect(() => {
-    if (safeServices.length > 0) {
-      // servicesDetails is now an object { [serviceId]: details[] }
-      const currentDetailsCount = Object.keys(servicesDetails).length;
-      const servicesWithIds = safeServices.filter((s: any) => (s._id || s.id));
-      const servicesLength = servicesWithIds.length;
+    if (activeTab === 'services-details' && safeServices.length > 0) {
+      console.log('🔄 Services Details tab opened, fetching details...');
+      fetchOrderSections();
+    }
+  }, [activeTab, safeServices.length]);
+
+  // Removed useEffect that auto-creates empty sections
+  // Data is now stored exactly as fetched from backend
+
+  // Fetch service details by serviceId from backend
+  // Returns data exactly as fetched - no padding or normalization
+  const fetchServiceDetails = async (serviceId: string): Promise<any[]> => {
+    try {
+      console.log(`🔄 Fetching details for service ${serviceId}...`);
       
-      // If we have more services than details, add empty sections for new services
-      if (servicesLength > currentDetailsCount) {
-        console.log(`📝 Adding details sections for ${servicesLength - currentDetailsCount} new service(s)`);
-        
-        // Add empty sections for services that don't have details yet
-        const newDetails: { [serviceId: string]: any[] } = {};
-        servicesWithIds.forEach((service: any) => {
-          const serviceId = service._id || service.id;
-          if (serviceId && !servicesDetails[serviceId]) {
-            newDetails[serviceId] = [
-              { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
-              { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
-              { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
-              { title_en: '', title_ar: '', image: '', details_en: '', details_ar: '' },
-            ];
-          }
-        });
-        
-        if (Object.keys(newDetails).length > 0) {
-          setServicesDetails(prev => ({ ...prev, ...newDetails }));
-          console.log(`✅ Added ${Object.keys(newDetails).length} new service detail sections`);
+      // Try the new endpoint first: /api/content/services/details/{id}
+      let response;
+      try {
+        console.log(`🔄 Trying endpoint: /api/content/services/details/${serviceId}`);
+        response = await http.get(`/api/content/services/details/${serviceId}`);
+        console.log(`✅ Successfully fetched from /api/content/services/details/${serviceId}`);
+      } catch (newEndpointError: any) {
+        if (newEndpointError.response?.status === 404) {
+          // If new endpoint returns 404, try the old endpoint as fallback
+          console.log(`⚠️ /api/content/services/details/${serviceId} returned 404, trying fallback endpoint...`);
+          console.log(`🔄 Trying fallback endpoint: /content/services/items/${serviceId}/details`);
+          response = await http.get(`/content/services/items/${serviceId}/details`);
+          console.log(`✅ Successfully fetched from fallback endpoint`);
+        } else {
+          throw newEndpointError;
         }
       }
+      
+      // Log raw response for debugging
+      console.log(`📦 Raw response.data for service ${serviceId}:`, response.data);
+      console.log(`📦 Response.data type:`, typeof response.data);
+      console.log(`📦 Response.data isArray:`, Array.isArray(response.data));
+      
+      // Handle nested response shapes
+      let details: any[] = [];
+      if (Array.isArray(response.data)) {
+        // Direct array response
+        details = response.data;
+        console.log(`✅ Found direct array response with ${details.length} items`);
+      } else if (response.data?.items && Array.isArray(response.data.items)) {
+        // Nested in items
+        details = response.data.items;
+        console.log(`✅ Found nested items array with ${details.length} items`);
+      } else if (response.data?.data && Array.isArray(response.data.data)) {
+        // Nested in data
+        details = response.data.data;
+        console.log(`✅ Found nested data array with ${details.length} items`);
+      } else if (response.data?.details && Array.isArray(response.data.details)) {
+        // Nested in details
+        details = response.data.details;
+        console.log(`✅ Found nested details array with ${details.length} items`);
+      } else {
+        // Try to find any array property
+        const dataKeys = Object.keys(response.data || {});
+        console.log(`⚠️ Response.data keys:`, dataKeys);
+        for (const key of dataKeys) {
+          if (Array.isArray(response.data[key])) {
+            details = response.data[key];
+            console.log(`✅ Found array in key "${key}" with ${details.length} items`);
+            break;
+          }
+        }
+      }
+      
+      // Log extracted details
+      console.log(`📋 Extracted ${details.length} details for service ${serviceId}:`, details);
+      
+      // Sort by sectionKey if present, but don't modify the data structure
+      const sortedDetails = [...details].sort((a, b) => {
+        const aKey = a.sectionKey || '';
+        const bKey = b.sectionKey || '';
+        return aKey.localeCompare(bKey);
+      });
+      
+      console.log(`✅ Fetched ${sortedDetails.length} details for service ${serviceId} (exact data from backend)`);
+      return sortedDetails;
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        // Service has no details yet, return empty array (not 4 empty sections)
+        console.log(`ℹ️ No details found for service ${serviceId}, returning empty array`);
+        return [];
+      }
+      console.error(`❌ Error fetching details for service ${serviceId}:`, error);
+      throw error;
     }
-  }, [safeServices.length, servicesDetails]);
+  };
 
   const fetchOrderSections = async () => {
-    // Get services at the start so it's accessible in both try and catch blocks
-    let currentServices = Array.isArray(services) ? services : (services?.items || []);
-    
     try {
       console.log('🔄 Fetching services details from API...');
       
-      // First, fetch services to get their IDs (in case we need to fetch individual service details)
-      await fetchContent();
-      await new Promise(resolve => setTimeout(resolve, 100));
-      // Update currentServices after fetchContent to get the latest services
-      currentServices = Array.isArray(services) ? services : (services?.items || []);
+      // Get current services
+      const currentServices = Array.isArray(services) ? services : (services?.items || []);
+      const servicesWithIds = currentServices.filter((s: any) => s._id || s.id);
       
-      // Try to fetch services details from API (same approach as CompanyLanding.tsx)
-      let data: any[] = [];
-      
-      // Try /content/services-details first (but expect it might not exist)
-      try {
-        console.log('🔄 Trying to fetch services details from /content/services-details');
-        const response = await http.get('/content/services-details');
-        console.log('✅ Services details response from /content/services-details:', response.data);
-        data = response.data?.servicesDetails || response.data?.services_details || response.data || [];
-      } catch (servicesDetailsErr: any) {
-        // If that fails (expected), try /content and extract servicesDetails
-        if (servicesDetailsErr.response?.status === 404) {
-          // Silently continue - this endpoint is expected to not exist
-          console.log('ℹ️ /content/services-details not found (expected), trying /content');
-    try {
-      const response = await http.get('/content');
-            console.log('✅ Full content response from /content:', response.data);
-            console.log('📋 Response keys:', Object.keys(response.data || {}));
-            console.log('🔍 Checking for services details:', {
-              servicesDetails: response.data?.servicesDetails,
-              services_details: response.data?.services_details,
-              services: response.data?.services,
-              servicesDetails: response.data?.services?.details,
-            });
-            
-            // Check if details are in services.details
-            const servicesDetails = response.data?.services?.details;
-            const servicesItems = response.data?.services?.items || currentServices || [];
-            
-            if (Array.isArray(servicesDetails) && servicesDetails.length > 0) {
-              console.log('✅ Found services.details array:', servicesDetails);
-              console.log('✅ Services items for mapping:', servicesItems.map((s: any) => ({
-                id: s._id || s.id,
-                title: s.title_en || s.title_ar,
-              })));
-              
-              // Group details by serviceId - use serviceItemId first, then categoryKey
-              const detailsByServiceId: { [serviceId: string]: any[] } = {};
-              
-              // Initialize empty arrays for all services
-              servicesItems.forEach((service: any) => {
-                const serviceId = service._id || service.id;
-                if (serviceId) {
-                  detailsByServiceId[serviceId] = [];
-                }
-              });
-              
-              // Map details to services using serviceItemId or categoryKey
-              servicesDetails.forEach((detail: any) => {
-                let targetServiceId: string | null = null;
-                
-                // Priority 1: Use serviceItemId if available (most reliable)
-                if (detail.serviceItemId) {
-                  const matchingService = servicesItems.find((s: any) => 
-                    String(s._id || s.id) === String(detail.serviceItemId)
-                  );
-                  if (matchingService) {
-                    targetServiceId = String(matchingService._id || matchingService.id);
-                  }
-                }
-                
-                // Priority 2: Use categoryKey if it matches a serviceId
-                if (!targetServiceId && detail.categoryKey && detail.categoryKey !== 'general') {
-                  const matchingService = servicesItems.find((s: any) => 
-                    String(s._id || s.id) === String(detail.categoryKey)
-                  );
-                  if (matchingService) {
-                    targetServiceId = String(matchingService._id || matchingService.id);
-                  }
-                }
-                
-                // Only add detail if we found a matching service
-                if (targetServiceId && detailsByServiceId[targetServiceId]) {
-                  detailsByServiceId[targetServiceId].push(detail);
-                  console.log(`✅ Matched detail ${detail._id} to service ${targetServiceId} (section: ${detail.sectionKey})`);
-                } else {
-                  console.warn('⚠️ Detail not matched to any service:', {
-                    detailId: detail._id,
-                    categoryKey: detail.categoryKey,
-                    serviceItemId: detail.serviceItemId,
-                    availableServiceIds: servicesItems.map((s: any) => s._id || s.id),
-                  });
-                }
-              });
-              
-              // Sort details by sectionKey for each service and limit to 4
-              Object.keys(detailsByServiceId).forEach(serviceId => {
-                detailsByServiceId[serviceId].sort((a, b) => {
-                  const aKey = a.sectionKey || '';
-                  const bKey = b.sectionKey || '';
-                  return aKey.localeCompare(bKey);
-                });
-                detailsByServiceId[serviceId] = detailsByServiceId[serviceId].slice(0, 4);
-              });
-              
-              // Convert to array format (matching service order) for backward compatibility
-              // Map details to services in the same order as servicesItems
-              data = servicesItems.slice(0, 4).map((service: any) => {
-                const serviceId = service._id || service.id;
-                return serviceId ? (detailsByServiceId[serviceId] || []) : [];
-              });
-              
-              console.log('📦 Grouped and formatted data from services.details (by service order):', data);
-              console.log('📊 Details count per service:', Object.keys(detailsByServiceId).map(serviceId => ({
-                serviceId,
-                count: detailsByServiceId[serviceId].length,
-              })));
-              
-              // Also store the map directly in state for immediate use
-              setServicesDetails(detailsByServiceId);
-              console.log('✅ Services details map stored directly in state:', detailsByServiceId);
-      } else {
-              data = response.data?.servicesDetails || response.data?.services_details || [];
-            }
-            console.log('📦 Extracted data:', data);
-          } catch (contentErr: any) {
-            // If /content also fails, try fetching individual service details
-            if (contentErr.response?.status === 404) {
-              console.log('⚠️ /content not found, trying to fetch individual service details');
-              // Try to fetch details for each service using /content/services/details/{serviceId}
-              if (currentServices.length > 0) {
-                try {
-                  const detailsPromises = currentServices.slice(0, 4).map(async (service: any, index: number) => {
-                    const serviceId = service._id || service.id;
-                    if (!serviceId) {
-                      console.warn(`Service ${index + 1} has no ID, skipping...`);
-                      return null;
-                    }
-                    
-                    try {
-                      console.log(`🔄 Fetching details for service ${index + 1} (ID: ${serviceId}) from /content/services/details/${serviceId}`);
-                      const response = await http.get(`/content/services/details/${serviceId}`);
-                      const details = response.data?.sections || response.data?.details || response.data || [];
-                      console.log(`✅ Service ${index + 1} details fetched:`, details);
-                      return Array.isArray(details) && details.length > 0 ? details : null;
-                    } catch (err: any) {
-                      if (err.response?.status === 404) {
-                        console.log(`⚠️ Service ${index + 1} details not found (404)`);
-                        return null;
-                      }
-                      console.error(`❌ Error fetching service ${index + 1} details:`, err);
-                      return null;
-                    }
-                  });
-                  
-                  const fetchedDetails = await Promise.all(detailsPromises);
-                  const validDetails = fetchedDetails.filter(d => d !== null);
-                  
-                  if (validDetails.length > 0) {
-                    console.log('✅ Fetched individual service details:', validDetails);
-                    data = validDetails;
-                  } else {
-                    // If individual fetch also fails, try /content/services
-                    console.log('⚠️ Individual service details not found, trying /content/services');
-                    try {
-                      const servicesResponse = await http.get('/content/services');
-                      console.log('✅ Services response from /content/services:', servicesResponse.data);
-                      data = servicesResponse.data?.servicesDetails || servicesResponse.data?.services_details || [];
-                    } catch (servicesErr) {
-                      console.warn('⚠️ Could not fetch services details from API');
-                      data = [];
-                    }
-                  }
-                } catch (individualErr) {
-                  console.error('❌ Error fetching individual service details:', individualErr);
-                  data = [];
-                }
-              } else {
-                console.log('⚠️ No services found, trying /content/services');
-                try {
-                  const servicesResponse = await http.get('/content/services');
-                  console.log('✅ Services response from /content/services:', servicesResponse.data);
-                  data = servicesResponse.data?.servicesDetails || servicesResponse.data?.services_details || [];
-                } catch (servicesErr) {
-                  console.warn('⚠️ Could not fetch services details from API');
-                  data = [];
-                }
-              }
-            } else {
-              throw contentErr;
-            }
-          }
-        } else {
-          throw servicesDetailsErr;
-        }
+      if (servicesWithIds.length === 0) {
+        console.log('ℹ️ No services with IDs found');
+        return;
       }
       
-      console.log('📦 Services details from API:', data);
-      console.log('📊 Data type:', Array.isArray(data) ? 'Array' : typeof data);
-      console.log('📊 Data length:', Array.isArray(data) ? data.length : 'N/A');
+      // Fetch details for each service by serviceId
+      const detailsMap: { [serviceId: string]: any[] } = {};
       
-      // Ensure we have 4 services, each with 4 sections
-      const defaultServicesDetails: any[][] = Array(4).fill(null).map(() => 
-        Array(4).fill(null).map(() => ({
-          title_en: '',
-          title_ar: '',
-          image: '',
-          details_en: '',
-          details_ar: '',
-          categoryKey: 'general',
-          sectionKey: '',
-        }))
+      await Promise.all(
+        servicesWithIds.map(async (service: any) => {
+          const serviceId = String(service._id || service.id);
+          if (!serviceId) return;
+          
+          try {
+            console.log(`🔄 Fetching details for service ${serviceId}...`);
+            const details = await fetchServiceDetails(serviceId);
+            detailsMap[serviceId] = details;
+            console.log(`✅ Fetched ${details.length} details for service ${serviceId}:`, details);
+          } catch (error) {
+            console.error(`❌ Failed to fetch details for service ${serviceId}:`, error);
+            // Use empty array on error (no padding)
+            detailsMap[serviceId] = [];
+          }
+        })
       );
       
-      // Merge API data with defaults
-      let mergedData = [...defaultServicesDetails];
-      if (Array.isArray(data) && data.length > 0) {
-        console.log('✅ Using services details from API');
-        data.forEach((serviceSections: any[], serviceIndex: number) => {
-          if (serviceIndex < 4 && Array.isArray(serviceSections)) {
-            serviceSections.forEach((section: any, sectionIndex: number) => {
-              if (sectionIndex < 4) {
-                mergedData[serviceIndex][sectionIndex] = {
-                  ...defaultServicesDetails[serviceIndex][sectionIndex],
-                  ...section,
-                  // Preserve categoryKey and sectionKey from API
-                  categoryKey: section.categoryKey || 'general',
-                  sectionKey: section.sectionKey || `section${sectionIndex + 1}`,
-                };
-              }
-            });
-          }
-        });
-      } else {
-        console.log('⚠️ No services details found in API response, trying localStorage...');
-        // Try to load from localStorage as fallback
-        const savedData = localStorage.getItem('servicesDetails');
-        if (savedData) {
-          try {
-            const parsed = JSON.parse(savedData);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              console.log('✅ Using services details from localStorage');
-              parsed.forEach((serviceSections: any[], serviceIndex: number) => {
-                if (serviceIndex < 4 && Array.isArray(serviceSections)) {
-                  serviceSections.forEach((section: any, sectionIndex: number) => {
-                    if (sectionIndex < 4) {
-                      mergedData[serviceIndex][sectionIndex] = {
-                        ...defaultServicesDetails[serviceIndex][sectionIndex],
-                        ...section,
-                        // Preserve categoryKey and sectionKey
-                        categoryKey: section.categoryKey || 'general',
-                        sectionKey: section.sectionKey || `section${sectionIndex + 1}`,
-                      };
-                    }
-                  });
-                }
-              });
-            } else {
-              console.log('⚠️ localStorage data is not a valid array');
-            }
-          } catch (e) {
-            console.error('❌ Error parsing saved data:', e);
-          }
-        } else {
-          console.log('⚠️ No services details in localStorage, using empty defaults');
-        }
-      }
+      console.log(`📦 Details map before setting state:`, detailsMap);
+      console.log(`📊 Total services with details: ${Object.keys(detailsMap).length}`);
+      Object.keys(detailsMap).forEach(serviceId => {
+        console.log(`  - Service ${serviceId}: ${detailsMap[serviceId].length} sections`);
+      });
       
-      // Convert mergedData array to object format: { [serviceId]: details[] }
-      // But only if we haven't already set it from the API response above
-      if (Object.keys(servicesDetails).length === 0) {
-        const servicesDetailsMap: { [serviceId: string]: any[] } = {};
-        mergedData.slice(0, 4).forEach((serviceSections: any[], serviceIndex: number) => {
-          const service = currentServices[serviceIndex];
-          if (service) {
-            const serviceId = service._id || service.id;
-            if (serviceId) {
-              servicesDetailsMap[serviceId] = serviceSections;
-            }
-          }
-        });
-        setServicesDetails(servicesDetailsMap);
-        console.log('✅ Services details loaded from mergedData:', servicesDetailsMap);
-      } else {
-        console.log('✅ Services details already loaded from API response');
-      }
-      console.log('✅ Services details loaded successfully');
-    } catch (error) {
+      setServicesDetails(detailsMap);
+      console.log(`✅ Fetched and set details for ${Object.keys(detailsMap).length} service(s)`);
+      console.log(`📦 State updated. Available serviceIds in state:`, Object.keys(detailsMap));
+    } catch (error: any) {
       console.error('❌ Error fetching services details:', error);
-      // Fallback to localStorage
-      const savedData = localStorage.getItem('servicesDetails');
-      if (savedData) {
-        try {
-          const parsed = JSON.parse(savedData);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            // Ensure we have 4 services, each with 4 sections
-            const defaultServicesDetails: any[][] = Array(4).fill(null).map(() => 
-              Array(4).fill(null).map(() => ({
-                title_en: '',
-                title_ar: '',
-                image: '',
-                details_en: '',
-                details_ar: '',
-                categoryKey: 'general',
-                sectionKey: '',
-              }))
-            );
-            let mergedData = [...defaultServicesDetails];
-            parsed.forEach((serviceSections: any[], serviceIndex: number) => {
-              if (serviceIndex < 4 && Array.isArray(serviceSections)) {
-                serviceSections.forEach((section: any, sectionIndex: number) => {
-                  if (sectionIndex < 4) {
-                    mergedData[serviceIndex][sectionIndex] = {
-                      ...defaultServicesDetails[serviceIndex][sectionIndex],
-                      ...section,
-                      // Preserve categoryKey and sectionKey
-                      categoryKey: section.categoryKey || 'general',
-                      sectionKey: section.sectionKey || `section${sectionIndex + 1}`,
-                    };
-                  }
-                });
-              }
-            });
-            // Convert mergedData array to object format: { [serviceId]: details[] }
-            const servicesDetailsMap: { [serviceId: string]: any[] } = {};
-            mergedData.slice(0, 4).forEach((serviceSections: any[], serviceIndex: number) => {
-              const service = currentServices[serviceIndex];
-              if (service) {
-                const serviceId = service._id || service.id;
-                if (serviceId) {
-                  servicesDetailsMap[serviceId] = serviceSections;
-                }
-              }
-            });
-            setServicesDetails(servicesDetailsMap);
-            console.log('✅ Services details loaded from localStorage');
-          }
-        } catch (e) {
-          console.error('Error parsing saved data:', e);
-        }
-      }
+      toast({
+        title: "Error",
+        description: "Failed to fetch services details",
+        variant: "destructive",
+      });
     }
   };
 
@@ -497,8 +298,8 @@ const ContentManagement = () => {
     const newDetails = [...currentDetails];
     newDetails[sectionIndex] = {
       ...newDetails[sectionIndex],
-        [field]: value,
-      };
+      [field]: value,
+    };
     setServiceDetails(serviceId, newDetails);
   };
 
@@ -559,89 +360,26 @@ const ContentManagement = () => {
     }
   };
 
-  // Save details for a single service
-  const saveServiceDetails = async (serviceIndex: number) => {
+  // Save details for a single service by serviceId
+  const saveServiceDetails = async (serviceId: string) => {
+    if (!serviceId) {
+      toast.error(language === 'en' ? 'Service ID is required' : 'معرف الخدمة مطلوب');
+      return;
+    }
+    
     try {
-      const currentServices = Array.isArray(services) ? services : (services?.items || []);
-      const service = currentServices[serviceIndex];
       
-      if (!service) {
-        toast.error(language === 'en' ? 'Service not found' : 'الخدمة غير موجودة');
-        return;
-      }
-      
-      const serviceId = service._id || service.id;
-      if (!serviceId) {
-        toast.error(language === 'en' ? 'Service ID not found' : 'معرف الخدمة غير موجود');
-        return;
-      }
-      
-      // Verify service exists in backend before saving details
-      // Try to find the service by ID, and if not found, try to refresh and find by title
+      // Verify service exists in backend
       try {
-        let verified = false;
-        let actualServiceId = serviceId;
-        let lastError = null;
-        
-        // Try multiple times with retry logic (in case service was just saved)
-        for (let attempt = 0; attempt < 5; attempt++) {
-          try {
-            if (attempt > 0) {
-              // Wait a bit before retrying (increasing delay)
-              await new Promise(resolve => setTimeout(resolve, 500 * attempt));
-              
-              // On later attempts, try to refresh services from backend
-              if (attempt >= 2) {
-                console.log('🔄 Refreshing services from backend to get updated IDs...');
-                await fetchContent();
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                // Get updated service with potentially new ID
-                const updatedServices = Array.isArray(services) ? services : (services?.items || []);
-                const updatedService = updatedServices[serviceIndex];
-                if (updatedService) {
-                  const newServiceId = updatedService._id || updatedService.id;
-                  if (newServiceId && newServiceId !== serviceId) {
-                    console.log(`🔄 Service ID changed from ${serviceId} to ${newServiceId}`);
-                    actualServiceId = newServiceId;
-                    serviceId = newServiceId; // Update for use in payload
-                  }
-                }
-              }
-            }
-            
-            console.log(`🔄 Verifying service ${actualServiceId} (attempt ${attempt + 1}/5)...`);
-            const verifyResponse = await http.get(`/content/services/items/${actualServiceId}`);
-            console.log(`✅ Service ${actualServiceId} verified in backend:`, verifyResponse.data);
-            verified = true;
-            serviceId = actualServiceId; // Ensure we use the verified ID
-            break;
-          } catch (verifyErr: any) {
-            lastError = verifyErr;
-            if (verifyErr.response?.status === 404) {
-              console.log(`⚠️ Service ${actualServiceId} not found (attempt ${attempt + 1}/5)`);
-              if (attempt < 4) {
-                // Continue to retry
-                continue;
-              }
-            } else {
-              // Other error, don't retry
-              throw verifyErr;
-            }
-          }
-        }
-        
-        if (!verified && lastError?.response?.status === 404) {
-          const errorMsg = language === 'en' 
-            ? `Service ${serviceIndex + 1} not found in backend. Please save the service first by clicking "Save Services" and wait a moment, then try again.` 
-            : `الخدمة ${serviceIndex + 1} غير موجودة في الخادم. يرجى حفظ الخدمة أولاً بالنقر على "حفظ الخدمات" والانتظار قليلاً، ثم حاول مرة أخرى.`;
-          toast.error(errorMsg);
-          console.error(`❌ Service ${actualServiceId} not found in backend after 5 attempts. Cannot save details.`);
-          console.error(`💡 Service data:`, service);
+        await http.get(`/content/services/items/${serviceId}`);
+        console.log(`✅ Service ${serviceId} verified in backend`);
+      } catch (verifyErr: any) {
+        if (verifyErr.response?.status === 404) {
+          toast.error(language === 'en' 
+            ? 'Service not found in backend. Please save the service first.' 
+            : 'الخدمة غير موجودة في الخادم. يرجى حفظ الخدمة أولاً.');
           return;
         }
-      } catch (verifyErr: any) {
-        // If it's another error (not 404), continue anyway (might be network issue)
         console.warn(`⚠️ Could not verify service, continuing anyway:`, verifyErr);
       }
       
@@ -651,25 +389,32 @@ const ContentManagement = () => {
       // The categoryKey should always match the serviceId for correct association
       const categoryKey = serviceId; // Always use serviceId as categoryKey
       
-      console.log(`🔑 Using serviceId ${serviceId} as categoryKey for service ${serviceIndex + 1}`);
+      console.log(`🔑 Using serviceId ${serviceId} as categoryKey`);
       
       // Prepare all sections for this service
+      // Update existing sections (with _id) and create new ones (without _id)
       const sections = serviceDetails
         .map((section: any, sectionIndex: number) => {
           const titleEn = (section.title_en || '').trim();
           if (!titleEn) {
+            // Skip sections without title_en (empty sections)
+            console.log(`⚠️ Section ${sectionIndex + 1} has no title_en, skipping`);
             return null;
           }
           
+          // Ensure sectionKey is set correctly ("section1", "section2", etc.)
+          const sectionKey = section.sectionKey || `section${sectionIndex + 1}`;
+          console.log(`📝 Section ${sectionIndex + 1}: sectionKey="${sectionKey}", categoryKey="${serviceId}"`);
+          
           return {
             categoryKey: serviceId, // Always use serviceId to ensure correct linking
-            sectionKey: section.sectionKey || `section${sectionIndex + 1}`,
+            sectionKey: sectionKey,
             title_en: titleEn,
             title_ar: (section.title_ar || '').trim(),
             image: (section.image || '').trim(),
             details_en: (section.details_en || '').trim(),
             details_ar: (section.details_ar || '').trim(),
-            _id: section._id,
+            _id: section._id, // Will be undefined for new sections
           };
         })
         .filter((s: any) => s !== null);
@@ -677,25 +422,21 @@ const ContentManagement = () => {
       if (sections.length === 0) {
         toast.warning(
           language === 'en' 
-            ? 'No valid sections to save' 
-            : 'لا توجد أقسام صالحة للحفظ'
+            ? 'No valid sections to save. Please enter at least a title for one section.' 
+            : 'لا توجد أقسام صالحة للحفظ. يرجى إدخال عنوان على الأقل لقسم واحد.'
         );
         return;
       }
       
-      console.log(`💾 Saving service ${serviceIndex + 1} (ID: ${serviceId}) with ${sections.length} section(s)`);
+      console.log(`💾 Saving service ${serviceId} with ${sections.length} section(s)`);
       
-      // Save to localStorage first (as backup)
-      // servicesDetails is now an object { [serviceId]: details[] }, so we save it as is
-      localStorage.setItem('servicesDetails', JSON.stringify(servicesDetails));
-      
-      // Save each section individually using the correct endpoint structure
+      // Save each section individually
       // PUT /content/services/items/{serviceId}/details/{detailId} for updates
       // POST /content/services/items/{serviceId}/details for new sections
       const sectionPromises = sections.map(async (section: any, sectionIndex: number) => {
         const sectionPayload = {
           categoryKey: serviceId, // Always use serviceId to ensure correct linking
-          sectionKey: section.sectionKey,
+          sectionKey: section.sectionKey, // sectionKey was set in the previous map
           title_en: section.title_en,
           title_ar: section.title_ar,
           image: section.image,
@@ -712,15 +453,21 @@ const ContentManagement = () => {
           if (section._id) {
             // UPDATE existing section
             console.log(`🔄 Updating section ${sectionIndex + 1} via PUT ${endpoint}`);
-            console.log(`📦 Payload:`, JSON.stringify(sectionPayload, null, 2));
+            console.log(`📦 Payload categoryKey: "${sectionPayload.categoryKey}" (should match serviceId: "${serviceId}")`);
+            console.log(`📦 Payload sectionKey: "${sectionPayload.sectionKey}"`);
+            console.log(`📦 Full Payload:`, JSON.stringify(sectionPayload, null, 2));
             response = await http.put(endpoint, sectionPayload);
             console.log(`✅ Section ${sectionIndex + 1} updated successfully`);
+            console.log(`📦 Response:`, response.data);
           } else {
             // CREATE new section
             console.log(`🆕 Creating section ${sectionIndex + 1} via POST ${endpoint}`);
-            console.log(`📦 Payload:`, JSON.stringify(sectionPayload, null, 2));
+            console.log(`📦 Payload categoryKey: "${sectionPayload.categoryKey}" (should match serviceId: "${serviceId}")`);
+            console.log(`📦 Payload sectionKey: "${sectionPayload.sectionKey}"`);
+            console.log(`📦 Full Payload:`, JSON.stringify(sectionPayload, null, 2));
             response = await http.post(endpoint, sectionPayload);
-            console.log(`✅ Section ${sectionIndex + 1} created successfully`);
+            console.log(`✅ Section ${sectionIndex + 1} created successfully (POST 200)`);
+            console.log(`📦 Response:`, response.data);
           }
           
           // Return success with the saved data (including _id from backend)
@@ -737,27 +484,14 @@ const ContentManagement = () => {
           const isBelongingError = errorMessage.includes('لا تنتمي') || errorMessage.includes('does not belong');
           
           if (err.response?.status === 400 && isBelongingError && section._id) {
-            // Detail doesn't belong to this service - create a new one instead
-            console.warn(`⚠️ Section ${sectionIndex + 1} detail (${section._id}) doesn't belong to service ${serviceId}. Creating new detail instead.`);
-            
-            try {
-              const createEndpoint = `/content/services/items/${serviceId}/details`;
-              console.log(`🆕 Creating new section ${sectionIndex + 1} via POST ${createEndpoint}`);
-              console.log(`📦 Payload:`, JSON.stringify(sectionPayload, null, 2));
-              const response = await http.post(createEndpoint, sectionPayload);
-              console.log(`✅ Section ${sectionIndex + 1} created successfully (replaced old detail)`);
-              const savedData = response.data || sectionPayload;
-              return { 
-                success: true, 
-                sectionIndex, 
-                data: savedData, 
-                replaced: true,
-                _id: savedData._id || savedData.id, // Preserve _id from response
-              };
-            } catch (createErr: any) {
-              console.error(`❌ Error creating new section ${sectionIndex + 1}:`, createErr);
-              return { success: false, sectionIndex, error: createErr };
-            }
+            // Detail doesn't belong to this service - skip it (we only update existing)
+            console.warn(`⚠️ Section ${sectionIndex + 1} detail (${section._id}) doesn't belong to service ${serviceId}. Skipping update.`);
+            return { 
+              success: false, 
+              sectionIndex, 
+              error: err,
+              message: 'Detail does not belong to this service'
+            };
           }
           
           console.error(`❌ Error saving section ${sectionIndex + 1}:`, {
@@ -811,61 +545,60 @@ const ContentManagement = () => {
         // Service doesn't exist - show specific error
         toast.error(
           language === 'en' 
-            ? `Service ${serviceIndex + 1} not found in backend. Please save the service first by clicking "Save Services".` 
-            : `الخدمة ${serviceIndex + 1} غير موجودة في الخادم. يرجى حفظ الخدمة أولاً بالنقر على "حفظ الخدمات".`
+            ? 'Service not found in backend. Please save the service first.' 
+            : 'الخدمة غير موجودة في الخادم. يرجى حفظ الخدمة أولاً.'
         );
         return;
       }
       
       if (successCount > 0) {
-        console.log(`✅ Service ${serviceIndex + 1}: ${successCount} section(s) saved successfully`);
+        console.log(`✅ Service ${serviceId}: ${successCount} section(s) saved successfully`);
         
-        // Update local state with saved data (including _id from backend)
-        const updatedDetails = [...serviceDetails];
-        sectionResults.forEach((result) => {
-          if (result.success && result.data) {
-            const savedSection = result.data;
-            const sectionIndex = result.sectionIndex;
+        // Re-fetch details from backend to get updated data (with _id from backend)
+        try {
+          const fetchedDetails = await fetchServiceDetails(serviceId);
+          
+          // If POST succeeded but GET returns empty array, keep previous saved details
+          if (fetchedDetails.length === 0 && serviceDetails.length > 0) {
+            console.warn(`⚠️ POST succeeded but GET returned empty array for service ${serviceId}`);
+            console.warn(`⚠️ Keeping previous saved details (${serviceDetails.length} sections) instead of overwriting with empty array`);
+            console.warn(`💡 This might indicate a backend filtering issue (check categoryKey/serviceId/serviceItemId matching)`);
+            console.warn(`💡 POST payload used categoryKey: "${serviceId}" - verify backend filters by this field`);
             
-            // Use sectionIndex directly since sections array is in the same order as serviceDetails
-            if (sectionIndex >= 0 && sectionIndex < updatedDetails.length) {
-              // Update with backend data (including _id)
-              updatedDetails[sectionIndex] = {
-                ...updatedDetails[sectionIndex],
-                ...savedSection,
-                _id: (result as any)._id || savedSection._id || savedSection.id || updatedDetails[sectionIndex]._id,
-                categoryKey: serviceId, // Ensure categoryKey is set correctly
-                sectionKey: savedSection.sectionKey || updatedDetails[sectionIndex].sectionKey || sections[sectionIndex]?.sectionKey || `section${sectionIndex + 1}`,
-                title_en: savedSection.title_en || updatedDetails[sectionIndex].title_en || sections[sectionIndex]?.title_en || '',
-                title_ar: savedSection.title_ar || updatedDetails[sectionIndex].title_ar || sections[sectionIndex]?.title_ar || '',
-                image: savedSection.image || updatedDetails[sectionIndex].image || sections[sectionIndex]?.image || '',
-                details_en: savedSection.details_en || updatedDetails[sectionIndex].details_en || sections[sectionIndex]?.details_en || '',
-                details_ar: savedSection.details_ar || updatedDetails[sectionIndex].details_ar || sections[sectionIndex]?.details_ar || '',
-              };
-              console.log(`✅ Updated detail ${sectionIndex} with backend data:`, updatedDetails[sectionIndex]);
-            } else {
-              console.warn(`⚠️ Section index ${sectionIndex} is out of bounds (0-${updatedDetails.length - 1})`);
-            }
+            // Keep the current state, but update sections that were successfully saved with their _id from response
+            // This is a fallback to prevent data loss
+            const updatedDetails = [...serviceDetails];
+            sectionResults.forEach((result, idx) => {
+              if (result.success && result.data && result._id) {
+                // Update the section with _id from backend
+                if (idx < updatedDetails.length) {
+                  updatedDetails[idx] = {
+                    ...updatedDetails[idx],
+                    _id: result._id,
+                  };
+                }
+              }
+            });
+            setServiceDetails(serviceId, updatedDetails);
+          } else {
+            // Normal case: update with fetched data
+            setServiceDetails(serviceId, fetchedDetails);
+            console.log(`✅ Re-fetched and updated details for service ${serviceId} (${fetchedDetails.length} sections)`);
           }
-        });
-        
-        // Update servicesDetails state with saved data
-        setServiceDetails(serviceId, updatedDetails);
-        console.log(`✅ Updated local state for service ${serviceId} with ${updatedDetails.length} detail(s)`);
-        
-        // Also update localStorage with the updated servicesDetails object
-        const updatedServicesDetails = { ...servicesDetails, [serviceId]: updatedDetails };
-        localStorage.setItem('servicesDetails', JSON.stringify(updatedServicesDetails));
-        console.log(`✅ Updated localStorage with saved details for service ${serviceId}`);
+        } catch (fetchError: any) {
+          console.error(`❌ Error re-fetching details after save for service ${serviceId}:`, fetchError);
+          console.warn(`⚠️ Keeping current state instead of overwriting`);
+          // Don't overwrite state if re-fetch fails
+        }
         
         toast.success(
           language === 'en' 
-            ? `Service ${serviceIndex + 1} details saved successfully (${successCount} section${successCount > 1 ? 's' : ''})` 
-            : `تم حفظ تفاصيل الخدمة ${serviceIndex + 1} بنجاح (${successCount} قسم${successCount > 1 ? 'ات' : ''})`
+            ? `Service details saved successfully (${successCount} section${successCount > 1 ? 's' : ''})` 
+            : `تم حفظ تفاصيل الخدمة بنجاح (${successCount} قسم${successCount > 1 ? 'ات' : ''})`
         );
         
         if (failCount > 0) {
-          console.warn(`⚠️ Service ${serviceIndex + 1}: ${failCount} section(s) failed to save`);
+          console.warn(`⚠️ Service ${serviceId}: ${failCount} section(s) failed to save`);
           toast.warning(
             language === 'en' 
               ? `${failCount} section(s) could not be saved` 
@@ -873,7 +606,7 @@ const ContentManagement = () => {
           );
         }
       } else {
-        console.error(`❌ Service ${serviceIndex + 1}: All sections failed to save`);
+        console.error(`❌ Service ${serviceId}: All sections failed to save`);
         
         // Show detailed error message
         const firstError = sectionResults.find(r => !r.success)?.error;
@@ -881,35 +614,14 @@ const ContentManagement = () => {
           ? 'Failed to save service details. Data saved locally.' 
           : 'فشل حفظ تفاصيل الخدمة. تم حفظ البيانات محلياً.';
         
-        if (firstError?.response?.status === 404) {
-          const errorMsg = firstError.response?.data?.message || '';
-          if (errorMsg.includes('الخدمة غير موجودة') || errorMsg.includes('Service not found')) {
-            errorMessage = language === 'en'
-              ? 'Service not found. Please save the service first.'
-              : 'الخدمة غير موجودة. يرجى حفظ الخدمة أولاً.';
-          } else {
-            errorMessage = language === 'en'
-              ? 'API endpoint not found. Please check backend configuration.'
-              : 'نقطة النهاية غير موجودة. يرجى التحقق من إعدادات الخادم.';
-          }
-        } else if (firstError?.response?.status === 400) {
-          errorMessage = language === 'en'
-            ? 'Invalid data format. Please check the console for details.'
-            : 'تنسيق البيانات غير صحيح. يرجى التحقق من وحدة التحكم للتفاصيل.';
-        } else if (firstError?.response?.status) {
-          errorMessage = language === 'en'
-            ? `Error ${firstError.response.status}: ${firstError.response.data?.message || 'Failed to save'}`
-            : `خطأ ${firstError.response.status}: ${firstError.response.data?.message || 'فشل الحفظ'}`;
-        }
-        
         toast.error(errorMessage);
       }
     } catch (error: any) {
-      console.error(`❌ Error saving service ${serviceIndex + 1} details:`, error);
+      console.error(`❌ Error saving service ${serviceId} details:`, error);
       toast.error(
         language === 'en' 
-          ? 'Failed to save service details. Data saved locally.' 
-          : 'فشل حفظ تفاصيل الخدمة. تم حفظ البيانات محلياً.'
+          ? 'Failed to save service details' 
+          : 'فشل حفظ تفاصيل الخدمة'
       );
     }
   };
@@ -1804,7 +1516,7 @@ const ContentManagement = () => {
                     onClick={async () => {
                       console.log('💾 Saving all (services + details)...');
                       await updateServices(servicesData);
-                      await saveServicesDetails();
+                      await saveAllServicesDetails();
                     }}
                     disabled={loading}
                     className="flex-1 bg-gold hover:bg-gold-dark text-black font-semibold"
@@ -1860,132 +1572,153 @@ const ContentManagement = () => {
                               <CardContent className="pt-4 space-y-4">
                                 {/* Service Details Sections */}
                                 <div className="mt-4">
-                                  <h4 className="text-lg font-semibold mb-4">
-                                    {language === 'en' ? 'Service Details Sections' : 'أقسام تفاصيل الخدمة'}
-                                  </h4>
-                                  <div className="space-y-4">
-                                    {[0, 1, 2, 3].map((sectionIndex) => {
-                                      const serviceDetailsForThisService = getServiceDetails(serviceId);
-                                      const section = serviceDetailsForThisService[sectionIndex] || { 
-                                        title_en: '', 
-                                        title_ar: '', 
-                                        image: '', 
-                                        details_en: '', 
-                                        details_ar: '' 
-                                      };
-                                      return (
-                                        <Collapsible key={sectionIndex} defaultOpen={sectionIndex === 0}>
-                                          <Card className="border">
-                                            <CollapsibleTrigger asChild>
-                                              <CardHeader className="cursor-pointer hover:bg-secondary/50 transition-colors py-3">
-                                                <div className="flex items-center justify-between">
-                                                  <CardTitle className="text-base">
-                                                    {language === 'en' 
-                                                      ? `Section ${sectionIndex + 1}${section.title_en ? `: ${section.title_en}` : ''}`
-                                                      : `القسم ${sectionIndex + 1}${section.title_ar ? `: ${section.title_ar}` : ''}`
-                                                    }
-                                                  </CardTitle>
-                                                  <ChevronDownIcon className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
-                                                </div>
-                                              </CardHeader>
-                                            </CollapsibleTrigger>
-                                            <CollapsibleContent>
-                                              <CardContent className="pt-4 space-y-4">
-                                                {/* Title Row - English and Arabic */}
-                                                <div className="grid grid-cols-2 gap-4">
-                                                  <div>
-                                                    <label className="text-sm font-medium mb-1 block">
-                                                      {language === 'en' ? 'Section Title (English)' : 'عنوان القسم (إنجليزي)'}
-                                                    </label>
-                                                    <Input
-                                                      value={section.title_en || ''}
-                                                      onChange={(e) => handleSectionChange(serviceId, sectionIndex, 'title_en', e.target.value)}
-                                                      placeholder={language === 'en' ? 'Enter section title in English...' : 'أدخل عنوان القسم بالإنجليزية...'}
-                                                    />
-                                                  </div>
-                                                  <div>
-                                                    <label className="text-sm font-medium mb-1 block">
-                                                      {language === 'en' ? 'Section Title (Arabic)' : 'عنوان القسم (عربي)'}
-                                                    </label>
-                                                    <Input
-                                                      value={section.title_ar || ''}
-                                                      onChange={(e) => handleSectionChange(serviceId, sectionIndex, 'title_ar', e.target.value)}
-                                                      placeholder={language === 'en' ? 'Enter section title in Arabic...' : 'أدخل عنوان القسم بالعربية...'}
-                                                      dir="rtl"
-                                                    />
-                                                  </div>
-                                                </div>
-
-                                                {/* Image */}
+                                <h4 className="text-lg font-semibold mb-4">
+                                  {language === 'en' ? 'Service Details Sections' : 'أقسام تفاصيل الخدمة'}
+                                </h4>
+                                <div className="space-y-4">
+                                  {(() => {
+                                    // Get actual data from state (no padding)
+                                    const serviceDetailsForThisService = getServiceDetails(serviceId);
+                                    
+                                    // Pad to 4 sections ONLY at render time, not in state
+                                    const paddedSections = [...serviceDetailsForThisService];
+                                    while (paddedSections.length < 4) {
+                                      paddedSections.push({
+                                        title_en: '',
+                                        title_ar: '',
+                                        image: '',
+                                        details_en: '',
+                                        details_ar: '',
+                                        _id: undefined,
+                                        sectionKey: `section${paddedSections.length + 1}`,
+                                      });
+                                    }
+                                    
+                                    return paddedSections.map((section, sectionIndex) => {
+                                    
+                                    // Debug log for first section of first service
+                                    if (index === 0 && sectionIndex === 0) {
+                                      console.log(`🔍 Rendering section ${sectionIndex + 1} for service ${index + 1}:`, {
+                                        serviceId,
+                                        section,
+                                        serviceDetailsForThisService,
+                                        allServiceDetails: servicesDetails,
+                                      });
+                                    }
+                                    return (
+                                      <Collapsible key={sectionIndex} defaultOpen={sectionIndex === 0}>
+                                        <Card className="border">
+                                          <CollapsibleTrigger asChild>
+                                            <CardHeader className="cursor-pointer hover:bg-secondary/50 transition-colors py-3">
+                                              <div className="flex items-center justify-between">
+                                                <CardTitle className="text-base">
+                                                  {language === 'en' 
+                                                    ? `Section ${sectionIndex + 1}${section.title_en ? `: ${section.title_en}` : ''}`
+                                                    : `القسم ${sectionIndex + 1}${section.title_ar ? `: ${section.title_ar}` : ''}`
+                                                  }
+                                                </CardTitle>
+                                                <ChevronDownIcon className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
+                                              </div>
+                                            </CardHeader>
+                                          </CollapsibleTrigger>
+                                          <CollapsibleContent>
+                                            <CardContent className="pt-4 space-y-4">
+                                              {/* Title Row - English and Arabic */}
+                                              <div className="grid grid-cols-2 gap-4">
                                                 <div>
                                                   <label className="text-sm font-medium mb-1 block">
-                                                    {language === 'en' ? 'Section Image' : 'صورة القسم'}
+                                                    {language === 'en' ? 'Section Title (English)' : 'عنوان القسم (إنجليزي)'}
                                                   </label>
-                                                  <div className="space-y-2">
-                                                    <input
-                                                      type="file"
-                                                      accept="image/*"
-                                                      onChange={(e) => handleSectionImageUpload(serviceId, sectionIndex, e)}
-                                                      className="hidden"
-                                                      id={`service-details-${serviceId}-section-${sectionIndex}-image`}
-                                                    />
-                                                    <label
-                                                      htmlFor={`service-details-${serviceId}-section-${sectionIndex}-image`}
-                                                      className="flex items-center justify-center w-full px-4 py-2 bg-background border border-border rounded-lg cursor-pointer hover:bg-muted transition-colors"
-                                                    >
-                                                      <Upload className="h-4 w-4 mr-2" />
-                                                      <span className="text-sm">
-                                                        {section.image
-                                                          ? (language === 'en' ? 'Change image...' : 'تغيير الصورة...')
-                                                          : (language === 'en' ? 'Choose image...' : 'اختر صورة...')}
-                                                      </span>
-                                                    </label>
-                                                    {section.image && (
-                                                      <div className="mt-2">
-                                                        <img
-                                                          src={section.image}
-                                                          alt={`Service ${index + 1} - Section ${sectionIndex + 1}`}
-                                                          className="w-full h-48 object-cover rounded-lg border border-border"
-                                                        />
-                                                      </div>
-                                                    )}
-                                                  </div>
+                                                  <Input
+                                                    value={section.title_en || ''}
+                                                      onChange={(e) => handleSectionChange(serviceId, sectionIndex, 'title_en', e.target.value)}
+                                                    placeholder={language === 'en' ? 'Enter section title in English...' : 'أدخل عنوان القسم بالإنجليزية...'}
+                                                  />
                                                 </div>
+                                                <div>
+                                                  <label className="text-sm font-medium mb-1 block">
+                                                    {language === 'en' ? 'Section Title (Arabic)' : 'عنوان القسم (عربي)'}
+                                                  </label>
+                                                  <Input
+                                                    value={section.title_ar || ''}
+                                                      onChange={(e) => handleSectionChange(serviceId, sectionIndex, 'title_ar', e.target.value)}
+                                                    placeholder={language === 'en' ? 'Enter section title in Arabic...' : 'أدخل عنوان القسم بالعربية...'}
+                                                    dir="rtl"
+                                                  />
+                                                </div>
+                                              </div>
 
-                                                {/* Details Row - English and Arabic */}
-                                                <div className="grid grid-cols-2 gap-4">
-                                                  <div>
-                                                    <label className="text-sm font-medium mb-1 block">
-                                                      {language === 'en' ? 'Details (English)' : 'التفاصيل (إنجليزي)'}
-                                                    </label>
-                                                    <Textarea
-                                                      value={section.details_en || ''}
-                                                      onChange={(e) => handleSectionChange(serviceId, sectionIndex, 'details_en', e.target.value)}
-                                                      placeholder={language === 'en' ? 'Enter details in English...' : 'أدخل التفاصيل بالإنجليزية...'}
-                                                      rows={6}
-                                                    />
-                                                  </div>
-                                                  <div>
-                                                    <label className="text-sm font-medium mb-1 block">
-                                                      {language === 'en' ? 'Details (Arabic)' : 'التفاصيل (عربي)'}
-                                                    </label>
-                                                    <Textarea
-                                                      value={section.details_ar || ''}
-                                                      onChange={(e) => handleSectionChange(serviceId, sectionIndex, 'details_ar', e.target.value)}
-                                                      placeholder={language === 'en' ? 'Enter details in Arabic...' : 'أدخل التفاصيل بالعربية...'}
-                                                      rows={6}
-                                                      dir="rtl"
-                                                    />
-                                                  </div>
+                                              {/* Image */}
+                                              <div>
+                                                <label className="text-sm font-medium mb-1 block">
+                                                  {language === 'en' ? 'Section Image' : 'صورة القسم'}
+                                                </label>
+                                                <div className="space-y-2">
+                                                  <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                      onChange={(e) => handleSectionImageUpload(serviceId, sectionIndex, e)}
+                                                    className="hidden"
+                                                      id={`service-details-${serviceId}-section-${sectionIndex}-image`}
+                                                  />
+                                                  <label
+                                                      htmlFor={`service-details-${serviceId}-section-${sectionIndex}-image`}
+                                                    className="flex items-center justify-center w-full px-4 py-2 bg-background border border-border rounded-lg cursor-pointer hover:bg-muted transition-colors"
+                                                  >
+                                                    <Upload className="h-4 w-4 mr-2" />
+                                                    <span className="text-sm">
+                                                      {section.image
+                                                        ? (language === 'en' ? 'Change image...' : 'تغيير الصورة...')
+                                                        : (language === 'en' ? 'Choose image...' : 'اختر صورة...')}
+                                                    </span>
+                                                  </label>
+                                                  {section.image && (
+                                                    <div className="mt-2">
+                                                      <img
+                                                        src={section.image}
+                                                        alt={`Service ${index + 1} - Section ${sectionIndex + 1}`}
+                                                        className="w-full h-48 object-cover rounded-lg border border-border"
+                                                      />
+                                                    </div>
+                                                  )}
                                                 </div>
-                                              </CardContent>
-                                            </CollapsibleContent>
-                                          </Card>
-                                        </Collapsible>
-                                      );
-                                    })}
-                                  </div>
-                                  
+                                              </div>
+
+                                              {/* Details Row - English and Arabic */}
+                                              <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                  <label className="text-sm font-medium mb-1 block">
+                                                    {language === 'en' ? 'Details (English)' : 'التفاصيل (إنجليزي)'}
+                                                  </label>
+                                                  <Textarea
+                                                    value={section.details_en || ''}
+                                                      onChange={(e) => handleSectionChange(serviceId, sectionIndex, 'details_en', e.target.value)}
+                                                    placeholder={language === 'en' ? 'Enter details in English...' : 'أدخل التفاصيل بالإنجليزية...'}
+                                                    rows={6}
+                                                  />
+                                                </div>
+                                                <div>
+                                                  <label className="text-sm font-medium mb-1 block">
+                                                    {language === 'en' ? 'Details (Arabic)' : 'التفاصيل (عربي)'}
+                                                  </label>
+                                                  <Textarea
+                                                    value={section.details_ar || ''}
+                                                      onChange={(e) => handleSectionChange(serviceId, sectionIndex, 'details_ar', e.target.value)}
+                                                    placeholder={language === 'en' ? 'Enter details in Arabic...' : 'أدخل التفاصيل بالعربية...'}
+                                                    rows={6}
+                                                    dir="rtl"
+                                                  />
+                                </div>
+                              </div>
+                            </CardContent>
+                          </CollapsibleContent>
+                  </Card>
+                      </Collapsible>
+                                    );
+                                  });
+                                })()}
+                                </div>
+
                                   {/* Save Button for this specific service */}
                                   <div className="mt-6 pt-4 border-t border-border">
                                     <div className="space-y-2">
@@ -1996,13 +1729,18 @@ const ContentManagement = () => {
                                       </p>
                   <Button
                     onClick={async () => {
-                                          console.log(`💾 Saving details for service ${index + 1}...`);
-                                          await saveServiceDetails(index);
+                                          const serviceId = s._id || s.id;
+                                          if (serviceId) {
+                                            console.log(`💾 Saving details for service ${serviceId}...`);
+                                            await saveServiceDetails(serviceId);
+                                          } else {
+                                            toast.error(language === 'en' ? 'Service ID not found' : 'معرف الخدمة غير موجود');
+                                          }
                     }}
                     disabled={loading}
                                         className="w-full bg-gold hover:bg-gold-dark text-black font-semibold"
                   >
-                                        {loading ? (language === 'en' ? 'Saving...' : 'جاري الحفظ...') : (language === 'en' ? `Save Service ${index + 1} Details` : `حفظ تفاصيل الخدمة ${index + 1}`)}
+                                        {loading ? (language === 'en' ? 'Saving...' : 'جاري الحفظ...') : (language === 'en' ? `Save Service Details` : `حفظ تفاصيل الخدمة`)}
                 </Button>
                 </div>
                                   </div>
