@@ -402,19 +402,8 @@ const CompanyLanding = () => {
       service?.details ||
       "";
     
-    // Check for icon or code
-    const serviceIcon = service?.icon || "";
-    const serviceCode = service?.code || 
-                       service?.serviceCode || 
-                       service?.codeValue || 
-                       "";
-    
-    // Use icon if available, otherwise code, otherwise first letter of title
-    const serviceDisplay = serviceIcon 
-      ? serviceIcon 
-      : (serviceCode && String(serviceCode).trim() !== "") 
-        ? String(serviceCode).trim() 
-        : (serviceTitle?.charAt(0) || "S");
+    // Use first letter of service title (uppercase)
+    const serviceDisplay = serviceTitle?.charAt(0)?.toUpperCase() || "S";
     
     const serviceLink = service?.link || service?.url || service?.href;
 
