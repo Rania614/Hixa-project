@@ -22,15 +22,19 @@ const CompanyLanding = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [orderModalOpen, setOrderModalOpen] = useState(false);
+  const [serviceDetailsModalOpen, setServiceDetailsModalOpen] = useState(false);
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedService, setSelectedService] = useState<any>(null);
+  const [selectedServiceForDetails, setSelectedServiceForDetails] = useState<any>(null);
+  const [selectedServiceDetails, setSelectedServiceDetails] = useState<any[]>([]);
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [email, setEmail] = useState("");
   const [orderDetails, setOrderDetails] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [expandedCardIndex, setExpandedCardIndex] = useState<number | null>(null);
+  const [expandedServiceId, setExpandedServiceId] = useState<string | null>(null);
   const { language } = useApp();
   const { hero, about, services, projects, cta, loading } = useLandingStore(
     useShallow((state) => ({
@@ -47,8 +51,19 @@ const CompanyLanding = () => {
   // Fetch services details from API (4 services, each with 4 sections)
   // Store service details by serviceId
   const [servicesDetailsMap, setServicesDetailsMap] = useState<{ [serviceId: string]: any[] }>({});
+  const [loadingDetails, setLoadingDetails] = useState<{ [serviceId: string]: boolean }>({});
   
-  // Service details are now fetched on-demand when modal opens (in handleOrderNow)
+  // Store specific service data from API endpoints
+  const [serviceItem1, setServiceItem1] = useState<any>(null);
+  const [serviceItem2, setServiceItem2] = useState<any>(null);
+  const [serviceItem3, setServiceItem3] = useState<any>(null);
+  const [serviceItem4, setServiceItem4] = useState<any>(null);
+  const [serviceItem3Detail4, setServiceItem3Detail4] = useState<any>(null);
+  const [loadingServiceItem1, setLoadingServiceItem1] = useState(false);
+  const [loadingServiceItem2, setLoadingServiceItem2] = useState(false);
+  const [loadingServiceItem3, setLoadingServiceItem3] = useState(false);
+  const [loadingServiceItem4, setLoadingServiceItem4] = useState(false);
+  const [loadingServiceItem3Detail4, setLoadingServiceItem3Detail4] = useState(false);
 
   useEffect(() => {
     // Fetch real data from API immediately
@@ -128,6 +143,175 @@ const CompanyLanding = () => {
     });
   }, [services, safeServices]);
 
+  // Debug: Log specific service data from API
+  useEffect(() => {
+    if (serviceItem1) {
+      console.log('📦 Service Item1 Data:', serviceItem1);
+    }
+    if (serviceItem2) {
+      console.log('📦 Service Item2 Data:', serviceItem2);
+    }
+    if (serviceItem3) {
+      console.log('📦 Service Item3 Data:', serviceItem3);
+    }
+    if (serviceItem4) {
+      console.log('📦 Service Item4 Data:', serviceItem4);
+    }
+    if (serviceItem3Detail4) {
+      console.log('📦 Service Item3 Detail4 Data:', serviceItem3Detail4);
+    }
+  }, [serviceItem1, serviceItem2, serviceItem3, serviceItem4, serviceItem3Detail4]);
+
+  // Fetch service details for all services when services are loaded
+  useEffect(() => {
+    const fetchAllServiceDetails = async () => {
+      if (!safeServices || safeServices.length === 0) return;
+      
+      const fetchPromises = safeServices.map(async (service: any) => {
+        const serviceId = service._id || service.id;
+        if (!serviceId) return;
+        
+        // Skip if already fetched
+        if (servicesDetailsMap[String(serviceId)]) return;
+        
+        setLoadingDetails(prev => ({ ...prev, [String(serviceId)]: true }));
+        
+        try {
+          console.log(`🔄 Fetching details for service ${serviceId}...`);
+          const response = await http.get(`/content/services/items/${serviceId}/details`);
+          
+          let details: any[] = [];
+          if (Array.isArray(response.data)) {
+            details = response.data;
+          } else if (response.data?.data && Array.isArray(response.data.data)) {
+            details = response.data.data;
+          } else if (response.data?.items && Array.isArray(response.data.items)) {
+            details = response.data.items;
+          } else if (response.data?.details && Array.isArray(response.data.details)) {
+            details = response.data.details;
+          } else {
+            const dataKeys = Object.keys(response.data || {});
+            for (const key of dataKeys) {
+              if (Array.isArray(response.data[key])) {
+                details = response.data[key];
+                break;
+              }
+            }
+          }
+          
+          const sortedDetails = details
+            .sort((a: any, b: any) => {
+              const aKey = a.sectionKey || '';
+              const bKey = b.sectionKey || '';
+              return aKey.localeCompare(bKey);
+            })
+            .slice(0, 4);
+          
+          setServicesDetailsMap(prev => ({
+            ...prev,
+            [String(serviceId)]: sortedDetails
+          }));
+          
+          console.log(`✅ Fetched ${sortedDetails.length} details for service ${serviceId}`);
+        } catch (error: any) {
+          console.error(`❌ Error fetching service details for ${serviceId}:`, error);
+          if (error.response?.status === 404) {
+            setServicesDetailsMap(prev => ({
+              ...prev,
+              [String(serviceId)]: []
+            }));
+          }
+        } finally {
+          setLoadingDetails(prev => ({ ...prev, [String(serviceId)]: false }));
+        }
+      });
+      
+      await Promise.all(fetchPromises);
+    };
+    
+    if (safeServices.length > 0) {
+      fetchAllServiceDetails();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [safeServices]);
+
+  // Fetch specific service data from API endpoints
+  useEffect(() => {
+    const fetchSpecificServiceData = async () => {
+      // Fetch service item1 data
+      setLoadingServiceItem1(true);
+      try {
+        const response = await http.get('/content/services/item1');
+        setServiceItem1(response.data?.data || response.data);
+      } catch (error: any) {
+        // Silently handle 404 (endpoint may not exist)
+        if (error.response?.status !== 404) {
+          console.error('Error fetching service item1:', error);
+        }
+      } finally {
+        setLoadingServiceItem1(false);
+      }
+
+      // Fetch service item2 data
+      setLoadingServiceItem2(true);
+      try {
+        const response = await http.get('/content/services/item2');
+        setServiceItem2(response.data?.data || response.data);
+      } catch (error: any) {
+        // Silently handle 404 (endpoint may not exist)
+        if (error.response?.status !== 404) {
+          console.error('Error fetching service item2:', error);
+        }
+      } finally {
+        setLoadingServiceItem2(false);
+      }
+
+      // Fetch service item3 data (full service with all details)
+      setLoadingServiceItem3(true);
+      try {
+        const response = await http.get('/content/services/item3');
+        setServiceItem3(response.data?.data || response.data);
+      } catch (error: any) {
+        // Silently handle 404 (endpoint may not exist)
+        if (error.response?.status !== 404) {
+          console.error('Error fetching service item3:', error);
+        }
+      } finally {
+        setLoadingServiceItem3(false);
+      }
+
+      // Fetch service item4 data
+      setLoadingServiceItem4(true);
+      try {
+        const response = await http.get('/content/services/item4');
+        setServiceItem4(response.data?.data || response.data);
+      } catch (error: any) {
+        // Silently handle 404 (endpoint may not exist)
+        if (error.response?.status !== 404) {
+          console.error('Error fetching service item4:', error);
+        }
+      } finally {
+        setLoadingServiceItem4(false);
+      }
+
+      // Fetch service item3 detail4 data
+      setLoadingServiceItem3Detail4(true);
+      try {
+        const response = await http.get('/content/services/item3/details/detail4');
+        setServiceItem3Detail4(response.data?.data || response.data);
+      } catch (error: any) {
+        // Silently handle 404 (endpoint may not exist)
+        if (error.response?.status !== 404) {
+          console.error('Error fetching service item3 detail4:', error);
+        }
+      } finally {
+        setLoadingServiceItem3Detail4(false);
+      }
+    };
+
+    fetchSpecificServiceData();
+  }, []);
+
   // Show skeleton loading while fetching data
   if (loading && !hero && !about) {
     return <SkeletonCard />;
@@ -205,6 +389,96 @@ const CompanyLanding = () => {
 
   const handleGetStarted = () => {
     navigate("/platform");
+  };
+
+  // Helper function to render a service card
+  const renderServiceCard = (service: any, index: number, serviceDetails: any[] = [], serviceId: string | null = null) => {
+    const serviceTitle =
+      getFieldValue(service, "title", language) ||
+      service?.name ||
+      "Service";
+    const serviceDescription =
+      getFieldValue(service, "description", language) ||
+      service?.details ||
+      "";
+    
+    // Check for icon or code
+    const serviceIcon = service?.icon || "";
+    const serviceCode = service?.code || 
+                       service?.serviceCode || 
+                       service?.codeValue || 
+                       "";
+    
+    // Use icon if available, otherwise code, otherwise first letter of title
+    const serviceDisplay = serviceIcon 
+      ? serviceIcon 
+      : (serviceCode && String(serviceCode).trim() !== "") 
+        ? String(serviceCode).trim() 
+        : (serviceTitle?.charAt(0) || "S");
+    
+    const serviceLink = service?.link || service?.url || service?.href;
+
+    // Truncate description to 1 line
+    const truncateDescription = (text: string, maxLength: number = 100) => {
+      if (!text) return '';
+      if (text.length <= maxLength) return text;
+      return text.substring(0, maxLength).trim() + '...';
+    };
+
+    const shortDescription = truncateDescription(serviceDescription);
+
+    const handleServiceClick = () => {
+      if (serviceLink) {
+        if (serviceLink.startsWith('http://') || serviceLink.startsWith('https://')) {
+          window.open(serviceLink, '_blank', 'noopener,noreferrer');
+        } else {
+          navigate(serviceLink);
+        }
+      }
+    };
+
+    const cardServiceId = serviceId || service._id || service.id || `service-${index}`;
+    const isExpanded = expandedServiceId === String(cardServiceId);
+    const isLoading = cardServiceId ? loadingDetails[String(cardServiceId)] : false;
+
+    return (
+      <div 
+        key={cardServiceId} 
+        className="bg-card text-card-foreground rounded-xl border border-border p-6 sm:p-8 transition-all duration-300 ease-in-out hover:shadow-xl hover:shadow-gold/20 hover:bg-card/80 group flex flex-col"
+      >
+        {/* Hexagonal Icon/Code at Top Center */}
+        <div className="flex justify-center mb-6">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gold/10 group-hover:bg-gold/20 hexagon flex items-center justify-center transition-colors duration-300">
+            <span className="text-gold group-hover:text-gold-dark font-bold text-lg sm:text-xl transition-colors duration-300">
+              {serviceDisplay}
+            </span>
+          </div>
+        </div>
+
+        {/* Service Title */}
+        <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-center text-card-foreground leading-tight">
+          {serviceTitle}
+        </h3>
+
+        {/* Short Description (One line) */}
+        <p className="text-muted-foreground text-sm sm:text-base leading-relaxed line-clamp-1 text-center flex-grow mb-4">
+          {shortDescription}
+        </p>
+
+        {/* Read More Button */}
+        <Button
+          className="mt-auto w-full bg-gold hover:bg-gold-dark text-black font-semibold py-2"
+          onClick={(e) => {
+            e.stopPropagation();
+            setSelectedServiceForDetails(service);
+            setSelectedServiceDetails(serviceDetails);
+            setServiceDetailsModalOpen(true);
+          }}
+        >
+          {language === 'en' ? 'Read More' : 'اقرأ المزيد'}
+        </Button>
+      </div>
+    );
   };
 
   const handleOrderNow = async (e: React.MouseEvent, service: any) => {
@@ -292,6 +566,13 @@ const CompanyLanding = () => {
     setOrderDetails("");
   };
 
+  const handleOpenGeneralOrderModal = () => {
+    setSelectedService(null); // No specific service
+    setOrderModalOpen(true);
+    setEmail("");
+    setOrderDetails("");
+  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -304,32 +585,29 @@ const CompanyLanding = () => {
     setSubmitting(true);
 
     try {
-      const serviceId = selectedService?._id || selectedService?.id;
-      
-      // Validate required fields
-      if (!serviceId) {
-        toast.error(language === 'en' ? 'Service ID is required' : 'معرف الخدمة مطلوب');
-        setSubmitting(false);
-        return;
-      }
-      
       if (!orderDetails || !orderDetails.trim()) {
         toast.error(language === 'en' ? 'Please enter your order details' : 'يرجى إدخال تفاصيل الطلب');
         setSubmitting(false);
         return;
       }
       
+      const serviceId = selectedService?._id || selectedService?.id;
+      
       // Use JSON instead of FormData since we're only sending text
       const payload: any = {
         email: email.trim(),
-        serviceId: String(serviceId),
         orderDetails: orderDetails.trim(),
       };
       
-      // Add title if available (some backends require it)
-      const serviceTitle = getFieldValue(selectedService, "title", language) || selectedService?.name || "";
-      if (serviceTitle) {
-        payload.title = serviceTitle;
+      // Add serviceId only if a specific service is selected
+      if (serviceId) {
+        payload.serviceId = String(serviceId);
+        
+        // Add title if available (some backends require it)
+        const serviceTitle = getFieldValue(selectedService, "title", language) || selectedService?.name || "";
+        if (serviceTitle) {
+          payload.title = serviceTitle;
+        }
       }
 
       // Log data being sent (for debugging)
@@ -590,112 +868,150 @@ const CompanyLanding = () => {
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-            {safeServices.length > 0 ? (
-              safeServices
-                .slice()
-                .sort((a: any, b: any) => (a?.order || 0) - (b?.order || 0))
-                .map((service: any, index: number) => {
-                  console.log(`🔍 Rendering service ${index + 1}:`, {
-                    service,
-                    title_en: service?.title_en,
-                    title_ar: service?.title_ar,
-                    description_en: service?.description_en,
-                    description_ar: service?.description_ar,
-                  });
-                  
-                  const serviceTitle =
-                    getFieldValue(service, "title", language) ||
-                    service?.name ||
-                    "Service";
-                  const serviceDescription =
-                    getFieldValue(service, "description", language) ||
-                    service?.details ||
-                    "";
-                  // Check for code in multiple possible locations - code is not localized, it's a direct field
-                  const serviceCode = service?.code || 
-                                     service?.serviceCode || 
-                                     service?.codeValue || 
-                                     "";
-                  
-                  // Use code if available and not empty, otherwise use first letter of title
-                  const serviceDisplay = (serviceCode && String(serviceCode).trim() !== "") 
-                    ? String(serviceCode).trim() 
-                    : (serviceTitle?.charAt(0) || "S");
-                  const serviceLink = service?.link || service?.url || service?.href;
-
-                  // Truncate description to 2 lines
-                  const truncateDescription = (text: string, maxLength: number = 120) => {
-                    if (text.length <= maxLength) return text;
-                    return text.substring(0, maxLength).trim() + '...';
-                  };
-
-                  const shortDescription = truncateDescription(serviceDescription);
-
-                  const handleServiceClick = () => {
-                    if (serviceLink) {
-                      if (serviceLink.startsWith('http://') || serviceLink.startsWith('https://')) {
-                        window.open(serviceLink, '_blank', 'noopener,noreferrer');
-                      } else {
-                        navigate(serviceLink);
-                      }
+            {(() => {
+              // Combine all services: safeServices, item1, item2, item3, and item4
+              const allServices: any[] = [];
+              
+              // Helper function to extract details from a service
+              const extractDetails = (service: any): any[] => {
+                const details: any[] = [];
+                if (service?.details && typeof service.details === 'object') {
+                  Object.keys(service.details).forEach((key) => {
+                    const detail = service.details[key];
+                    if (detail && typeof detail === 'object') {
+                      details.push(detail);
                     }
-                  };
-
-                  return (
-              <div 
-                key={service._id || service.id} 
-                className="bg-card text-card-foreground rounded-xl border border-border p-6 sm:p-8 transition-all duration-300 ease-in-out hover:scale-[1.03] hover:shadow-xl hover:shadow-gold/20 hover:bg-card/80 cursor-pointer group flex flex-col"
-                onClick={handleServiceClick}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleServiceClick();
+                  });
+                }
+                return details;
+              };
+              
+              // Add item1 if available (priority: API data first)
+              if (serviceItem1) {
+                allServices.push({ 
+                  service: serviceItem1, 
+                  details: extractDetails(serviceItem1), 
+                  serviceId: 'item1' 
+                });
+              }
+              
+              // Add item2 if available
+              if (serviceItem2) {
+                allServices.push({ 
+                  service: serviceItem2, 
+                  details: extractDetails(serviceItem2), 
+                  serviceId: 'item2' 
+                });
+              }
+              
+              // Add item3 if available
+              if (serviceItem3) {
+                const item3Details = extractDetails(serviceItem3);
+                const detailKeys = new Set<string>();
+                
+                // Track existing detail keys
+                item3Details.forEach((detail: any, index: number) => {
+                  // Try to identify the detail key from the detail object
+                  if (detail.title_en || detail.title_ar) {
+                    detailKeys.add(`detail${index + 1}`);
                   }
-                }}
-              >
-                {/* Hexagonal Icon/Code at Top Center */}
-                <div className="flex justify-center mb-6">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gold/10 group-hover:bg-gold/20 hexagon flex items-center justify-center transition-colors duration-300">
-                    <span className="text-gold group-hover:text-gold-dark font-bold text-lg sm:text-xl transition-colors duration-300">
-                      {serviceDisplay}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Service Title */}
-                <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-center text-card-foreground leading-tight">
-                  {serviceTitle}
-                </h3>
-
-                {/* Short Description (Max 2 lines) */}
-                <p className="text-muted-foreground text-sm sm:text-base leading-relaxed line-clamp-2 text-center flex-grow">
-                  {shortDescription}
-                </p>
-
-                {/* Read More Button */}
-                <Button
-                  className="mt-4 w-full bg-gold hover:bg-gold-dark text-black font-semibold py-2"
-                  onClick={(e) => handleOrderNow(e, service)}
-                >
-                  {language === 'en' ? 'More Details' : 'المزيد من التفاصيل'}
-                </Button>
-              </div>
+                });
+                
+                // Also add detail4 if it was fetched separately and not already in details
+                if (serviceItem3Detail4 && !detailKeys.has('detail4')) {
+                  item3Details.push(serviceItem3Detail4);
+                }
+                
+                allServices.push({ 
+                  service: serviceItem3, 
+                  details: item3Details, 
+                  serviceId: 'item3' 
+                });
+              }
+              
+              // Add item4 if available
+              if (serviceItem4) {
+                allServices.push({ 
+                  service: serviceItem4, 
+                  details: extractDetails(serviceItem4), 
+                  serviceId: 'item4' 
+                });
+              }
+              
+              // Add services from safeServices only if they're not already added from API
+              // (to avoid duplicates)
+              safeServices.forEach((service: any) => {
+                const serviceId = service._id || service.id;
+                // Check if this service is already in allServices
+                const alreadyAdded = allServices.some(item => {
+                  const apiServiceId = item.service?._id || item.service?.id;
+                  return apiServiceId === serviceId;
+                });
+                
+                if (!alreadyAdded) {
+                  const serviceDetails = serviceId ? servicesDetailsMap[String(serviceId)] || [] : [];
+                  allServices.push({ service, details: serviceDetails, serviceId });
+                }
+              });
+              
+              // Sort by order if available, otherwise by serviceId (item1, item2, item3, item4)
+              allServices.sort((a: any, b: any) => {
+                const orderA = a.service?.order;
+                const orderB = b.service?.order;
+                
+                // If both have order, sort by order
+                if (orderA !== undefined && orderB !== undefined) {
+                  return orderA - orderB;
+                }
+                
+                // Otherwise, sort by serviceId to maintain item1, item2, item3, item4 order
+                const idA = a.serviceId || '';
+                const idB = b.serviceId || '';
+                
+                // Extract number from serviceId (item1 -> 1, item2 -> 2, etc.)
+                const numA = idA.match(/\d+/)?.[0] || '999';
+                const numB = idB.match(/\d+/)?.[0] || '999';
+                
+                return parseInt(numA) - parseInt(numB);
+              });
+              
+              if (allServices.length > 0) {
+                return allServices.map((item: any, index: number) => {
+                  return renderServiceCard(
+                    item.service, 
+                    index, 
+                    item.details, 
+                    item.serviceId
                   );
-                })
-            ) : (
+                });
+              } else {
+                return (
               <div className="col-span-full text-center py-8">
                 <p className="text-muted-foreground">
                   {language === 'en' ? 'No services available' : 'لا توجد خدمات متاحة'}
                 </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  {language === 'en' 
-                    ? `Debug: safeServices.length = ${safeServices.length}, services type = ${Array.isArray(services) ? 'array' : typeof services}`
-                    : `تصحيح: عدد الخدمات = ${safeServices.length}, نوع البيانات = ${Array.isArray(services) ? 'array' : typeof services}`}
-                </p>
-              </div>
-            )}
+                    {(loadingServiceItem1 || loadingServiceItem2 || loadingServiceItem3 || loadingServiceItem4 || loadingServiceItem3Detail4) && (
+                      <div className="mt-4">
+                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gold"></div>
+                  <p className="text-sm text-muted-foreground mt-2">
+                          {language === 'en' ? 'Loading services...' : 'جاري تحميل الخدمات...'}
+                  </p>
+                </div>
+              )}
+            </div>
+                );
+              }
+            })()}
+          </div>
+          
+          {/* General Order Now Button - Centered below services */}
+          <div className="flex justify-center mt-8">
+            <Button
+              onClick={handleOpenGeneralOrderModal}
+              className="bg-gold hover:bg-gold-dark text-black font-semibold py-3 px-8 text-lg"
+            >
+              {language === 'en' ? 'Order Now' : 'اطلب الآن'}
+            </Button>
           </div>
         </div>
       </section>
@@ -1057,6 +1373,138 @@ const CompanyLanding = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Service Details Modal */}
+      <Dialog open={serviceDetailsModalOpen} onOpenChange={setServiceDetailsModalOpen}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto bg-secondary/95 border-border">
+          {selectedServiceForDetails && (
+            <div className="space-y-6">
+              {/* Service Title and Description */}
+              <div className="text-center space-y-4 pb-6 border-b border-border">
+                <h2 className="text-3xl sm:text-4xl font-bold text-card-foreground">
+                  {getFieldValue(selectedServiceForDetails, "title", language) ||
+                   selectedServiceForDetails?.name ||
+                   "Service"}
+                </h2>
+                <p className="text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+                  {getFieldValue(selectedServiceForDetails, "description", language) ||
+                   selectedServiceForDetails?.details ||
+                   selectedServiceForDetails?.description_en ||
+                   selectedServiceForDetails?.description_ar ||
+                   ""}
+                </p>
+              </div>
+
+              {/* Four Specializations Grid - 2x2 */}
+              {selectedServiceDetails && selectedServiceDetails.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {selectedServiceDetails.slice(0, 4).map((section: any, index: number) => {
+                    const sectionTitle = getFieldValue(section, "title", language) || 
+                                        section?.title_en || 
+                                        section?.title_ar || 
+                                        "";
+                    const sectionDetails = getFieldValue(section, "details", language) || 
+                                        section?.details_en || 
+                                        section?.details_ar || 
+                                        "";
+                    const sectionImage = section?.image || section?.imageUrl || "";
+                    
+                    // Parse details if it's a string with line breaks
+                    const detailsList = sectionDetails 
+                      ? (typeof sectionDetails === 'string' 
+                          ? sectionDetails.split('\n').filter((line: string) => line.trim())
+                          : [])
+                      : [];
+
+                    return (
+                      <div 
+                        key={index} 
+                        className="bg-card rounded-xl border-2 border-gold/50 p-6 flex flex-col h-full relative overflow-hidden min-h-[400px]"
+                      >
+                        {/* Content wrapper - free space, avoids image and button area */}
+                        <div className="flex-1 flex flex-col pb-52 sm:pb-56">
+                          {/* Section Title - Orange/Gold at top */}
+                          {sectionTitle && (
+                            <h3 className="text-xl sm:text-2xl font-bold text-gold mb-6 uppercase z-10 relative">
+                              {sectionTitle}
+                            </h3>
+                          )}
+
+                          {/* Section Details List - White text, uppercase */}
+                          {detailsList.length > 0 && (
+                            <div className="mb-4 z-10 relative flex-1">
+                              <ul className="space-y-2.5">
+                                {detailsList.map((item: string, itemIndex: number) => (
+                                  <li 
+                                    key={itemIndex} 
+                                    className="text-sm sm:text-base text-white uppercase font-medium leading-relaxed"
+                                  >
+                                    {item.trim()}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Order Now Button - Fixed position opposite to image */}
+                        <Button
+                          className="absolute bottom-6 left-6 w-auto bg-gold hover:bg-gold-dark text-black font-semibold py-1.5 px-4 text-sm z-10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Create a service object for this specialization
+                            const specializationService = {
+                              ...selectedServiceForDetails,
+                              specializationTitle: sectionTitle,
+                              specializationDetails: sectionDetails,
+                            };
+                            setSelectedService(specializationService);
+                            setServiceDetailsModalOpen(false);
+                            setOrderModalOpen(true);
+                            setEmail("");
+                            setOrderDetails("");
+                          }}
+                        >
+                          {language === 'en' ? 'Order Now' : 'اطلب الآن'}
+                        </Button>
+
+                        {/* Image in bottom right with blue overlay */}
+                        {sectionImage && (
+                          <div className="absolute bottom-6 right-6 w-56 h-44 sm:w-64 sm:h-52 z-10">
+                            <div className="relative w-full h-full rounded-lg overflow-hidden border border-cyan/30">
+                              <img
+                                src={sectionImage}
+                                alt={sectionTitle || `Section ${index + 1}`}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                              <div className="absolute inset-0 bg-cyan/30"></div>
+                              {/* Optional text overlay */}
+                              <div className="absolute bottom-2 left-2 right-2">
+                                <p className="text-xs text-white/80 font-medium uppercase truncate">
+                                  {sectionTitle || ''}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">
+                    {language === 'en' ? 'No specializations available' : 'لا توجد تخصصات متاحة'}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Full Size Image Modal */}
       <Dialog open={imageModalOpen} onOpenChange={setImageModalOpen}>
         <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-none">
@@ -1120,6 +1568,7 @@ const CompanyLanding = () => {
               )}
 
               {/* Four Sections - Display Only (for selected service) */}
+              {selectedService && (
               <div className="mb-6 space-y-6">
                 {(() => {
                   // Get the service ID from selectedService
@@ -1194,6 +1643,7 @@ const CompanyLanding = () => {
                   });
                 })()}
               </div>
+              )}
 
               {/* Order Form - Email and Details Only */}
               <div className="mb-6 space-y-4">

@@ -62,31 +62,34 @@ http.interceptors.response.use(
     // These endpoints may not be implemented yet or are expected to not exist
     if (error.response?.status === 404) {
       const url = error.config?.url || '';
-      const expected404Endpoints = [
-        '/auth/verify',
-        '/admin/me',
-        '/content/services-details', // Expected to not exist - we use /content instead
-        '/content/services/details', // Expected to not exist - backend endpoint not implemented
-        '/content/upload-image', // Expected to not exist - we try multiple upload endpoints
-        '/content/upload', // Expected to not exist - we try multiple upload endpoints
-        '/upload-image', // Expected to not exist - we try multiple upload endpoints
-        '/upload', // Expected to not exist - we try multiple upload endpoints
+      
+      // Patterns for expected 404 endpoints (optional endpoints that may not exist)
+      const expected404Patterns = [
+        /^\/auth\/verify$/,
+        /^\/admin\/me$/,
+        /^\/content\/services-details/,
+        /^\/content\/services\/details$/,
+        /^\/content\/services\/item\d+$/, // Service items: /content/services/item1, item2, etc.
+        /^\/content\/services\/item\d+\/details\/detail\d+$/, // Service details like /content/services/item3/details/detail4
+        /^\/content\/upload-image/,
+        /^\/content\/upload$/,
+        /^\/upload-image/,
+        /^\/upload$/,
       ];
       
-      // Don't suppress 404 errors for services details endpoints - we want to see them
-      // The correct endpoints are:
-      // - /content/services/items/{serviceId}/details/{detailId} (PUT)
-      // - /content/services/items/{serviceId}/details (POST)
-      // These should work, so we want to see errors if they don't
+      // Check if this URL matches any expected 404 pattern
+      const isExpected404 = expected404Patterns.some(pattern => pattern.test(url));
       
-      if (expected404Endpoints.some(endpoint => url.includes(endpoint))) {
+      if (isExpected404) {
         // Silently handle 404 for these optional/expected endpoints
-        // Mark error as silent to prevent console logging
-        error.silent = true;
         // Don't log to console - these are expected 404s
+        error.silent = true;
       } else {
-        // Log other 404 errors normally
-        console.error('404 Error:', error.config?.url);
+        // Log other 404 errors normally (these might indicate actual problems)
+        // But only log if not already marked as silent
+        if (!error.silent) {
+          console.error('404 Error:', error.config?.url);
+        }
       }
     }
     return Promise.reject(error);

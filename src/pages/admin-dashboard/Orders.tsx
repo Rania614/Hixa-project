@@ -59,16 +59,24 @@ const Orders = () => {
       // Ensure it's always an array
       const finalOrders = Array.isArray(ordersData) ? ordersData : [];
       
+      // Sort orders by createdAt (newest first, oldest last)
+      // So the newest order will be the first one (highest number)
+      const sortedOrders = finalOrders.sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA; // Descending order (newest first)
+      });
+      
       // Log first order image structure for debugging
-      if (finalOrders.length > 0 && finalOrders[0].image) {
+      if (sortedOrders.length > 0 && sortedOrders[0].image) {
         console.log('First order image structure:', {
-          image: finalOrders[0].image,
-          imageType: typeof finalOrders[0].image,
-          isObject: typeof finalOrders[0].image === 'object',
+          image: sortedOrders[0].image,
+          imageType: typeof sortedOrders[0].image,
+          isObject: typeof sortedOrders[0].image === 'object',
         });
       }
       
-      setOrders(finalOrders);
+      setOrders(sortedOrders);
     } catch (error: any) {
       console.error('Error fetching orders:', error);
       toast.error(language === 'en' ? 'Failed to fetch orders' : 'فشل في جلب الطلبات');
@@ -213,7 +221,7 @@ const Orders = () => {
                               </div>
                               <div className="flex-1">
                                 <CardTitle className="text-xl">
-                                  {language === 'en' ? 'Order' : 'طلب'} #{index + 1}
+                                  {language === 'en' ? 'Order' : 'طلب'} #{orders.length - index}
                                 </CardTitle>
                                 {orderDate && (
                                   <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">

@@ -161,13 +161,6 @@ const ContentManagement = () => {
     }
   }, [safeServices.length]);
   
-  // Also fetch details when Services Details tab is opened
-  useEffect(() => {
-    if (activeTab === 'services-details' && safeServices.length > 0) {
-      console.log('🔄 Services Details tab opened, fetching details...');
-      fetchOrderSections();
-    }
-  }, [activeTab, safeServices.length]);
 
   // Removed useEffect that auto-creates empty sections
   // Data is now stored exactly as fetched from backend
@@ -624,11 +617,10 @@ const ContentManagement = () => {
           </h2>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-            <TabsList className="grid grid-cols-7 gap-2" style={{ direction: language === 'ar' ? 'rtl' : 'ltr' }}>
+            <TabsList className="grid grid-cols-6 gap-2" style={{ direction: language === 'ar' ? 'rtl' : 'ltr' }}>
               <TabsTrigger value="hero">{language === 'en' ? 'Hero' : 'البطل'}</TabsTrigger>
               <TabsTrigger value="about">{language === 'en' ? 'About' : 'حول'}</TabsTrigger>
               <TabsTrigger value="services">{language === 'en' ? 'Services' : 'الخدمات'}</TabsTrigger>
-              <TabsTrigger value="services-details">{language === 'en' ? 'Services Details' : 'تفاصيل الخدمات'}</TabsTrigger>
               <TabsTrigger value="projects">{language === 'en' ? 'Projects' : 'المشاريع'}</TabsTrigger>
               <TabsTrigger value="partners">{language === 'en' ? 'Partners' : 'الشركاء'}</TabsTrigger>
               <TabsTrigger value="jobs">{language === 'en' ? 'Jobs' : 'الوظائف'}</TabsTrigger>
@@ -1034,7 +1026,7 @@ const ContentManagement = () => {
                     <p>{language === 'en' ? 'No services found.' : 'لا توجد خدمات.'}</p>
                   </div>
                 ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {safeServices.map((s) => {
                     const itemId = s.itemId || `item${s.index + 1}`;
                     return (
@@ -1093,200 +1085,6 @@ const ContentManagement = () => {
                     }
                   </p>
                 </div>
-              </Card>
-            </TabsContent>
-
-            {/* Services Details Section */}
-            <TabsContent value="services-details">
-              <Card className="p-6">
-                <div className="mb-6">
-                  <h3 className="text-2xl font-bold mb-4">
-                    {language === 'en' ? 'Services Details Section' : 'قسم تفاصيل الخدمات'}
-                  </h3>
-                  <p className="text-muted-foreground mb-4">
-                    {language === 'en' 
-                      ? 'Manage details for each service. Select a service below to edit its details sections.' 
-                      : 'إدارة تفاصيل كل خدمة. اختر خدمة أدناه لتعديل أقسام تفاصيلها.'}
-                  </p>
-                </div>
-
-                {safeServices.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>{language === 'en' ? 'No services found. Please add services first in the Services tab.' : 'لا توجد خدمات. يرجى إضافة الخدمات أولاً في تبويب الخدمات.'}</p>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    {safeServices.map((s) => {
-                      const itemId = s.itemId || `item${(s.index || 0) + 1}`;
-                      const serviceDetails = s.details || {};
-                      const detailsArray = [
-                        { ...serviceDetails.detail1, detailId: 'detail1' },
-                        { ...serviceDetails.detail2, detailId: 'detail2' },
-                        { ...serviceDetails.detail3, detailId: 'detail3' },
-                        { ...serviceDetails.detail4, detailId: 'detail4' },
-                      ];
-                      
-                      return (
-                        <Collapsible key={itemId} defaultOpen={s.index === 0}>
-                          <Card className="border-2">
-                            <CollapsibleTrigger asChild>
-                              <CardHeader className="cursor-pointer hover:bg-secondary/50 transition-colors">
-                                <div className="flex items-center justify-between">
-                                  <CardTitle>
-                                    {language === 'en' 
-                                      ? `Service ${(s.index || 0) + 1}: ${s.title_en || s.title_ar || 'Untitled'}` 
-                                      : `الخدمة ${(s.index || 0) + 1}: ${s.title_ar || s.title_en || 'بدون عنوان'}`}
-                                  </CardTitle>
-                                  <ChevronDownIcon className="h-5 w-5 transition-transform duration-200 data-[state=open]:rotate-180" />
-                                </div>
-                              </CardHeader>
-                            </CollapsibleTrigger>
-                            <CollapsibleContent>
-                              <CardContent className="pt-4 space-y-4">
-                                {/* Service Details Sections */}
-                                <div className="mt-4">
-                                <h4 className="text-lg font-semibold mb-4">
-                                  {language === 'en' ? 'Service Details Sections' : 'أقسام تفاصيل الخدمة'}
-                                </h4>
-                                <div className="space-y-4">
-                                    {detailsArray.map((section, sectionIndex) => {
-                                      const detailId = section.detailId || `detail${sectionIndex + 1}`;
-                                      
-                                    return (
-                                      <Collapsible key={sectionIndex} defaultOpen={sectionIndex === 0}>
-                                        <Card className="border">
-                                          <CollapsibleTrigger asChild>
-                                            <CardHeader className="cursor-pointer hover:bg-secondary/50 transition-colors py-3">
-                                              <div className="flex items-center justify-between">
-                                                <CardTitle className="text-base">
-                                                  {language === 'en' 
-                                                    ? `Section ${sectionIndex + 1}${section.title_en ? `: ${section.title_en}` : ''}`
-                                                    : `القسم ${sectionIndex + 1}${section.title_ar ? `: ${section.title_ar}` : ''}`
-                                                  }
-                                                </CardTitle>
-                                                <ChevronDownIcon className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
-                                              </div>
-                                            </CardHeader>
-                                          </CollapsibleTrigger>
-                                          <CollapsibleContent>
-                                            <CardContent className="pt-4 space-y-4">
-                                              {/* Title Row - English and Arabic */}
-                                              <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                  <label className="text-sm font-medium mb-1 block">
-                                                    {language === 'en' ? 'Section Title (English)' : 'عنوان القسم (إنجليزي)'}
-                                                  </label>
-                                                  <Input
-                                                    value={section.title_en || ''}
-                                                      onChange={(e) => handleSectionChange(itemId, detailId, 'title_en', e.target.value)}
-                                                    placeholder={language === 'en' ? 'Enter section title in English...' : 'أدخل عنوان القسم بالإنجليزية...'}
-                                                  />
-                                                </div>
-                                                <div>
-                                                  <label className="text-sm font-medium mb-1 block">
-                                                    {language === 'en' ? 'Section Title (Arabic)' : 'عنوان القسم (عربي)'}
-                                                  </label>
-                                                  <Input
-                                                    value={section.title_ar || ''}
-                                                      onChange={(e) => handleSectionChange(itemId, detailId, 'title_ar', e.target.value)}
-                                                    placeholder={language === 'en' ? 'Enter section title in Arabic...' : 'أدخل عنوان القسم بالعربية...'}
-                                                    dir="rtl"
-                                                  />
-                                                </div>
-                                              </div>
-
-                                              {/* Image */}
-                                              <div>
-                                                <label className="text-sm font-medium mb-1 block">
-                                                  {language === 'en' ? 'Section Image' : 'صورة القسم'}
-                                                </label>
-                                                <div className="space-y-2">
-                                                  <input
-                                                    type="file"
-                                                    accept="image/*"
-                                                      onChange={(e) => handleSectionImageUpload(itemId, detailId, e)}
-                                                    className="hidden"
-                                                      id={`service-details-${itemId}-${detailId}-image`}
-                                                  />
-                                                  <label
-                                                      htmlFor={`service-details-${itemId}-${detailId}-image`}
-                                                    className="flex items-center justify-center w-full px-4 py-2 bg-background border border-border rounded-lg cursor-pointer hover:bg-muted transition-colors"
-                                                  >
-                                                    <Upload className="h-4 w-4 mr-2" />
-                                                    <span className="text-sm">
-                                                      {section.image
-                                                        ? (language === 'en' ? 'Change image...' : 'تغيير الصورة...')
-                                                        : (language === 'en' ? 'Choose image...' : 'اختر صورة...')}
-                                                    </span>
-                                                  </label>
-                                                  {section.image && (
-                                                    <div className="mt-2">
-                                                      <img
-                                                        src={section.image}
-                                                          alt={`Service ${(s.index || 0) + 1} - Section ${sectionIndex + 1}`}
-                                                        className="w-full h-48 object-cover rounded-lg border border-border"
-                                                      />
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              </div>
-
-                                              {/* Details Row - English and Arabic */}
-                                              <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                  <label className="text-sm font-medium mb-1 block">
-                                                    {language === 'en' ? 'Details (English)' : 'التفاصيل (إنجليزي)'}
-                                                  </label>
-                                                  <Textarea
-                                                    value={section.details_en || ''}
-                                                      onChange={(e) => handleSectionChange(itemId, detailId, 'details_en', e.target.value)}
-                                                    placeholder={language === 'en' ? 'Enter details in English...' : 'أدخل التفاصيل بالإنجليزية...'}
-                                                    rows={6}
-                                                  />
-                                                </div>
-                                                <div>
-                                                  <label className="text-sm font-medium mb-1 block">
-                                                    {language === 'en' ? 'Details (Arabic)' : 'التفاصيل (عربي)'}
-                                                  </label>
-                                                  <Textarea
-                                                    value={section.details_ar || ''}
-                                                      onChange={(e) => handleSectionChange(itemId, detailId, 'details_ar', e.target.value)}
-                                                    placeholder={language === 'en' ? 'Enter details in Arabic...' : 'أدخل التفاصيل بالعربية...'}
-                                                    rows={6}
-                                                    dir="rtl"
-                                                  />
-                                </div>
-                              </div>
-                            </CardContent>
-                          </CollapsibleContent>
-                  </Card>
-                      </Collapsible>
-                                    );
-                                    })}
-                                  </div>
-                                </div>
-
-                                  {/* Save Button for this specific service */}
-                                  <div className="mt-6 pt-4 border-t border-border">
-                  <Button
-                    onClick={async () => {
-                                      console.log(`💾 Saving details for service ${itemId}...`);
-                                      await saveServiceDetails(itemId);
-                    }}
-                    disabled={loading}
-                                        className="w-full bg-gold hover:bg-gold-dark text-black font-semibold"
-                  >
-                                        {loading ? (language === 'en' ? 'Saving...' : 'جاري الحفظ...') : (language === 'en' ? `Save Service Details` : `حفظ تفاصيل الخدمة`)}
-                </Button>
-                                </div>
-                              </CardContent>
-                            </CollapsibleContent>
-                          </Card>
-                        </Collapsible>
-                      );
-                    })}
-                  </div>
-                )}
               </Card>
             </TabsContent>
 
@@ -2325,22 +2123,6 @@ const ContentManagement = () => {
                     <p className="text-sm p-2 bg-muted rounded-md whitespace-pre-wrap" dir="rtl">{selectedService.description_ar || '-'}</p>
                   )}
                 </div>
-              </div>
-
-              {/* Icon Field */}
-              <div>
-                <label className="text-sm font-medium mb-1 block">
-                  {language === 'en' ? 'Icon (URL or icon name)' : 'الأيقونة (رابط أو اسم الأيقونة)'}
-                </label>
-                {isEditMode ? (
-                  <Input
-                    placeholder={language === 'en' ? 'Enter icon URL or icon name...' : 'أدخل رابط الأيقونة أو اسم الأيقونة...'}
-                    value={selectedService.icon || ''}
-                    onChange={(e) => setSelectedService({ ...selectedService, icon: e.target.value })}
-                  />
-                ) : (
-                  <p className="text-sm p-2 bg-muted rounded-md">{selectedService.icon || '-'}</p>
-                )}
               </div>
 
               {/* Service Details Sections */}
