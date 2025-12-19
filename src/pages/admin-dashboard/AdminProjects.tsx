@@ -55,11 +55,29 @@ const AdminProjects = () => {
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const response = await http.get('/client/projects');
-      setProjects(response.data || []);
+      const response = await http.get('/projects');
+      // Handle different response structures
+      let projectsData = response.data;
+      
+      // If response.data is an object with a data property
+      if (projectsData && typeof projectsData === 'object' && !Array.isArray(projectsData)) {
+        projectsData = projectsData.data || projectsData.projects || [];
+      }
+      
+      // Ensure it's always an array
+      if (!Array.isArray(projectsData)) {
+        console.warn("Projects data is not an array:", projectsData);
+        projectsData = [];
+      }
+      
+      setProjects(projectsData);
     } catch (error: any) {
       console.error('Error fetching projects:', error);
-      toast.error(language === 'en' ? 'Failed to load projects' : 'فشل تحميل المشاريع');
+      // Don't show error toast for 404, as there might not be projects yet
+      if (error.response?.status !== 404) {
+        toast.error(language === 'en' ? 'Failed to load projects' : 'فشل تحميل المشاريع');
+      }
+      setProjects([]);
     } finally {
       setLoading(false);
     }
@@ -68,7 +86,7 @@ const AdminProjects = () => {
   // Fetch project statistics
   const fetchStatistics = async () => {
     try {
-      const response = await http.get('/client/projects/statistics');
+      const response = await http.get('/projects/statistics');
       setStatistics(response.data || { total: 0, active: 0, pending: 0, completed: 0 });
     } catch (error: any) {
       console.error('Error fetching statistics:', error);
@@ -88,7 +106,7 @@ const AdminProjects = () => {
   // Fetch project by ID
   const fetchProjectById = async (id: string) => {
     try {
-      const response = await http.get(`/client/projects/${id}`);
+      const response = await http.get(`/projects/${id}`);
       return response.data;
     } catch (error: any) {
       console.error('Error fetching project:', error);
@@ -101,7 +119,7 @@ const AdminProjects = () => {
   const handleAddProject = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await http.post('/client/projects', projectForm);
+      await http.post('/projects', projectForm);
       toast.success(language === 'en' ? 'Project added successfully' : 'تم إضافة المشروع بنجاح');
       setShowAddModal(false);
       resetForm();
@@ -109,7 +127,11 @@ const AdminProjects = () => {
       fetchStatistics();
     } catch (error: any) {
       console.error('Error adding project:', error);
-      toast.error(language === 'en' ? 'Failed to add project' : 'فشل إضافة المشروع');
+      toast.error(
+        language === 'en' 
+          ? error.response?.data?.message || 'Failed to add project'
+          : error.response?.data?.message || 'فشل إضافة المشروع'
+      );
     }
   };
 
@@ -118,7 +140,7 @@ const AdminProjects = () => {
     e.preventDefault();
     if (!selectedProject) return;
     try {
-      await http.put(`/client/projects/${selectedProject._id || selectedProject.id}`, projectForm);
+      await http.put(`/projects/${selectedProject._id || selectedProject.id}`, projectForm);
       toast.success(language === 'en' ? 'Project updated successfully' : 'تم تحديث المشروع بنجاح');
       setShowEditModal(false);
       resetForm();
@@ -127,7 +149,11 @@ const AdminProjects = () => {
       fetchStatistics();
     } catch (error: any) {
       console.error('Error updating project:', error);
-      toast.error(language === 'en' ? 'Failed to update project' : 'فشل تحديث المشروع');
+      toast.error(
+        language === 'en' 
+          ? error.response?.data?.message || 'Failed to update project'
+          : error.response?.data?.message || 'فشل تحديث المشروع'
+      );
     }
   };
 

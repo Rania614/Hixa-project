@@ -180,12 +180,195 @@ Deploy the `dist` folder to any static hosting service:
 - Mobile-first responsive design
 - Accessible components from Shadcn/ui
 
+## 📊 Admin Dashboards API Connection Status
+
+### ✅ متصل بالـ API (Connected to API)
+
+1. **Content Management** (`/admin/content`)
+   - ✅ متصل بالـ API بشكل كامل
+   - يستخدم `useContentStore` للتفاعل مع الـ API
+   - Endpoints: `/content`, `/content/hero`, `/content/about`, `/content/services`, `/content/projects`, `/content/partners`, `/content/jobs`
+   - الوظائف: جلب المحتوى، تحديث، إضافة، حذف، إعادة ترتيب
+
+2. **Admin Projects** (`/admin/projects`)
+   - ✅ متصل بالـ API بشكل كامل
+   - Endpoints: `/client/projects`, `/client/projects/{id}`, `/client/projects/statistics`
+   - الوظائف: عرض المشاريع، إضافة، تعديل، حذف، رفع مرفقات، إحصائيات
+
+3. **Subscribers** (`/admin/subscribers`)
+   - ✅ متصل بالـ API بشكل كامل
+   - Endpoints: `/subscribers`, `/subscribers/statistics`, `/subscribers/broadcast`
+   - الوظائف: عرض المشتركين، حذف، إرسال برودكاست، إحصائيات
+
+4. **Orders** (`/admin/orders`)
+   - ✅ متصل بالـ API بشكل كامل
+   - Endpoints: `/service-orders`, `/service-orders/{id}`, `/service-orders/{id}/status`
+   - الوظائف: عرض الطلبات، تحديث الحالة، حذف، عرض التفاصيل
+
+### ❌ غير متصل بالـ API (Not Connected - Using Static/Mock Data)
+
+1. **Admin Dashboard** (`/admin/dashboard`)
+   - ❌ غير متصل بالـ API
+   - جميع البيانات والإحصائيات معطلة (commented out)
+   - يحتاج إلى ربط بـ API endpoints للإحصائيات والملخصات
+
+2. **Admin Users** (`/admin/users`)
+   - ❌ غير متصل بالـ API
+   - يستخدم بيانات ثابتة (static sample data)
+   - يحتاج إلى ربط بـ API endpoints لإدارة المستخدمين
+
+3. **Admin Messages** (`/admin/messages`)
+   - ❌ غير متصل بالـ API
+   - يستخدم بيانات محادثات ثابتة
+   - يحتاج إلى ربط بـ API endpoints للرسائل والمحادثات
+
+4. **Admin Documents** (`/admin/documents`)
+   - ❌ غير متصل بالـ API
+   - يستخدم بيانات مستندات ثابتة
+   - يحتاج إلى ربط بـ API endpoints لإدارة المستندات
+
+5. **Admin Reports** (`/admin/reports`)
+   - ❌ غير متصل بالـ API
+   - يستخدم بيانات تقارير ثابتة
+   - يحتاج إلى ربط بـ API endpoints للتقارير والتحليلات
+
+6. **Admin Settings** (`/admin/settings`)
+   - ❌ غير متصل بالـ API
+   - واجهة إعدادات فقط بدون حفظ حقيقي
+   - يحتاج إلى ربط بـ API endpoints لحفظ الإعدادات
+
+7. **Admin Communication** (`/admin/communication`)
+   - ❌ غير متصل بالـ API
+   - يستخدم بيانات محادثات ثابتة
+   - يحتاج إلى ربط بـ API endpoints للتواصل والمحادثات
+
+### 📝 ملاحظات (Notes)
+
+- الداشبوردات المتصلة تستخدم `http` service من `@/services/http` للتفاعل مع الـ API
+- جميع الطلبات تستخدم Bearer Token للـ Authentication
+- البيانات غير المتصلة تستخدم Mock/Static data للعرض فقط
+- راجع ملف `API_ENDPOINTS.md` لمزيد من التفاصيل عن الـ API Endpoints المتاحة
+
+---
+
+## 👤 Client Dashboard API Connection Status
+
+### ✅ متصل بالـ API (Connected to API)
+
+1. **Client Projects** (`/client/projects`)
+   - ✅ متصل بالـ API بشكل كامل
+   - Endpoints: `/projects` أو `/client/projects`
+   - الوظائف: عرض المشاريع، جلب التفاصيل، فلترة حسب الحالة
+
+### ❌ غير متصل بالـ API (Not Connected - Using Static/Mock Data)
+
+1. **Client Dashboard** (`/client/dashboard`)
+   - ❌ غير متصل بالـ API
+   - يستخدم بيانات مشاريع ثابتة (mock data)
+   - يحتاج إلى ربط بـ API endpoints للإحصائيات والمشاريع النشطة
+
+2. **Client Messages** (`/client/messages`)
+   - ❌ غير متصل بالـ API
+   - يستخدم بيانات محادثات ثابتة
+   - يحتاج إلى ربط بـ API endpoints للرسائل والمحادثات
+
+3. **Client Profile** (`/client/profile`)
+   - ❌ غير متصل بالـ API
+   - واجهة فقط بدون حفظ/جلب بيانات حقيقية
+   - يحتاج إلى ربط بـ API endpoints للملف الشخصي
+
+4. **Create Project** (`/client/create-project`)
+   - ❌ غير متصل بالـ API
+   - نموذج فقط بدون إرسال حقيقي
+   - يحتاج إلى ربط بـ API endpoints لإنشاء المشاريع
+
+5. **Project Details** (`/client/projects/:id`)
+   - ❌ غير متصل بالـ API
+   - يستخدم بيانات ثابتة
+   - يحتاج إلى ربط بـ API endpoints لجلب تفاصيل المشروع
+
+6. **Client Contracts** (`/client/contracts`)
+   - ❌ غير متصل بالـ API
+   - يحتاج إلى ربط بـ API endpoints للعقود
+
+7. **Client Notifications** (`/client/notifications`)
+   - ❌ غير متصل بالـ API
+   - يحتاج إلى ربط بـ API endpoints للإشعارات
+
+8. **Engineer Profile View** (`/client/engineer-profile/:id`)
+   - ❌ غير متصل بالـ API
+   - يحتاج إلى ربط بـ API endpoints لعرض ملف المهندس
+
+---
+
+## 🔧 Engineer Dashboard API Connection Status
+
+### ❌ غير متصل بالـ API (Not Connected - Using Static/Mock Data)
+
+جميع صفحات Engineer Dashboard غير متصلة بالـ API حالياً:
+
+1. **Engineer Dashboard** (`/engineer/dashboard`)
+   - ❌ غير متصل بالـ API
+   - يستخدم بيانات ثابتة (إحصائيات ومشاريع)
+   - يحتاج إلى ربط بـ API endpoints للإحصائيات والمشاريع
+
+2. **Engineer Projects** (`/engineer/projects`)
+   - ❌ غير متصل بالـ API
+   - يستخدم بيانات مشاريع ثابتة
+   - يحتاج إلى ربط بـ API endpoints لعرض مشاريع المهندس
+
+3. **Engineer Messages** (`/engineer/messages`)
+   - ❌ غير متصل بالـ API
+   - يستخدم بيانات محادثات ثابتة
+   - يحتاج إلى ربط بـ API endpoints للرسائل والمحادثات
+
+4. **Engineer Profile** (`/engineer/profile`)
+   - ❌ غير متصل بالـ API
+   - واجهة فقط بدون حفظ/جلب بيانات حقيقية
+   - يحتاج إلى ربط بـ API endpoints للملف الشخصي
+
+5. **Engineer Portfolio** (`/engineer/portfolio`)
+   - ❌ غير متصل بالـ API
+   - يحتاج إلى ربط بـ API endpoints للمحفظة/الأعمال
+
+6. **Add Work** (`/engineer/portfolio/add`)
+   - ❌ غير متصل بالـ API
+   - يحتاج إلى ربط بـ API endpoints لإضافة عمل للمحفظة
+
+7. **Work Details** (`/engineer/portfolio/:id`)
+   - ❌ غير متصل بالـ API
+   - يحتاج إلى ربط بـ API endpoints لعرض تفاصيل العمل
+
+8. **Available Projects** (`/engineer/available-projects`)
+   - ❌ غير متصل بالـ API
+   - يستخدم بيانات مشاريع ثابتة
+   - يحتاج إلى ربط بـ API endpoints لعرض المشاريع المتاحة للتقدم
+
+9. **Submit Proposal** (`/engineer/submit-proposal/:id`)
+   - ❌ غير متصل بالـ API
+   - نموذج فقط بدون إرسال حقيقي
+   - يحتاج إلى ربط بـ API endpoints لإرسال العروض
+
+10. **Engineer Project Details** (`/engineer/projects/:id`)
+    - ❌ غير متصل بالـ API
+    - يحتاج إلى ربط بـ API endpoints لتفاصيل المشروع
+
+11. **Engineer Notifications** (`/engineer/notifications`)
+    - ❌ غير متصل بالـ API
+    - يحتاج إلى ربط بـ API endpoints للإشعارات
+
+12. **Engineer Payouts** (`/engineer/payouts`)
+    - ❌ غير متصل بالـ API
+    - يحتاج إلى ربط بـ API endpoints للمدفوعات
+
+---
+
 ## 🔮 Future Enhancements
 
 - [ ] Add Light Mode toggle
 - [ ] Implement real authentication with JWT
 - [ ] Add file upload for project images
-- [ ] Create API endpoints for content management
+- [ ] Connect remaining dashboards to API (Users, Messages, Documents, Reports, Settings, Communication)
 - [ ] Add analytics dashboard
 - [ ] Multi-language support (beyond EN/AR)
 

@@ -42,31 +42,13 @@ export const Footer = () => {
           
           <div className="flex justify-center gap-4 md:gap-6 mb-12">
             <a 
-              href={socialLinks.instagram}
+              href={socialLinks.facebook}
               target="_blank"
               rel="noopener noreferrer"
               className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
-              aria-label="Instagram"
+              aria-label="Facebook"
             >
-              <Instagram className="w-5 h-5" />
-            </a>
-            <a 
-              href={socialLinks.whatsapp}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
-              aria-label="WhatsApp"
-            >
-              <MessageCircle className="w-5 h-5" />
-            </a>
-            <a 
-              href={socialLinks.twitter}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
-              aria-label="Twitter/X"
-            >
-              <Twitter className="w-5 h-5" />
+              <Facebook className="w-5 h-5" />
             </a>
             <a 
               href={socialLinks.telegram}
@@ -78,13 +60,31 @@ export const Footer = () => {
               <Send className="w-5 h-5" />
             </a>
             <a 
-              href={socialLinks.facebook}
+              href={socialLinks.whatsapp}
               target="_blank"
               rel="noopener noreferrer"
               className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
-              aria-label="Facebook"
+              aria-label="WhatsApp"
             >
-              <Facebook className="w-5 h-5" />
+              <MessageCircle className="w-5 h-5" />
+            </a>
+            <a 
+              href={socialLinks.instagram}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
+              aria-label="Instagram"
+            >
+              <Instagram className="w-5 h-5" />
+            </a>
+            <a 
+              href={socialLinks.twitter}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
+              aria-label="Twitter/X"
+            >
+              <Twitter className="w-5 h-5" />
             </a>
             <a 
               href={socialLinks.linkedin}
@@ -98,13 +98,7 @@ export const Footer = () => {
           </div>
         </div>
         
-        <div className="border-t border-white/10 pt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-xs md:text-sm">
-          <p className="text-[#cfcfd6]">&copy; {new Date().getFullYear()} HIXA. {language === 'en' ? 'All rights reserved.' : 'جميع الحقوق محفوظة.'}</p>
-          <div className="flex gap-6">
-            <a href="#" className="text-[#cfcfd6] hover:text-[#D4AC35] transition-colors duration-200 focus:outline focus:outline-2 focus:outline-[#D4AC35] focus:rounded">{language === 'en' ? 'Privacy' : 'الخصوصية'}</a>
-            <a href="#" className="text-[#cfcfd6] hover:text-[#D4AC35] transition-colors duration-200 focus:outline focus:outline-2 focus:outline-[#D4AC35] focus:rounded">{language === 'en' ? 'Terms and Conditions' : 'الشروط والأحكام'}</a>
-          </div>
-        </div>
+        
       </div>
     </footer>
   );

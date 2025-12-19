@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { useApp } from "@/context/AppContext";
@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, MessageSquare, Star } from "lucide-react";
+import { MapPin, MessageSquare, Star, Edit } from "lucide-react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -16,48 +16,63 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { http } from "@/services/http";
+import { toast } from "@/components/ui/sonner";
 
 const EngineerProjects = () => {
   const { language } = useApp();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("all");
+  const [proposals, setProposals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const projects = [
-    {
-      id: 1,
-      title: "Residential Building Design",
-      category: "Architecture",
-      location: "Riyadh, Saudi Arabia",
-      status: "inProgress",
-    },
-    {
-      id: 2,
-      title: "Office Complex Construction",
-      category: "Construction",
-      location: "Dubai, UAE",
-      status: "waitingForAdminDecision",
-    },
-    {
-      id: 3,
-      title: "Bridge Engineering Project",
-      category: "Civil Engineering",
-      location: "Jeddah, Saudi Arabia",
-      status: "completed",
-      rating: 4.8,
-      review: language === "en" ? "Excellent work! Very professional." : "عمل ممتاز! محترف جداً.",
-      completedDate: "2024-01-15",
-    },
-    {
-      id: 4,
-      title: "Industrial Warehouse Design",
-      category: "Mechanical Engineering",
-      location: "Dammam, Saudi Arabia",
-      status: "completed",
-      rating: 5.0,
-      review: language === "en" ? "Outstanding quality and attention to detail." : "جودة استثنائية واهتمام بالتفاصيل.",
-      completedDate: "2024-01-10",
-    },
-  ];
+  // Fetch engineer's proposals
+  useEffect(() => {
+    const fetchProposals = async () => {
+      try {
+        setLoading(true);
+        const response = await http.get("/proposals/my");
+        // Handle different response structures
+        let proposalsData = response.data;
+        
+        // If response.data is an object with a data property
+        if (proposalsData && typeof proposalsData === 'object' && !Array.isArray(proposalsData)) {
+          proposalsData = proposalsData.data || proposalsData.proposals || [];
+        }
+        
+        // Ensure it's always an array
+        if (!Array.isArray(proposalsData)) {
+          console.warn("Proposals data is not an array:", proposalsData);
+          proposalsData = [];
+        }
+        
+        setProposals(proposalsData);
+      } catch (error: any) {
+        console.error("Error fetching proposals:", error);
+        // Don't show error toast for 404, as user might not have proposals yet
+        if (error.response?.status !== 404) {
+          toast.error(
+            language === "en" ? "Failed to load proposals" : "فشل تحميل العروض"
+          );
+        }
+        setProposals([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProposals();
+  }, [language]);
+
+  // Map proposal status to project status
+  const mapProposalStatusToProjectStatus = (status: string) => {
+    const statusMap: Record<string, string> = {
+      pending: "waitingForAdminDecision",
+      accepted: "inProgress",
+      rejected: "waitingForAdminDecision",
+      completed: "completed",
+    };
+    return statusMap[status] || "waitingForAdminDecision";
+  };
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -67,6 +82,18 @@ const EngineerProjects = () => {
       },
       inProgress: { label: getDashboardText("inProgress", language), variant: "default" },
       completed: { label: getDashboardText("completed", language), variant: "default" },
+      pending: {
+        label: language === "en" ? "Pending" : "قيد الانتظار",
+        variant: "outline",
+      },
+      accepted: {
+        label: language === "en" ? "Accepted" : "مقبول",
+        variant: "default",
+      },
+      rejected: {
+        label: language === "en" ? "Rejected" : "مرفوض",
+        variant: "destructive",
+      },
     };
     const statusInfo = statusMap[status] || statusMap.waitingForAdminDecision;
     return (
@@ -76,9 +103,33 @@ const EngineerProjects = () => {
     );
   };
 
+  // Transform proposals to projects format for display
+  // Ensure proposals is always an array before mapping
+  const projects = Array.isArray(proposals) 
+    ? proposals.map((proposal) => ({
+        id: proposal.project?._id || proposal.project,
+        proposalId: proposal._id,
+        title: proposal.project?.name || proposal.project?.title || "Unknown Project",
+        category: proposal.project?.category || "N/A",
+        location: proposal.project?.location || "N/A",
+        status: mapProposalStatusToProjectStatus(proposal.status),
+        proposalStatus: proposal.status,
+        proposal: proposal,
+        rating: proposal.rating,
+        review: proposal.review,
+        completedDate: proposal.completedDate,
+      }))
+    : [];
+
   const filteredProjects = activeTab === "all"
     ? projects
-    : projects.filter(p => p.status === activeTab);
+    : activeTab === "waitingForAdminDecision"
+    ? projects.filter(p => p.proposalStatus === "pending")
+    : activeTab === "inProgress"
+    ? projects.filter(p => p.proposalStatus === "accepted")
+    : activeTab === "completed"
+    ? projects.filter(p => p.proposalStatus === "completed")
+    : projects;
 
   return (
     <DashboardLayout userType="engineer">
@@ -145,69 +196,100 @@ const EngineerProjects = () => {
           </TabsList>
 
           <TabsContent value={activeTab} className="mt-0">
-            <div className="grid gap-6 grid-cols-1">
-              {filteredProjects.map((project) => (
-                <Card key={project.id} className="hover:shadow-xl hover:border-hexa-secondary/60 transition-all duration-300 bg-hexa-card border-hexa-border">
-                  <div className="flex flex-col md:flex-row gap-6 p-6">
-                    {/* Left Section - Main Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-3 mb-4">
-                        <CardTitle className="text-lg font-bold text-hexa-text-dark line-clamp-2 flex-1">{project.title}</CardTitle>
-                        <div className="flex-shrink-0">
-                          {getStatusBadge(project.status)}
-                        </div>
-                      </div>
-                      <CardDescription className="flex items-center gap-2 mb-4 text-hexa-text-light">
-                        <MapPin className="w-4 h-4 text-hexa-secondary" />
-                        {project.location}
-                      </CardDescription>
-                      {project.status === "completed" && project.rating && (
-                        <div className="p-3 rounded-lg bg-hexa-bg border border-hexa-border/50">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="flex items-center gap-1">
-                              {[...Array(5)].map((_, i) => (
-                                <Star
-                                  key={i}
-                                  className={`w-4 h-4 ${
-                                    i < Math.floor(project.rating!)
-                                      ? "text-yellow-500 fill-yellow-500"
-                                      : "text-hexa-text-light"
-                                  }`}
-                                />
-                              ))}
-                            </div>
-                            <span className="text-sm font-semibold text-hexa-text-dark">{project.rating}</span>
+            {loading ? (
+              <div className="text-center py-12 text-hexa-text-light">
+                {language === "en" ? "Loading proposals..." : "جاري تحميل العروض..."}
+              </div>
+            ) : filteredProjects.length === 0 ? (
+              <div className="text-center py-12 text-hexa-text-light">
+                {language === "en" ? "No proposals found" : "لا توجد عروض"}
+              </div>
+            ) : (
+              <div className="grid gap-6 grid-cols-1">
+                {filteredProjects.map((project) => (
+                  <Card key={project.id} className="hover:shadow-xl hover:border-hexa-secondary/60 transition-all duration-300 bg-hexa-card border-hexa-border">
+                    <div className="flex flex-col md:flex-row gap-6 p-6">
+                      {/* Left Section - Main Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-3 mb-4">
+                          <CardTitle className="text-lg font-bold text-hexa-text-dark line-clamp-2 flex-1">{project.title}</CardTitle>
+                          <div className="flex-shrink-0">
+                            {getStatusBadge(project.proposalStatus || project.status)}
                           </div>
-                          {project.review && (
-                            <p className="text-xs text-hexa-text-light italic line-clamp-2">"{project.review}"</p>
-                          )}
-                          {project.completedDate && (
-                            <p className="text-xs text-hexa-text-light mt-2">
-                              {language === "en" ? `Completed: ${project.completedDate}` : `مكتمل: ${project.completedDate}`}
-                            </p>
-                          )}
                         </div>
-                      )}
-                    </div>
-                    {/* Right Section - Actions */}
-                    {project.status === "inProgress" && (
-                      <div className="flex flex-col justify-center gap-3 md:w-auto w-full md:border-s md:border-hexa-border md:ps-6 pt-4 md:pt-0 border-t md:border-t-0 border-hexa-border">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/engineer/messages?project=${project.id}`)}
-                          className="w-full md:w-auto border-hexa-border bg-hexa-bg text-hexa-text-light hover:bg-hexa-secondary hover:text-black hover:border-hexa-secondary transition-all"
-                          title={getDashboardText("chat", language)}
-                        >
-                          <MessageSquare className="w-4 h-4 ms-2" />
-                          {getDashboardText("chat", language)}
-                        </Button>
+                        <CardDescription className="flex items-center gap-2 mb-4 text-hexa-text-light">
+                          <MapPin className="w-4 h-4 text-hexa-secondary" />
+                          {project.location}
+                        </CardDescription>
+                        {project.proposal && (
+                          <div className="space-y-2 mb-4">
+                            <p className="text-sm text-hexa-text-light">
+                              {language === "en" ? "Budget:" : "الميزانية:"} {project.proposal.proposedBudget?.amount} {project.proposal.proposedBudget?.currency}
+                            </p>
+                            <p className="text-sm text-hexa-text-light">
+                              {language === "en" ? "Timeline:" : "الجدول الزمني:"} {project.proposal.estimatedTimeline}
+                            </p>
+                          </div>
+                        )}
+                        {project.status === "completed" && project.rating && (
+                          <div className="p-3 rounded-lg bg-hexa-bg border border-hexa-border/50">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="flex items-center gap-1">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={`w-4 h-4 ${
+                                      i < Math.floor(project.rating!)
+                                        ? "text-yellow-500 fill-yellow-500"
+                                        : "text-hexa-text-light"
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                              <span className="text-sm font-semibold text-hexa-text-dark">{project.rating}</span>
+                            </div>
+                            {project.review && (
+                              <p className="text-xs text-hexa-text-light italic line-clamp-2">"{project.review}"</p>
+                            )}
+                            {project.completedDate && (
+                              <p className="text-xs text-hexa-text-light mt-2">
+                                {language === "en" ? `Completed: ${project.completedDate}` : `مكتمل: ${project.completedDate}`}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </Card>
-              ))}
-            </div>
+                      {/* Right Section - Actions */}
+                      <div className="flex flex-col justify-center gap-3 md:w-auto w-full md:border-s md:border-hexa-border md:ps-6 pt-4 md:pt-0 border-t md:border-t-0 border-hexa-border">
+                        {project.proposalStatus === "pending" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(`/engineer/projects/${project.id}/proposal`)}
+                            className="w-full md:w-auto border-hexa-border bg-hexa-bg text-hexa-text-light hover:bg-hexa-secondary hover:text-black hover:border-hexa-secondary transition-all"
+                          >
+                            <Edit className="w-4 h-4 ms-2" />
+                            {language === "en" ? "Edit Proposal" : "تعديل العرض"}
+                          </Button>
+                        )}
+                        {project.status === "inProgress" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(`/engineer/messages?project=${project.id}`)}
+                            className="w-full md:w-auto border-hexa-border bg-hexa-bg text-hexa-text-light hover:bg-hexa-secondary hover:text-black hover:border-hexa-secondary transition-all"
+                            title={getDashboardText("chat", language)}
+                          >
+                            <MessageSquare className="w-4 h-4 ms-2" />
+                            {getDashboardText("chat", language)}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>

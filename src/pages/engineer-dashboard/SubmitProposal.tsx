@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { useApp } from "@/context/AppContext";
@@ -17,15 +17,24 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { http } from "@/services/http";
+import { toast } from "@/components/ui/sonner";
 
 const SubmitProposal = () => {
   const { id } = useParams<{ id: string }>();
   const { language } = useApp();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [proposalId, setProposalId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    proposal: "",
-    timeline: "",
-    experience: "",
+    description: "",
+    estimatedTimeline: "",
+    relevantExperience: "",
+    proposedBudget: {
+      amount: "",
+      currency: "SAR",
+    },
   });
 
   // Mock project data
@@ -36,19 +45,87 @@ const SubmitProposal = () => {
     location: "Riyadh, Saudi Arabia",
   };
 
+  // Check if proposal already exists for this project
+  useEffect(() => {
+    const checkExistingProposal = async () => {
+      if (!id) return;
+      try {
+        const response = await http.get(`/proposals/my`);
+        const proposals = response.data || [];
+        const existingProposal = proposals.find((p: any) => p.project === id);
+        if (existingProposal) {
+          setIsEditMode(true);
+          setProposalId(existingProposal._id);
+          setFormData({
+            description: existingProposal.description || "",
+            estimatedTimeline: existingProposal.estimatedTimeline || "",
+            relevantExperience: existingProposal.relevantExperience || "",
+            proposedBudget: {
+              amount: existingProposal.proposedBudget?.amount?.toString() || "",
+              currency: existingProposal.proposedBudget?.currency || "SAR",
+            },
+          });
+        }
+      } catch (error) {
+        console.error("Error checking existing proposal:", error);
+      }
+    };
+    checkExistingProposal();
+  }, [id]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    if (name === "amount") {
+      setFormData((prev) => ({
+        ...prev,
+        proposedBudget: {
+          ...prev.proposedBudget,
+          amount: value,
+        },
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle proposal submission
-    console.log("Proposal submitted:", formData);
-    navigate("/engineer/projects");
+    setLoading(true);
+    try {
+      const proposalData = {
+        project: id,
+        description: formData.description,
+        estimatedTimeline: formData.estimatedTimeline,
+        relevantExperience: formData.relevantExperience,
+        proposedBudget: {
+          amount: parseFloat(formData.proposedBudget.amount),
+          currency: formData.proposedBudget.currency,
+        },
+      };
+
+      if (isEditMode && proposalId) {
+        // Update existing proposal
+        await http.put(`/proposals/${proposalId}`, proposalData);
+        toast.success(language === "en" ? "Proposal updated successfully" : "تم تحديث العرض بنجاح");
+      } else {
+        // Create new proposal
+        await http.post("/proposals", proposalData);
+        toast.success(language === "en" ? "Proposal submitted successfully" : "تم تقديم العرض بنجاح");
+      }
+      navigate("/engineer/projects");
+    } catch (error: any) {
+      console.error("Error submitting proposal:", error);
+      toast.error(
+        language === "en"
+          ? error.response?.data?.message || "Failed to submit proposal"
+          : error.response?.data?.message || "فشل تقديم العرض"
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -138,13 +215,13 @@ const SubmitProposal = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Proposal Description */}
               <div className="space-y-2.5">
-                <Label htmlFor="proposal" className="text-hexa-text-dark text-base font-medium">
+                <Label htmlFor="description" className="text-hexa-text-dark text-base font-medium">
                   {language === "en" ? "Proposal Description" : "وصف العرض"} *
                 </Label>
                 <Textarea
-                  id="proposal"
-                  name="proposal"
-                  value={formData.proposal}
+                  id="description"
+                  name="description"
+                  value={formData.description}
                   onChange={handleInputChange}
                   required
                   rows={8}
@@ -155,13 +232,13 @@ const SubmitProposal = () => {
 
               {/* Timeline */}
               <div className="space-y-2.5">
-                <Label htmlFor="timeline" className="text-hexa-text-dark text-base font-medium">
+                <Label htmlFor="estimatedTimeline" className="text-hexa-text-dark text-base font-medium">
                   {language === "en" ? "Estimated Timeline" : "الجدول الزمني المتوقع"} *
                 </Label>
                 <Input
-                  id="timeline"
-                  name="timeline"
-                  value={formData.timeline}
+                  id="estimatedTimeline"
+                  name="estimatedTimeline"
+                  value={formData.estimatedTimeline}
                   onChange={handleInputChange}
                   required
                   className="bg-hexa-bg border-hexa-border text-hexa-text-dark placeholder:text-hexa-text-light h-11"
@@ -171,18 +248,45 @@ const SubmitProposal = () => {
 
               {/* Relevant Experience */}
               <div className="space-y-2.5">
-                <Label htmlFor="experience" className="text-hexa-text-dark text-base font-medium">
+                <Label htmlFor="relevantExperience" className="text-hexa-text-dark text-base font-medium">
                   {language === "en" ? "Relevant Experience" : "الخبرة ذات الصلة"}
                 </Label>
                 <Textarea
-                  id="experience"
-                  name="experience"
-                  value={formData.experience}
+                  id="relevantExperience"
+                  name="relevantExperience"
+                  value={formData.relevantExperience}
                   onChange={handleInputChange}
                   rows={5}
                   className="min-h-[100px] bg-hexa-bg border-hexa-border text-hexa-text-dark placeholder:text-hexa-text-light resize-none"
                   placeholder={language === "en" ? "Describe your relevant experience and similar projects you've completed..." : "اوصف خبرتك ذات الصلة والمشاريع المشابهة التي أكملتها..."}
                 />
+              </div>
+
+              {/* Proposed Budget */}
+              <div className="space-y-2.5">
+                <Label htmlFor="amount" className="text-hexa-text-dark text-base font-medium">
+                  {language === "en" ? "Proposed Budget" : "الميزانية المقترحة"} *
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="amount"
+                    name="amount"
+                    type="number"
+                    value={formData.proposedBudget.amount}
+                    onChange={handleInputChange}
+                    required
+                    className="bg-hexa-bg border-hexa-border text-hexa-text-dark placeholder:text-hexa-text-light h-11 flex-1"
+                    placeholder={language === "en" ? "Amount" : "المبلغ"}
+                  />
+                  <Input
+                    id="currency"
+                    name="currency"
+                    value={formData.proposedBudget.currency}
+                    onChange={handleInputChange}
+                    readOnly
+                    className="bg-hexa-bg border-hexa-border text-hexa-text-dark w-20 h-11"
+                  />
+                </div>
               </div>
 
               {/* Form Actions */}
@@ -197,10 +301,19 @@ const SubmitProposal = () => {
                 </Button>
                 <Button
                   type="submit"
+                  disabled={loading}
                   className="bg-hexa-secondary hover:bg-hexa-secondary/90 text-black font-semibold h-11 px-6"
                 >
                   <Save className={`w-4 h-4 ${language === "ar" ? "ml-2" : "mr-2"}`} />
-                  {getDashboardText("submitProposal", language)}
+                  {loading
+                    ? language === "en"
+                      ? "Submitting..."
+                      : "جاري التقديم..."
+                    : isEditMode
+                    ? language === "en"
+                      ? "Update Proposal"
+                      : "تحديث العرض"
+                    : getDashboardText("submitProposal", language)}
                 </Button>
               </div>
             </form>

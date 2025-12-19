@@ -61,11 +61,17 @@ interface AppContextProps {
 const AppContext = createContext<AppContextProps | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [language, setLanguage] = useState<"ar" | "en">("en");
+  const [language, setLanguage] = useState<"ar" | "en">("ar");
   // Initialize with fallback data immediately to prevent blank screen
   const [content, setContent] = useState<LandingContent | null>(getInitialContentSnapshot());
   const [loading, setLoading] = useState(false); // Start with false since we have fallback data
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+
+  // Set document direction and language on mount and when language changes
+  useEffect(() => {
+    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.lang = language;
+  }, [language]);
 
   const fetchLandingContent = async () => {
     try {

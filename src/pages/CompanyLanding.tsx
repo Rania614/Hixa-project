@@ -1186,14 +1186,15 @@ const CompanyLanding = () => {
 
             {/* Contact Cards Row */}
             <div className="max-w-4xl mx-auto">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
-                <div className="glass-card p-6 rounded-xl text-center hover:scale-105 transition-transform">
+              <div className="flex flex-wrap justify-center gap-6 mb-12">
+                {/* Email section - temporarily commented out */}
+                {/* <div className="glass-card p-6 rounded-xl text-center hover:scale-105 transition-transform">
                   <div className="w-16 h-16 bg-gold rounded-full flex items-center justify-center mx-auto mb-4">
                     <span className="text-2xl">📧</span>
                   </div>
                   <h3 className="font-bold text-lg mb-2">{language === 'en' ? 'Email' : 'البريد الإلكتروني'}</h3>
                   <p className="text-muted-foreground">info@hixa.com</p>
-                </div>
+                </div> */}
                 
                 <div className="glass-card p-6 rounded-xl text-center hover:scale-105 transition-transform">
                   <div className="w-16 h-16 bg-gold rounded-full flex items-center justify-center mx-auto mb-4">

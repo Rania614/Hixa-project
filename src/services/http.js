@@ -1,10 +1,18 @@
 import axios from "axios";
 
-const baseURL = import.meta.env.VITE_API_BASE_URL;
+let baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
+
+// Normalize baseURL - fix double /api/api and remove trailing slashes
+baseURL = baseURL.trim();
+// Fix /api/api pattern (could be /api/api/ or /api/api at end, or anywhere)
+baseURL = baseURL.replace(/\/api\/api(\/|$)/g, '/api$1');
+// Remove trailing slashes
+baseURL = baseURL.replace(/\/+$/, '');
+
 console.log("🌐 HTTP Service initialized with baseURL:", baseURL);
 
 export const http = axios.create({
-  baseURL: baseURL,
+  baseURL: baseURL + '/',
   headers: {
     "Content-Type": "application/json",
   },
@@ -26,11 +34,20 @@ http.interceptors.request.use((config) => {
     }
   }
   
+  // Normalize URL to avoid double slashes
+  if (config.url && config.url.startsWith('/')) {
+    config.url = config.url.substring(1);
+  }
+  
   // Log request for debugging
-  console.log(`📤 HTTP Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`, {
+  const fullURL = config.baseURL && config.url 
+    ? `${config.baseURL}${config.url}`
+    : `${config.baseURL}${config.url}`;
+    
+  console.log(`📤 HTTP Request: ${config.method?.toUpperCase()} ${fullURL}`, {
     baseURL: config.baseURL,
     url: config.url,
-    fullURL: `${config.baseURL}${config.url}`,
+    fullURL: fullURL,
     data: config.data,
   });
   
@@ -53,9 +70,14 @@ http.interceptors.response.use(
     if (error.response?.status === 401) {
       // Token is invalid or expired
       localStorage.removeItem("token");
-      // Redirect to login page
-      if (window.location.pathname.startsWith('/admin')) {
+      // Redirect to appropriate login page based on current route
+      const pathname = window.location.pathname;
+      if (pathname.startsWith('/admin')) {
         window.location.href = '/admin/login';
+      } else if (pathname.startsWith('/engineer')) {
+        window.location.href = '/engineer/login';
+      } else if (pathname.startsWith('/client')) {
+        window.location.href = '/client/login';
       }
     }
     // Suppress 404 errors from console for optional endpoints
