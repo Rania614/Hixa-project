@@ -25,8 +25,11 @@ const SubmitProposal = () => {
   const { language } = useApp();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [projectLoading, setProjectLoading] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
   const [proposalId, setProposalId] = useState<string | null>(null);
+  const [canEdit, setCanEdit] = useState(false);
+  const [project, setProject] = useState<any>(null);
   const [formData, setFormData] = useState({
     description: "",
     estimatedTimeline: "",
@@ -37,25 +40,91 @@ const SubmitProposal = () => {
     },
   });
 
-  // Mock project data
-  const project = {
-    id: id,
-    title: "Modern Office Building Design",
-    category: "Architecture",
-    location: "Riyadh, Saudi Arabia",
-  };
+  // Fetch project data
+  useEffect(() => {
+    const fetchProject = async () => {
+      if (!id) return;
+      try {
+        setProjectLoading(true);
+        const response = await http.get(`/projects/${id}`);
+        
+        // Handle different response structures
+        let projectData = response.data;
+        if (projectData && typeof projectData === 'object' && !Array.isArray(projectData)) {
+          if (projectData.data && typeof projectData.data === 'object') {
+            projectData = projectData.data;
+          } else if (projectData.project && typeof projectData.project === 'object') {
+            projectData = projectData.project;
+          }
+        }
+        
+        setProject({
+          id: projectData._id || projectData.id || id,
+          title: projectData.title || projectData.name || "Unknown Project",
+          category: projectData.category || projectData.projectType || "N/A",
+          location: projectData.location || "N/A",
+        });
+      } catch (error: any) {
+        console.error("Error fetching project:", error);
+        toast.error(
+          language === "en" ? "Failed to load project details" : "فشل تحميل تفاصيل المشروع"
+        );
+        // Fallback to basic data
+        setProject({
+          id: id,
+          title: "Unknown Project",
+          category: "N/A",
+          location: "N/A",
+        });
+      } finally {
+        setProjectLoading(false);
+      }
+    };
+    fetchProject();
+  }, [id, language]);
 
   // Check if proposal already exists for this project
   useEffect(() => {
     const checkExistingProposal = async () => {
       if (!id) return;
       try {
-        const response = await http.get(`/proposals/my`);
-        const proposals = response.data || [];
-        const existingProposal = proposals.find((p: any) => p.project === id);
+        // Use GET /api/proposals/project/:projectId to get engineer's proposal for this project
+        const response = await http.get(`/proposals/project/${id}`);
+        
+        // Handle different response structures
+        let proposalsData = response.data;
+        if (proposalsData && typeof proposalsData === 'object' && !Array.isArray(proposalsData)) {
+          if (proposalsData.data && Array.isArray(proposalsData.data)) {
+            proposalsData = proposalsData.data;
+          } else if (proposalsData.proposals && Array.isArray(proposalsData.proposals)) {
+            proposalsData = proposalsData.proposals;
+          } else if (proposalsData.items && Array.isArray(proposalsData.items)) {
+            proposalsData = proposalsData.items;
+          } else {
+            proposalsData = [];
+          }
+        }
+        
+        // Engineer sees only their proposal, so it should be a single proposal or empty array
+        const existingProposal = Array.isArray(proposalsData) && proposalsData.length > 0 
+          ? proposalsData[0] 
+          : null;
+        
         if (existingProposal) {
           setIsEditMode(true);
-          setProposalId(existingProposal._id);
+          setProposalId(existingProposal._id || existingProposal.id);
+          
+          // Check if proposal can be edited (within 1 hour of creation)
+          if (existingProposal.createdAt) {
+            const createdAt = new Date(existingProposal.createdAt);
+            const now = new Date();
+            const hoursDiff = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+            setCanEdit(hoursDiff < 1);
+          } else {
+            // If createdAt is not available, allow edit (backend will handle validation)
+            setCanEdit(true);
+          }
+          
           setFormData({
             description: existingProposal.description || "",
             estimatedTimeline: existingProposal.estimatedTimeline || "",
@@ -66,8 +135,11 @@ const SubmitProposal = () => {
             },
           });
         }
-      } catch (error) {
-        console.error("Error checking existing proposal:", error);
+      } catch (error: any) {
+        // 404 is expected if no proposal exists yet
+        if (error.response?.status !== 404) {
+          console.error("Error checking existing proposal:", error);
+        }
       }
     };
     checkExistingProposal();
@@ -96,7 +168,6 @@ const SubmitProposal = () => {
     setLoading(true);
     try {
       const proposalData = {
-        project: id,
         description: formData.description,
         estimatedTimeline: formData.estimatedTimeline,
         relevantExperience: formData.relevantExperience,
@@ -107,26 +178,45 @@ const SubmitProposal = () => {
       };
 
       if (isEditMode && proposalId) {
-        // Update existing proposal
+        // Check if still within 1 hour (client-side validation)
+        if (!canEdit) {
+          toast.error(
+            language === "en" 
+              ? "You can only edit proposals within 1 hour of creation" 
+              : "يمكنك تعديل العروض خلال ساعة واحدة فقط من وقت الإنشاء"
+          );
+          setLoading(false);
+          return;
+        }
+        
+        // Update existing proposal using PUT /api/proposals/:id
         await http.put(`/proposals/${proposalId}`, proposalData);
         toast.success(language === "en" ? "Proposal updated successfully" : "تم تحديث العرض بنجاح");
       } else {
-        // Create new proposal
-        await http.post("/proposals", proposalData);
+        // Create new proposal using POST /api/proposals/project/:projectId
+        await http.post(`/proposals/project/${id}`, proposalData);
         toast.success(language === "en" ? "Proposal submitted successfully" : "تم تقديم العرض بنجاح");
       }
       navigate("/engineer/projects");
     } catch (error: any) {
       console.error("Error submitting proposal:", error);
-      toast.error(
-        language === "en"
-          ? error.response?.data?.message || "Failed to submit proposal"
-          : error.response?.data?.message || "فشل تقديم العرض"
-      );
+      const errorMessage = error.response?.data?.message || 
+        (language === "en" ? "Failed to submit proposal" : "فشل تقديم العرض");
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
+
+  if (projectLoading || !project) {
+    return (
+      <DashboardLayout userType="engineer">
+        <div className="text-center py-12 text-hexa-text-light">
+          {language === "en" ? "Loading..." : "جاري التحميل..."}
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout userType="engineer">
@@ -200,6 +290,19 @@ const SubmitProposal = () => {
             </p>
           </div>
         </div>
+
+        {/* Edit Mode Warning */}
+        {isEditMode && !canEdit && (
+          <Card className="bg-yellow-500/10 border-yellow-500/20">
+            <CardContent className="pt-6">
+              <p className="text-yellow-600 dark:text-yellow-400">
+                {language === "en" 
+                  ? "⚠️ You can only edit proposals within 1 hour of creation. This proposal can no longer be edited." 
+                  : "⚠️ يمكنك تعديل العروض خلال ساعة واحدة فقط من وقت الإنشاء. لا يمكن تعديل هذا العرض بعد الآن."}
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Form Card */}
         <Card className="bg-hexa-card border-hexa-border p-8">
@@ -301,8 +404,8 @@ const SubmitProposal = () => {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={loading}
-                  className="bg-hexa-secondary hover:bg-hexa-secondary/90 text-black font-semibold h-11 px-6"
+                  disabled={loading || (isEditMode && !canEdit)}
+                  className="bg-hexa-secondary hover:bg-hexa-secondary/90 text-black font-semibold h-11 px-6 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Save className={`w-4 h-4 ${language === "ar" ? "ml-2" : "mr-2"}`} />
                   {loading

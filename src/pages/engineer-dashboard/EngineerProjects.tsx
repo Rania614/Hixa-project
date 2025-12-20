@@ -261,17 +261,31 @@ const EngineerProjects = () => {
                       </div>
                       {/* Right Section - Actions */}
                       <div className="flex flex-col justify-center gap-3 md:w-auto w-full md:border-s md:border-hexa-border md:ps-6 pt-4 md:pt-0 border-t md:border-t-0 border-hexa-border">
-                        {project.proposalStatus === "pending" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/engineer/projects/${project.id}/proposal`)}
-                            className="w-full md:w-auto border-hexa-border bg-hexa-bg text-hexa-text-light hover:bg-hexa-secondary hover:text-black hover:border-hexa-secondary transition-all"
-                          >
-                            <Edit className="w-4 h-4 ms-2" />
-                            {language === "en" ? "Edit Proposal" : "تعديل العرض"}
-                          </Button>
-                        )}
+                        {project.proposalStatus === "pending" && (() => {
+                          // Check if proposal can be edited (within 1 hour of creation)
+                          let canEdit = false;
+                          if (project.proposal?.createdAt) {
+                            const createdAt = new Date(project.proposal.createdAt);
+                            const now = new Date();
+                            const hoursDiff = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+                            canEdit = hoursDiff < 1;
+                          } else {
+                            // If createdAt is not available, allow edit (backend will handle validation)
+                            canEdit = true;
+                          }
+                          
+                          return canEdit ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate(`/engineer/projects/${project.id}/proposal`)}
+                              className="w-full md:w-auto border-hexa-border bg-hexa-bg text-hexa-text-light hover:bg-hexa-secondary hover:text-black hover:border-hexa-secondary transition-all"
+                            >
+                              <Edit className="w-4 h-4 ms-2" />
+                              {language === "en" ? "Edit Proposal" : "تعديل العرض"}
+                            </Button>
+                          ) : null;
+                        })()}
                         {project.status === "inProgress" && (
                           <Button
                             variant="outline"

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useForm } from "react-hook-form";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { useApp } from "@/context/AppContext";
 import { getDashboardText } from "@/locales/dashboard";
@@ -13,6 +14,14 @@ import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { http } from "@/services/http";
 import { toast } from "@/components/ui/sonner";
+import { CountryPhoneInput } from "@/components/shared/CountryPhoneInput";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -35,6 +44,36 @@ interface ProfileData {
   reviewsCount?: number;
 }
 
+// Helper function to get full image URL
+const getImageUrl = (imagePath: string | null | undefined): string => {
+  if (!imagePath || imagePath.trim() === '') return '';
+  
+  const trimmedPath = imagePath.trim();
+  
+  // If it's already a full URL (http:// or https://), return as is
+  if (trimmedPath.startsWith('http://') || trimmedPath.startsWith('https://')) {
+    return trimmedPath;
+  }
+  
+  // If it's a data URL (base64), return as is
+  if (trimmedPath.startsWith('data:')) {
+    return trimmedPath;
+  }
+  
+  // If it starts with /, it's an absolute path from the API base
+  if (trimmedPath.startsWith('/')) {
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
+    // Remove trailing slash from base URL if exists
+    const base = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+    return `${base}${trimmedPath}`;
+  }
+  
+  // Otherwise, treat as relative path
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
+  const base = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+  return `${base}/${trimmedPath}`;
+};
+
 const EngineerProfile = () => {
   const { language } = useApp();
   const navigate = useNavigate();
@@ -55,13 +94,18 @@ const EngineerProfile = () => {
     reviewsCount: 0,
   });
   
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    location: "",
-    bio: "",
+  const { control, handleSubmit, setValue, watch, formState: { errors } } = useForm({
+    defaultValues: {
+      name: "",
+      email: "",
+      countryCode: "SA",
+      phone: "",
+      location: "",
+      bio: "",
+    },
   });
+  
+  const formData = watch();
   
   const [specializations, setSpecializations] = useState<string[]>([]);
   const [certifications, setCertifications] = useState<Array<{ name: string; year: string }>>([]);
@@ -82,6 +126,7 @@ const EngineerProfile = () => {
   const fetchProfile = async () => {
     try {
       setLoading(true);
+      console.log("📤 Fetching profile from GET /users/me");
       const response = await http.get("/users/me");
       
       console.log("📥 Full response object:", response);
@@ -94,15 +139,17 @@ const EngineerProfile = () => {
       let data = response.data;
       
       // Check if data is nested
-      if (data && data.data) {
-        console.log("📥 Data found in response.data.data");
-        data = data.data;
-      } else if (data && data.user) {
-        console.log("📥 Data found in response.data.user");
-        data = data.user;
-      } else if (data && data.profile) {
-        console.log("📥 Data found in response.data.profile");
-        data = data.profile;
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        if (data.data && typeof data.data === 'object') {
+          console.log("📥 Data found in response.data.data");
+          data = data.data;
+        } else if (data.user && typeof data.user === 'object') {
+          console.log("📥 Data found in response.data.user");
+          data = data.user;
+        } else if (data.profile && typeof data.profile === 'object') {
+          console.log("📥 Data found in response.data.profile");
+          data = data.profile;
+        }
       }
       
       console.log("📥 Final data object:", data);
@@ -127,12 +174,17 @@ const EngineerProfile = () => {
                      data.avatar.path || 
                      data.avatar.filename || 
                      data.avatar.originalName ||
+                     data.avatar.src ||
                      "";
           
           // If avatar object exists but has no URL, it might be uploaded but URL not in object
           // In this case, we might need to construct URL from the avatar object info
           if (!avatarUrl && data.avatar.uploadedAt) {
             console.log("⚠️ Avatar object exists but no URL found:", data.avatar);
+            // Try to construct URL from filename if available
+            if (data.avatar.filename) {
+              avatarUrl = data.avatar.filename;
+            }
           }
         }
       }
@@ -142,7 +194,14 @@ const EngineerProfile = () => {
         avatarUrl = data.profileImage || data.image || "";
       }
       
+      // Convert to full URL if it's a relative path
+      if (avatarUrl) {
+        avatarUrl = getImageUrl(avatarUrl);
+      }
+      
       console.log("📥 Final avatar URL:", avatarUrl);
+      console.log("📥 Avatar URL type:", typeof avatarUrl);
+      console.log("📥 Avatar URL length:", avatarUrl?.length || 0);
       
       // Map API data to our form structure
       const mappedProfileData = {
@@ -159,26 +218,46 @@ const EngineerProfile = () => {
       };
       
       console.log("📥 Mapped profile data:", mappedProfileData);
+      console.log("📥 Setting profileImage to:", mappedProfileData.profileImage);
       setProfileData(mappedProfileData);
+      
+      // Extract country code from phone if available
+      let countryCode = "SA";
+      let phoneNumber = data.phone || data.phoneNumber || "";
+      
+      if (phoneNumber && phoneNumber.startsWith("+")) {
+        const detectedCountry = getCountryFromPhone(phoneNumber);
+        if (detectedCountry) {
+          countryCode = detectedCountry;
+        }
+      }
       
       const mappedFormData = {
         name: data.name || "",
         email: data.email || "",
-        phone: data.phone || data.phoneNumber || "",
+        countryCode,
+        phone: phoneNumber,
         location: data.location || data.address || "",
         bio: data.bio || data.description || "",
       };
       
       console.log("📥 Mapped form data:", mappedFormData);
-      console.log("📥 Setting formData state with:", mappedFormData);
       
-      // Force update formData
-      setFormData(mappedFormData);
+      // Update form values
+      setValue("name", mappedFormData.name);
+      setValue("email", mappedFormData.email);
+      setValue("countryCode", mappedFormData.countryCode);
+      setValue("phone", mappedFormData.phone);
+      setValue("location", mappedFormData.location);
+      setValue("bio", mappedFormData.bio);
       setSpecializations(Array.isArray(data.specializations) ? data.specializations : []);
       setCertifications(Array.isArray(data.certifications) ? data.certifications : []);
       
       if (avatarUrl) {
+        console.log("📥 Setting imagePreview to:", avatarUrl);
         setImagePreview(avatarUrl);
+      } else {
+        console.log("⚠️ No avatar URL to set as preview");
       }
       
       console.log("✅ Profile data loaded and state updated successfully");
@@ -208,10 +287,25 @@ const EngineerProfile = () => {
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setValue(field as any, value);
+  };
+  
+  // Helper function to get country from phone
+  const getCountryFromPhone = (phone: string): string | null => {
+    if (!phone || !phone.startsWith("+")) return null;
+    const countryOptions = [
+      { code: "EG", dialCode: "+20" },
+      { code: "SA", dialCode: "+966" },
+      { code: "AE", dialCode: "+971" },
+      { code: "KW", dialCode: "+965" },
+      { code: "QA", dialCode: "+974" },
+    ];
+    for (const option of countryOptions) {
+      if (phone.startsWith(option.dialCode)) {
+        return option.code;
+      }
+    }
+    return null;
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -248,25 +342,25 @@ const EngineerProfile = () => {
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (data: any) => {
     try {
       setSaving(true);
       
-      // Always update profile data first (without image) using JSON
+      // Always update profile data first using JSON (without image)
       const updateData: any = {
-        name: formData.name,
-        email: formData.email,
+        name: data.name,
+        email: data.email,
       };
       
       // Only add optional fields if they have values
-      if (formData.phone) {
-        updateData.phone = formData.phone;
+      if (data.phone) {
+        updateData.phone = data.phone;
       }
-      if (formData.location) {
-        updateData.location = formData.location;
+      if (data.location) {
+        updateData.location = data.location;
       }
-      if (formData.bio) {
-        updateData.bio = formData.bio;
+      if (data.bio) {
+        updateData.bio = data.bio;
       }
       
       // Add specializations if available
@@ -279,73 +373,122 @@ const EngineerProfile = () => {
         updateData.certifications = certifications;
       }
       
-      console.log("📤 Sending profile data (JSON):", updateData);
+      console.log("📤 Sending profile update to PUT /users/me");
+      console.log("📤 Update data:", updateData);
       
-      // Update profile data first
+      // Update profile data using PUT /api/users/me (JSON)
       let response = await http.put("/users/me", updateData);
       
-      // If there's an image, upload it separately
+      console.log("✅ Profile update response:", response.data);
+      
+      // If there's an image, upload it separately using FormData
       if (selectedImage) {
         console.log("📤 Uploading avatar image separately...");
         const avatarFormData = new FormData();
         avatarFormData.append("avatar", selectedImage);
         
-        // Try to upload avatar - might need a different endpoint
-        // For now, try the same endpoint with FormData containing only avatar
+        // Try different endpoints for avatar upload
+        let avatarUploaded = false;
+        
+        // Try 1: /users/me/avatar endpoint
         try {
+          console.log("🔄 Trying PUT /users/me/avatar");
           const avatarResponse = await http.put("/users/me/avatar", avatarFormData);
-          console.log("✅ Avatar uploaded successfully:", avatarResponse.data);
-        } catch (avatarError: any) {
-          console.warn("⚠️ Failed to upload avatar separately:", avatarError);
-          // If separate endpoint doesn't work, try with the main endpoint using FormData
-          // But only with avatar field
+          console.log("✅ Avatar uploaded successfully via /users/me/avatar:", avatarResponse.data);
+          // Merge avatar response with profile response
+          response.data = { ...response.data, ...avatarResponse.data };
+          avatarUploaded = true;
+        } catch (avatarError1: any) {
+          console.warn("⚠️ Failed to upload via /users/me/avatar:", avatarError1.response?.status, avatarError1.response?.data);
+          
+          // Try 2: POST /users/me/avatar endpoint (some APIs use POST for file uploads)
           try {
-            const avatarFormDataOnly = new FormData();
-            avatarFormDataOnly.append("avatar", selectedImage);
-            const avatarResponse2 = await http.put("/users/me", avatarFormDataOnly);
-            console.log("✅ Avatar uploaded successfully (alternative method):", avatarResponse2.data);
-            // Update response with avatar data
+            console.log("🔄 Trying POST /users/me/avatar");
+            const avatarResponse2 = await http.post("/users/me/avatar", avatarFormData);
+            console.log("✅ Avatar uploaded successfully via POST /users/me/avatar:", avatarResponse2.data);
             response.data = { ...response.data, ...avatarResponse2.data };
+            avatarUploaded = true;
           } catch (avatarError2: any) {
-            console.error("❌ Failed to upload avatar:", avatarError2);
-            // Don't fail the whole update if avatar upload fails
-            toast.error(
-              language === "en"
-                ? "Profile updated but avatar upload failed"
-                : "تم تحديث الملف الشخصي لكن فشل رفع الصورة"
-            );
+            console.warn("⚠️ Failed to upload via POST /users/me/avatar:", avatarError2.response?.status, avatarError2.response?.data);
+            
+            // Try 3: /upload/avatar endpoint
+            try {
+              console.log("🔄 Trying POST /upload/avatar");
+              const avatarResponse3 = await http.post("/upload/avatar", avatarFormData);
+              console.log("✅ Avatar uploaded successfully via /upload/avatar:", avatarResponse3.data);
+              response.data = { ...response.data, ...avatarResponse3.data };
+              avatarUploaded = true;
+            } catch (avatarError3: any) {
+              console.error("❌ All avatar upload methods failed:", {
+                method1: avatarError1.response?.status,
+                method2: avatarError2.response?.status,
+                method3: avatarError3.response?.status,
+              });
+              
+              // Show error but don't fail the whole update
+              toast.error(
+                language === "en"
+                  ? "Profile updated but avatar upload failed. The image may not be supported or the upload endpoint is not available."
+                  : "تم تحديث الملف الشخصي لكن فشل رفع الصورة. قد لا تكون الصورة مدعومة أو endpoint الرفع غير متاح."
+              );
+            }
           }
+        }
+        
+        if (!avatarUploaded) {
+          console.warn("⚠️ Avatar was not uploaded, but profile was updated successfully");
         }
       }
       
-      // Update local state with response
-      const updatedData = response.data;
+      // Handle different response structures
+      let updatedData = response.data;
+      if (updatedData && typeof updatedData === 'object' && !Array.isArray(updatedData)) {
+        if (updatedData.data && typeof updatedData.data === 'object') {
+          updatedData = updatedData.data;
+        } else if (updatedData.user && typeof updatedData.user === 'object') {
+          updatedData = updatedData.user;
+        }
+      }
+      
+      console.log("📥 Processed updated data:", updatedData);
       
       // Handle avatar from response - it's an object with url property
       let avatarUrl = "";
       if (updatedData.avatar) {
         if (typeof updatedData.avatar === 'string') {
           avatarUrl = updatedData.avatar;
-        } else if (updatedData.avatar.url) {
-          avatarUrl = updatedData.avatar.url;
-        } else if (updatedData.avatar.path) {
-          avatarUrl = updatedData.avatar.path;
+        } else if (typeof updatedData.avatar === 'object') {
+          avatarUrl = updatedData.avatar.url || 
+                     updatedData.avatar.path || 
+                     updatedData.avatar.filename ||
+                     updatedData.avatar.src ||
+                     "";
         }
       }
       
       // Fallback to other image fields
       if (!avatarUrl) {
-        avatarUrl = updatedData.profileImage || updatedData.image || imagePreview || "";
+        avatarUrl = updatedData.profileImage || updatedData.image || "";
       }
+      
+      // Convert to full URL if it's a relative path
+      if (avatarUrl) {
+        avatarUrl = getImageUrl(avatarUrl);
+      } else if (imagePreview) {
+        // Keep the preview if no URL from server yet
+        avatarUrl = imagePreview;
+      }
+      
+      console.log("📥 Processed avatar URL after update:", avatarUrl);
       
       // Update profileData with new data
       setProfileData((prev) => ({
         ...prev,
-        name: updatedData.name || formData.name,
-        email: updatedData.email || formData.email,
-        phone: updatedData.phone || formData.phone,
-        location: updatedData.location || formData.location,
-        bio: updatedData.bio || formData.bio,
+        name: updatedData.name || data.name,
+        email: updatedData.email || data.email,
+        phone: updatedData.phone || data.phone,
+        location: updatedData.location || data.location,
+        bio: updatedData.bio || data.bio,
         profileImage: avatarUrl,
         specializations: Array.isArray(updatedData.specializations) ? updatedData.specializations : specializations,
         certifications: Array.isArray(updatedData.certifications) ? updatedData.certifications : certifications,
@@ -474,10 +617,19 @@ const EngineerProfile = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8 px-6 md:px-8 pb-8">
+            <form onSubmit={handleSubmit(handleSave)} className="space-y-8">
             <div className="flex items-start gap-6 pb-6 border-b border-hexa-border">
               <Avatar className="w-24 h-24 flex-shrink-0">
                 {imagePreview || profileData.profileImage ? (
-                  <AvatarImage src={imagePreview || profileData.profileImage} alt="Profile" />
+                  <AvatarImage 
+                    src={imagePreview || profileData.profileImage} 
+                    alt="Profile"
+                    onError={(e) => {
+                      console.error("❌ Failed to load avatar image:", imagePreview || profileData.profileImage);
+                      // Hide the image on error, fallback will show
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
                 ) : null}
                 <AvatarFallback className="bg-hexa-secondary text-black text-2xl">
                   <User className="w-12 h-12" />
@@ -530,31 +682,15 @@ const EngineerProfile = () => {
                   />
                 </div>
               </div>
-              <div className="space-y-2.5">
-                <Label className="text-hexa-text-dark text-base font-medium">{language === "en" ? "Phone Number" : "رقم الهاتف"}</Label>
-                <div className="relative">
-                  <Phone className={`absolute top-1/2 transform -translate-y-1/2 text-hexa-text-light w-4 h-4 ${language === "ar" ? "right-3" : "left-3"}`} />
-                  <Input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange("phone", e.target.value)}
-                    className={`${language === "ar" ? "pr-10" : "pl-10"} bg-hexa-bg border-hexa-border text-hexa-text-dark placeholder:text-hexa-text-light h-11`}
-                    placeholder={language === "en" ? "Enter your phone number" : "أدخل رقم هاتفك"}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2.5">
-                <Label className="text-hexa-text-dark text-base font-medium">{language === "en" ? "Location" : "الموقع"}</Label>
-                <div className="relative">
-                  <MapPin className={`absolute top-1/2 transform -translate-y-1/2 text-hexa-text-light w-4 h-4 ${language === "ar" ? "right-3" : "left-3"}`} />
-                  <Input
-                    value={formData.location}
-                    onChange={(e) => handleInputChange("location", e.target.value)}
-                    className={`${language === "ar" ? "pr-10" : "pl-10"} bg-hexa-bg border-hexa-border text-hexa-text-dark placeholder:text-hexa-text-light h-11`}
-                    placeholder={language === "en" ? "Enter your location" : "أدخل موقعك"}
-                  />
-                </div>
-              </div>
+              <CountryPhoneInput
+                control={control}
+                countryCodeName="countryCode"
+                phoneName="phone"
+                cityName="city"
+                label={language === "en" ? "Contact Information" : "معلومات الاتصال"}
+                errors={errors}
+                className="md:col-span-2"
+              />
             </div>
 
             <div className="space-y-2.5">
@@ -626,7 +762,7 @@ const EngineerProfile = () => {
 
             <div className="flex items-center justify-end gap-4 pt-6 border-t border-hexa-border">
               <Button
-                onClick={handleSave}
+                type="submit"
                 disabled={saving}
                 className="bg-hexa-secondary hover:bg-hexa-secondary/90 text-black font-semibold h-11 px-6"
               >
@@ -643,6 +779,7 @@ const EngineerProfile = () => {
                 )}
               </Button>
             </div>
+            </form>
           </CardContent>
         </Card>
       </div>

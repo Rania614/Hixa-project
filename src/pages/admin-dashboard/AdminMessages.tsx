@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Search, Send, Paperclip, Loader2, Briefcase, User, UserCheck, CheckCircle, Clock } from "lucide-react";
+import { Search, Send, Paperclip, Loader2, Briefcase, User, UserCheck, CheckCircle, Clock, X } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/components/ui/sonner";
 import { messagesApi, ProjectRoom, ChatRoom, Message } from "@/services/messagesApi";
@@ -43,6 +43,9 @@ const AdminMessages = () => {
   const [hasMore, setHasMore] = useState(true);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
   
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -412,6 +415,48 @@ const AdminMessages = () => {
     }
   };
 
+  const handleRejectEngineer = async () => {
+    if (!rejectReason.trim()) {
+      toast.error(language === 'en' ? 'Please provide a rejection reason' : 'يرجى إدخال سبب الرفض');
+      return;
+    }
+    
+    try {
+      if (!selectedChatRoom || !selectedProjectRoom || selectedChatRoom.type !== 'admin-engineer') return;
+      
+      setRejecting(true);
+      const engineerId = selectedChatRoom.engineer || selectedChatRoom.participants.find(p => p.role === 'engineer')?.user;
+      if (!engineerId) {
+        toast.error(language === 'en' ? 'Engineer ID not found' : 'لم يتم العثور على معرف المهندس');
+        return;
+      }
+      
+      await http.post(`/projects/${selectedProjectRoom.project}/chat/${selectedChatRoom._id}/reject`, {
+        reason: rejectReason,
+        engineerId: engineerId,
+      });
+      
+      toast.success(language === 'en' ? 'Engineer rejected successfully' : 'تم رفض المهندس بنجاح');
+      setShowRejectModal(false);
+      setRejectReason("");
+      
+      // Refresh chat rooms
+      if (selectedProjectRoom) {
+        loadChatRooms(selectedProjectRoom._id);
+        // Clear selected chat room if it was rejected
+        if (selectedChatRoom) {
+          setSelectedChatRoom(null);
+          setMessages([]);
+        }
+      }
+    } catch (error: any) {
+      console.error('Error rejecting engineer:', error);
+      toast.error(language === 'en' ? 'Failed to reject engineer' : 'فشل رفض المهندس');
+    } finally {
+      setRejecting(false);
+    }
+  };
+
   const getChatRoomTitle = (chatRoom: ChatRoom): string => {
     if (chatRoom.type === 'admin-client') {
       const clientParticipant = chatRoom.participants.find((p) => p.role === 'client');
@@ -730,14 +775,24 @@ const AdminMessages = () => {
                      {/* Chat Header */}
                      <CardHeader className="flex-shrink-0 relative pb-2 px-3 pt-3">
                        {selectedChatRoom.type === 'admin-engineer' && (
-                         <Button
-                           onClick={() => setShowAssignModal(true)}
-                           className="absolute top-2 left-2 bg-yellow-400/80 hover:bg-yellow-400/90 text-foreground h-6 px-2 text-[10px] flex-shrink-0 z-10"
-                           size="sm"
-                         >
-                           <UserCheck className="h-3 w-3 mr-1" />
-                           {language === 'en' ? 'Assign' : 'تعيين'}
-                         </Button>
+                         <div className="absolute top-2 left-2 flex gap-2 z-10">
+                           <Button
+                             onClick={() => setShowAssignModal(true)}
+                             className="bg-yellow-400/80 hover:bg-yellow-400/90 text-foreground h-6 px-2 text-[10px] flex-shrink-0"
+                             size="sm"
+                           >
+                             <UserCheck className="h-3 w-3 mr-1" />
+                             {language === 'en' ? 'Assign' : 'تعيين'}
+                           </Button>
+                           <Button
+                             onClick={() => setShowRejectModal(true)}
+                             className="bg-red-500/80 hover:bg-red-500/90 text-white h-6 px-2 text-[10px] flex-shrink-0"
+                             size="sm"
+                           >
+                             <X className="h-3 w-3 mr-1" />
+                             {language === 'en' ? 'Reject' : 'رفض'}
+                           </Button>
+                         </div>
                        )}
                            <div className="flex items-center gap-2">
                          <div className={`w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 ${
@@ -938,6 +993,57 @@ const AdminMessages = () => {
           </div>
         </main>
       </div>
+
+      {/* Reject Engineer Modal */}
+      <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{language === 'en' ? 'Reject Engineer' : 'رفض المهندس'}</DialogTitle>
+            <DialogDescription>
+              {language === 'en' 
+                ? 'Please provide a reason for rejecting this engineer.'
+                : 'يرجى إدخال سبب رفض هذا المهندس.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                {language === 'en' ? 'Rejection Reason' : 'سبب الرفض'}
+              </label>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder={language === 'en' ? 'Enter rejection reason...' : 'أدخل سبب الرفض...'}
+                className="w-full min-h-[100px] p-3 border rounded-md bg-background text-foreground resize-none"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowRejectModal(false);
+              setRejectReason("");
+            }}>
+              {language === 'en' ? 'Cancel' : 'إلغاء'}
+            </Button>
+            <Button 
+              onClick={handleRejectEngineer}
+              disabled={rejecting || !rejectReason.trim()}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              {rejecting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {language === 'en' ? 'Rejecting...' : 'جاري الرفض...'}
+                </>
+              ) : (
+                <>
+                  {language === 'en' ? 'Reject Engineer' : 'رفض المهندس'}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Assign Engineer Modal */}
       <Dialog open={showAssignModal} onOpenChange={setShowAssignModal}>

@@ -1,4 +1,5 @@
 import React from "react";
+import { useForm, Controller } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { useApp } from "@/context/AppContext";
@@ -9,6 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { User, Mail, Phone, MapPin, Save } from "lucide-react";
+import { CountryPhoneInput } from "@/components/shared/CountryPhoneInput";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -21,6 +30,22 @@ import {
 const ClientProfile = () => {
   const { language } = useApp();
   const navigate = useNavigate();
+  
+  const { control, handleSubmit, formState: { errors } } = useForm({
+    defaultValues: {
+      name: "Ahmed Al-Saud",
+      email: "ahmed@example.com",
+      countryCode: "SA",
+      phone: "+966501234567",
+      location: "Riyadh, Saudi Arabia",
+      bio: "Experienced project manager with a passion for innovative engineering solutions.",
+    },
+  });
+  
+  const onSubmit = (data: any) => {
+    console.log("Form data:", data);
+    // TODO: Implement API call to update profile
+  };
 
   return (
     <DashboardLayout userType="client">
@@ -66,6 +91,7 @@ const ClientProfile = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8 px-6 md:px-8 pb-8">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
               <div className="flex items-start gap-6 pb-6 border-b border-hexa-border">
                 <Avatar className="w-24 h-24 flex-shrink-0">
                   <AvatarFallback className="bg-hexa-secondary text-black text-2xl">
@@ -77,6 +103,7 @@ const ClientProfile = () => {
                     {language === "en" ? "Profile Picture" : "صورة الملف الشخصي"}
                   </h3>
                   <Button 
+                    type="button"
                     variant="outline"
                     className="border-hexa-border bg-hexa-bg text-hexa-text-light hover:bg-hexa-secondary hover:text-black hover:border-hexa-secondary mb-2"
                   >
@@ -92,7 +119,7 @@ const ClientProfile = () => {
                 <div className="space-y-2.5">
                   <Label className="text-hexa-text-dark text-base font-medium">{language === "en" ? "Full Name" : "الاسم الكامل"}</Label>
                   <Input 
-                    defaultValue="Ahmed Al-Saud" 
+                    {...control.register("name")}
                     className="bg-hexa-bg border-hexa-border text-hexa-text-dark placeholder:text-hexa-text-light h-11"
                   />
                 </div>
@@ -102,55 +129,45 @@ const ClientProfile = () => {
                     <Mail className={`absolute top-1/2 transform -translate-y-1/2 text-hexa-text-light w-4 h-4 ${language === "ar" ? "right-3" : "left-3"}`} />
                     <Input 
                       type="email" 
-                      defaultValue="ahmed@example.com" 
+                      {...control.register("email")}
                       className={`${language === "ar" ? "pr-10" : "pl-10"} bg-hexa-bg border-hexa-border text-hexa-text-dark placeholder:text-hexa-text-light h-11`}
                     />
                   </div>
                 </div>
-                <div className="space-y-2.5">
-                  <Label className="text-hexa-text-dark text-base font-medium">{language === "en" ? "Phone Number" : "رقم الهاتف"}</Label>
-                  <div className="relative">
-                    <Phone className={`absolute top-1/2 transform -translate-y-1/2 text-hexa-text-light w-4 h-4 ${language === "ar" ? "right-3" : "left-3"}`} />
-                    <Input 
-                      type="tel" 
-                      defaultValue="+966 50 123 4567" 
-                      className={`${language === "ar" ? "pr-10" : "pl-10"} bg-hexa-bg border-hexa-border text-hexa-text-dark placeholder:text-hexa-text-light h-11`}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2.5">
-                  <Label className="text-hexa-text-dark text-base font-medium">{language === "en" ? "Location" : "الموقع"}</Label>
-                  <div className="relative">
-                    <MapPin className={`absolute top-1/2 transform -translate-y-1/2 text-hexa-text-light w-4 h-4 ${language === "ar" ? "right-3" : "left-3"}`} />
-                    <Input 
-                      defaultValue="Riyadh, Saudi Arabia" 
-                      className={`${language === "ar" ? "pr-10" : "pl-10"} bg-hexa-bg border-hexa-border text-hexa-text-dark placeholder:text-hexa-text-light h-11`}
-                    />
-                  </div>
-                </div>
+                <CountryPhoneInput
+                  control={control}
+                  countryCodeName="countryCode"
+                  phoneName="phone"
+                  cityName="city"
+                  label={language === "en" ? "Contact Information" : "معلومات الاتصال"}
+                  errors={errors}
+                  className="md:col-span-2"
+                />
                 <div className="md:col-span-2 space-y-2.5">
                   <Label className="text-hexa-text-dark text-base font-medium">{language === "en" ? "Bio" : "نبذة"}</Label>
                   <textarea
+                    {...control.register("bio")}
                     className="w-full min-h-[120px] p-4 border-hexa-border rounded-lg resize-none bg-hexa-bg text-hexa-text-dark placeholder:text-hexa-text-light border focus:outline-none focus:ring-2 focus:ring-hexa-secondary/50 focus:border-hexa-secondary transition-all"
                     placeholder={language === "en" ? "Tell us about yourself..." : "أخبرنا عن نفسك..."}
-                    defaultValue="Experienced project manager with a passion for innovative engineering solutions."
                   />
                 </div>
               </div>
 
               <div className="flex items-center justify-end gap-4 pt-6 border-t border-hexa-border">
                 <Button 
+                  type="button"
                   variant="outline"
                   onClick={() => window.history.back()}
                   className="border-hexa-border bg-hexa-bg text-hexa-text-light hover:bg-hexa-secondary hover:text-black hover:border-hexa-secondary h-11 px-6"
                 >
                   {language === "en" ? "Cancel" : "إلغاء"}
                 </Button>
-                <Button className="bg-hexa-secondary hover:bg-hexa-secondary/90 text-black font-semibold h-11 px-6">
+                <Button type="submit" className="bg-hexa-secondary hover:bg-hexa-secondary/90 text-black font-semibold h-11 px-6">
                   <Save className={`w-4 h-4 ${language === "ar" ? "ml-2" : "mr-2"}`} />
                   {language === "en" ? "Save Changes" : "حفظ التغييرات"}
                 </Button>
               </div>
+            </form>
           </CardContent>
         </Card>
       </div>

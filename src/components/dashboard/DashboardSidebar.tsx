@@ -7,7 +7,6 @@ import {
   FolderKanban,
   MessageSquare,
   Bell,
-  FileText,
   User,
   LogOut,
   Briefcase,
@@ -35,7 +34,6 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ userType }) 
     { icon: FolderKanban, label: getDashboardText("myProjects", language), path: "/client/projects" },
     { icon: MessageSquare, label: getDashboardText("messages", language), path: "/client/messages" },
     { icon: Bell, label: getDashboardText("notifications", language), path: "/client/notifications" },
-    { icon: FileText, label: getDashboardText("contractsFiles", language), path: "/client/contracts" },
     { icon: User, label: getDashboardText("profileSettings", language), path: "/client/profile" },
   ];
 

@@ -424,17 +424,31 @@ const EngineerProjectDetails = () => {
                             </Badge>
                           </CardDescription>
                         </div>
-                        {proposal.status === "pending" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/engineer/projects/${id}/proposal`)}
-                            className="border-hexa-border bg-hexa-bg text-hexa-text-light hover:bg-hexa-secondary hover:text-black hover:border-hexa-secondary"
-                          >
-                            <Edit className="w-4 h-4 ms-2" />
-                            {language === "en" ? "Edit" : "تعديل"}
-                          </Button>
-                        )}
+                        {proposal.status === "pending" && (() => {
+                          // Check if proposal can be edited (within 1 hour of creation)
+                          let canEdit = false;
+                          if (proposal.createdAt) {
+                            const createdAt = new Date(proposal.createdAt);
+                            const now = new Date();
+                            const hoursDiff = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+                            canEdit = hoursDiff < 1;
+                          } else {
+                            // If createdAt is not available, allow edit (backend will handle validation)
+                            canEdit = true;
+                          }
+                          
+                          return canEdit ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate(`/engineer/projects/${id}/proposal`)}
+                              className="border-hexa-border bg-hexa-bg text-hexa-text-light hover:bg-hexa-secondary hover:text-black hover:border-hexa-secondary"
+                            >
+                              <Edit className="w-4 h-4 ms-2" />
+                              {language === "en" ? "Edit" : "تعديل"}
+                            </Button>
+                          ) : null;
+                        })()}
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">

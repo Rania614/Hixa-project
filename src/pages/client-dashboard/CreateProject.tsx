@@ -9,7 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, MapPin, Loader2 } from "lucide-react";
+import { http } from "@/services/http";
+import { toast } from "@/components/ui/sonner";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -26,11 +28,14 @@ const CreateProject = () => {
     title: "",
     type: "",
     category: "",
+    country: "",
+    city: "",
     location: "",
     description: "",
     requirements: "",
     deadline: "",
   });
+  const [submitting, setSubmitting] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -38,15 +43,102 @@ const CreateProject = () => {
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const updated = { ...prev, [name]: value };
+      
+      // If country changes, reset city
+      if (name === "country") {
+        updated.city = "";
+        updated.location = "";
+      }
+      
+      // Update location when both country and city are selected
+      if (name === "city" && updated.country && value) {
+        const selectedCountry = countries.find(c => c.value === updated.country);
+        const selectedCity = citiesByCountry[updated.country]?.find(c => c.value === value);
+        if (selectedCountry && selectedCity) {
+          updated.location = `${language === "en" ? selectedCity.label.en : selectedCity.label.ar}, ${language === "en" ? selectedCountry.label : selectedCountry.label}`;
+        }
+      } else if (updated.country && updated.city) {
+        const selectedCountry = countries.find(c => c.value === updated.country);
+        const selectedCity = citiesByCountry[updated.country]?.find(c => c.value === updated.city);
+        if (selectedCountry && selectedCity) {
+          updated.location = `${language === "en" ? selectedCity.label.en : selectedCity.label.ar}, ${language === "en" ? selectedCountry.label : selectedCountry.label}`;
+        }
+      }
+      
+      return updated;
+    });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission here
-    console.log("Project Data:", formData);
-    // Navigate back to projects list after submission
-    navigate("/client/projects");
+    
+    // Validate required fields
+    if (!formData.title || !formData.type || !formData.country || !formData.city || !formData.description) {
+      toast.error(language === "en" ? "Please fill in all required fields" : "يرجى ملء جميع الحقول المطلوبة");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      
+      // Prepare project data
+      const projectData = {
+        title: formData.title,
+        name: formData.title, // Some APIs use 'name' instead of 'title'
+        type: formData.type,
+        category: formData.category || formData.type,
+        description: formData.description,
+        requirements: formData.requirements || "",
+        country: formData.country,
+        location: formData.location || `${formData.city}, ${countries.find(c => c.value === formData.country)?.label || ""}`,
+        city: formData.city,
+        deadline: formData.deadline || undefined,
+        status: "draft", // New projects start as draft
+      };
+
+      console.log("📤 Sending project data:", projectData);
+
+      // Try different possible endpoints
+      let response;
+      const possibleEndpoints = [
+        '/projects',
+        '/client/projects',
+      ];
+
+      let lastError;
+      for (const endpoint of possibleEndpoints) {
+        try {
+          response = await http.post(endpoint, projectData);
+          if (response && response.data) {
+            console.log(`✅ Successfully created project via ${endpoint}`);
+            break;
+          }
+        } catch (err: any) {
+          lastError = err;
+          console.warn(`⚠️ Failed to create via ${endpoint}:`, err.response?.status || err.message);
+          if (err.response?.status !== 404) {
+            // If it's not 404, it means endpoint exists but failed, so stop trying
+            break;
+          }
+          continue;
+        }
+      }
+
+      if (!response || !response.data) {
+        throw lastError || new Error('Failed to create project');
+      }
+
+      toast.success(language === "en" ? "Project created successfully" : "تم إنشاء المشروع بنجاح");
+      navigate("/client/projects");
+    } catch (error: any) {
+      console.error("❌ Error creating project:", error);
+      const errorMessage = error.response?.data?.message || error.message || (language === "en" ? "Failed to create project" : "فشل إنشاء المشروع");
+      toast.error(errorMessage);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const projectTypes = [
@@ -56,6 +148,85 @@ const CreateProject = () => {
     { value: "mechanical", label: language === "en" ? "Mechanical Engineering" : "الهندسة الميكانيكية" },
     { value: "electrical", label: language === "en" ? "Electrical Engineering" : "الهندسة الكهربائية" },
   ];
+
+  const countries = [
+    { value: "SA", label: language === "en" ? "Saudi Arabia" : "السعودية" },
+    { value: "EG", label: language === "en" ? "Egypt" : "مصر" },
+    { value: "AE", label: language === "en" ? "United Arab Emirates" : "الإمارات العربية المتحدة" },
+    { value: "KW", label: language === "en" ? "Kuwait" : "الكويت" },
+    { value: "QA", label: language === "en" ? "Qatar" : "قطر" },
+    { value: "BH", label: language === "en" ? "Bahrain" : "البحرين" },
+    { value: "OM", label: language === "en" ? "Oman" : "عمان" },
+    { value: "JO", label: language === "en" ? "Jordan" : "الأردن" },
+    { value: "LB", label: language === "en" ? "Lebanon" : "لبنان" },
+  ];
+
+  const citiesByCountry: { [key: string]: { value: string; label: { en: string; ar: string } }[] } = {
+    SA: [
+      { value: "Riyadh", label: { en: "Riyadh", ar: "الرياض" } },
+      { value: "Jeddah", label: { en: "Jeddah", ar: "جدة" } },
+      { value: "Dammam", label: { en: "Dammam", ar: "الدمام" } },
+      { value: "Mecca", label: { en: "Mecca", ar: "مكة المكرمة" } },
+      { value: "Medina", label: { en: "Medina", ar: "المدينة المنورة" } },
+      { value: "Khobar", label: { en: "Khobar", ar: "الخبر" } },
+      { value: "Abha", label: { en: "Abha", ar: "أبها" } },
+      { value: "Tabuk", label: { en: "Tabuk", ar: "تبوك" } },
+      { value: "Taif", label: { en: "Taif", ar: "الطائف" } },
+      { value: "Buraydah", label: { en: "Buraydah", ar: "بريدة" } },
+    ],
+    EG: [
+      { value: "Cairo", label: { en: "Cairo", ar: "القاهرة" } },
+      { value: "Alexandria", label: { en: "Alexandria", ar: "الإسكندرية" } },
+      { value: "Giza", label: { en: "Giza", ar: "الجيزة" } },
+      { value: "Port Said", label: { en: "Port Said", ar: "بورسعيد" } },
+      { value: "Suez", label: { en: "Suez", ar: "السويس" } },
+      { value: "Luxor", label: { en: "Luxor", ar: "الأقصر" } },
+      { value: "Aswan", label: { en: "Aswan", ar: "أسوان" } },
+    ],
+    AE: [
+      { value: "Dubai", label: { en: "Dubai", ar: "دبي" } },
+      { value: "Abu Dhabi", label: { en: "Abu Dhabi", ar: "أبو ظبي" } },
+      { value: "Sharjah", label: { en: "Sharjah", ar: "الشارقة" } },
+      { value: "Al Ain", label: { en: "Al Ain", ar: "العين" } },
+      { value: "Ajman", label: { en: "Ajman", ar: "عجمان" } },
+    ],
+    KW: [
+      { value: "Kuwait City", label: { en: "Kuwait City", ar: "مدينة الكويت" } },
+      { value: "Al Ahmadi", label: { en: "Al Ahmadi", ar: "الأحمدي" } },
+      { value: "Hawalli", label: { en: "Hawalli", ar: "حولي" } },
+    ],
+    QA: [
+      { value: "Doha", label: { en: "Doha", ar: "الدوحة" } },
+      { value: "Al Rayyan", label: { en: "Al Rayyan", ar: "الريان" } },
+      { value: "Al Wakrah", label: { en: "Al Wakrah", ar: "الوكرة" } },
+    ],
+    BH: [
+      { value: "Manama", label: { en: "Manama", ar: "المنامة" } },
+      { value: "Riffa", label: { en: "Riffa", ar: "الرفاع" } },
+      { value: "Muharraq", label: { en: "Muharraq", ar: "المحرق" } },
+    ],
+    OM: [
+      { value: "Muscat", label: { en: "Muscat", ar: "مسقط" } },
+      { value: "Salalah", label: { en: "Salalah", ar: "صلالة" } },
+      { value: "Sohar", label: { en: "Sohar", ar: "صحار" } },
+    ],
+    JO: [
+      { value: "Amman", label: { en: "Amman", ar: "عمان" } },
+      { value: "Zarqa", label: { en: "Zarqa", ar: "الزرقاء" } },
+      { value: "Irbid", label: { en: "Irbid", ar: "إربد" } },
+    ],
+    LB: [
+      { value: "Beirut", label: { en: "Beirut", ar: "بيروت" } },
+      { value: "Tripoli", label: { en: "Tripoli", ar: "طرابلس" } },
+      { value: "Sidon", label: { en: "Sidon", ar: "صيدا" } },
+    ],
+  };
+
+  const getCitiesForCountry = (countryCode: string) => {
+    return citiesByCountry[countryCode] || [];
+  };
+
+  const availableCities = getCitiesForCountry(formData.country);
 
   return (
     <DashboardLayout userType="client">
@@ -188,20 +359,80 @@ const CreateProject = () => {
                 </div>
               </div>
 
-              {/* Location */}
-              <div className="space-y-2.5">
-                <Label htmlFor="location" className="text-hexa-text-dark text-base font-medium">
+              {/* Location - Country and City */}
+              <div className="space-y-4">
+                <Label className="text-hexa-text-dark text-base font-medium block">
                   {getDashboardText("location", language)} *
                 </Label>
-                <Input
-                  id="location"
-                  name="location"
-                  value={formData.location}
-                  onChange={handleInputChange}
-                  required
-                  className="bg-hexa-bg border-hexa-border text-hexa-text-dark placeholder:text-hexa-text-light h-11"
-                  placeholder={language === "en" ? "e.g., Riyadh, Saudi Arabia" : "مثل: الرياض، السعودية"}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Country Select */}
+                  <div className="space-y-2.5">
+                    <Label htmlFor="country" className="text-hexa-text-dark text-sm font-medium">
+                      {language === "en" ? "Country" : "الدولة"} *
+                    </Label>
+                    <Select
+                      value={formData.country}
+                      onValueChange={(value) => handleSelectChange("country", value)}
+                      required
+                    >
+                      <SelectTrigger className="bg-hexa-bg border-hexa-border text-hexa-text-dark h-11">
+                        <SelectValue placeholder={language === "en" ? "Select country" : "اختر الدولة"} />
+                      </SelectTrigger>
+                      <SelectContent className="bg-hexa-card border-hexa-border">
+                        {countries.map((country) => (
+                          <SelectItem
+                            key={country.value}
+                            value={country.value}
+                            className="text-hexa-text-dark hover:bg-hexa-secondary/20 focus:bg-hexa-secondary/20"
+                          >
+                            {country.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* City Select */}
+                  <div className="space-y-2.5">
+                    <Label htmlFor="city" className="text-hexa-text-dark text-sm font-medium">
+                      {language === "en" ? "City" : "المدينة"} *
+                    </Label>
+                    <Select
+                      value={formData.city}
+                      onValueChange={(value) => handleSelectChange("city", value)}
+                      required
+                      disabled={!formData.country || availableCities.length === 0}
+                    >
+                      <SelectTrigger className="bg-hexa-bg border-hexa-border text-hexa-text-dark h-11">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-hexa-text-light" />
+                          <SelectValue placeholder={
+                            !formData.country 
+                              ? (language === "en" ? "Select country first" : "اختر الدولة أولاً")
+                              : (language === "en" ? "Select city" : "اختر المدينة")
+                          } />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent className="bg-hexa-card border-hexa-border">
+                        {availableCities.length > 0 ? (
+                          availableCities.map((city) => (
+                            <SelectItem
+                              key={city.value}
+                              value={city.value}
+                              className="text-hexa-text-dark hover:bg-hexa-secondary/20 focus:bg-hexa-secondary/20"
+                            >
+                              {language === "en" ? city.label.en : city.label.ar}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <div className="px-2 py-1.5 text-sm text-hexa-text-light text-center">
+                            {language === "en" ? "No cities available" : "لا توجد مدن متاحة"}
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
 
               {/* Deadline */}
@@ -264,10 +495,20 @@ const CreateProject = () => {
                 </Button>
                 <Button
                   type="submit"
+                  disabled={submitting}
                   className="bg-hexa-secondary hover:bg-hexa-secondary/90 text-black font-semibold px-6 h-11"
                 >
-                  <Save className={`w-4 h-4 ${language === "ar" ? "ml-2" : "mr-2"}`} />
-                  {language === "en" ? "Create Project" : "إنشاء المشروع"}
+                  {submitting ? (
+                    <>
+                      <Loader2 className={`w-4 h-4 animate-spin ${language === "ar" ? "ml-2" : "mr-2"}`} />
+                      {language === "en" ? "Creating..." : "جاري الإنشاء..."}
+                    </>
+                  ) : (
+                    <>
+                      <Save className={`w-4 h-4 ${language === "ar" ? "ml-2" : "mr-2"}`} />
+                      {language === "en" ? "Create Project" : "إنشاء المشروع"}
+                    </>
+                  )}
                 </Button>
               </div>
             </form>
