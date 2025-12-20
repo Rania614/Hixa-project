@@ -13,6 +13,10 @@ import ContentManagement from "./pages/admin-dashboard/ContentManagement";
 import Orders from "./pages/admin-dashboard/Orders";
 import Subscribers from "./pages/admin-dashboard/Subscribers";
 import AdminMessages from "./pages/admin-dashboard/AdminMessages";
+import AdminUsers from "./pages/admin-dashboard/AdminUsers";
+import AdminProjects from "./pages/admin-dashboard/AdminProjects";
+import AdminProjectDetails from "./pages/admin-dashboard/AdminProjectDetails";
+import AdminSettings from "./pages/admin-dashboard/AdminSettings";
 import NotFound from "./pages/NotFound";
 import CompanyLanding from "./pages/CompanyLanding";
 import AuthPage from "./pages/AuthPage";
@@ -252,6 +256,38 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <AdminMessages />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/users"
+        element={
+          <ProtectedRoute>
+            <AdminUsers />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/projects"
+        element={
+          <ProtectedRoute>
+            <AdminProjects />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/projects/:id"
+        element={
+          <ProtectedRoute>
+            <AdminProjectDetails />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/settings"
+        element={
+          <ProtectedRoute>
+            <AdminSettings />
           </ProtectedRoute>
         }
       />

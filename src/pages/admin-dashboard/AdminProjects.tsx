@@ -1,253 +1,252 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AdminSidebar } from '@/components/AdminSidebar';
 import { AdminTopBar } from '@/components/AdminTopBar';
 import { useApp } from '@/context/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { 
   Briefcase, 
   Search, 
-  Plus,
   CheckCircle,
   Clock,
   AlertCircle,
-  MoreHorizontal,
-  Edit,
-  Trash2,
-  Upload,
-  X,
-  FileText
+  Eye,
+  EyeOff,
+  Users,
+  MapPin,
+  DollarSign,
+  Calendar,
+  FileText,
+  Loader2,
+  Filter,
+  ArrowRight,
+  Building2,
+  User
 } from 'lucide-react';
 import { HexagonIcon } from '@/components/ui/hexagon-icon';
 import { http } from '@/services/http';
 import { toast } from '@/components/ui/sonner';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+
+interface Project {
+  _id: string;
+  name: string;
+  title?: string;
+  description: string;
+  category: string;
+  country: string;
+  location?: string;
+  budget?: number;
+  status: 'draft' | 'pending_review' | 'approved' | 'published' | 'assigned' | 'in_progress' | 'completed' | 'rejected' | 'archived';
+  client?: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  clientId?: string;
+  assignedTo?: {
+    _id: string;
+    name: string;
+    type: 'engineer' | 'company';
+  };
+  proposalsCount?: number;
+  createdAt: string;
+  targetRoles?: string[];
+  requiredSkills?: string[];
+  visibility?: {
+    visibleTo?: string[];
+    hiddenFrom?: string[];
+  };
+}
 
 const AdminProjects = () => {
   const { language } = useApp();
-  const [projects, setProjects] = useState<any[]>([]);
+  const navigate = useNavigate();
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [statistics, setStatistics] = useState({
-    total: 0,
+    pendingReview: 0,
     active: 0,
-    pending: 0,
-    completed: 0
+    assigned: 0,
+    rejected: 0,
+    total: 0,
   });
-  
-  // Modal states
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showAttachmentModal, setShowAttachmentModal] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<any>(null);
-  const [projectForm, setProjectForm] = useState({
-    name: '',
-    description: '',
-    clientId: '',
-    engineerId: '',
-    status: 'pending',
-    deadline: '',
-    budget: ''
-  });
-  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
-  // Fetch all projects
+  // Mock Data for demonstration
+  const getMockProjects = (): Project[] => [
+    {
+      _id: '1',
+      name: 'Residential Building Design - Riyadh',
+      description: 'Modern residential building design project requiring expertise in sustainable architecture',
+      category: 'architecture',
+      country: 'Saudi Arabia',
+      status: 'pending_review',
+      client: { _id: 'c1', name: 'Ahmed Al-Saud', email: 'ahmed@example.com' },
+      proposalsCount: 0,
+      createdAt: new Date().toISOString(),
+      targetRoles: ['engineer'],
+      requiredSkills: ['Architecture', 'Sustainable Design', 'Urban Planning'],
+      budget: 50000,
+    },
+    {
+      _id: '2',
+      name: 'Luxury Villa Interior Design',
+      description: 'Complete interior design for a luxury villa in Dubai',
+      category: 'interior',
+      country: 'UAE',
+      status: 'published',
+      client: { _id: 'c2', name: 'Fatima Al-Zahra', email: 'fatima@example.com' },
+      proposalsCount: 5,
+      createdAt: new Date(Date.now() - 86400000).toISOString(),
+      targetRoles: ['engineer', 'company'],
+      requiredSkills: ['Interior Design', '3D Modeling', 'Luxury Design'],
+      budget: 35000,
+    },
+    {
+      _id: '3',
+      name: 'Commercial Building MEP Design',
+      description: 'MEP design for a 20-story commercial building',
+      category: 'mep',
+      country: 'Egypt',
+      status: 'assigned',
+      client: { _id: 'c3', name: 'Mohamed Hassan', email: 'mohamed@example.com' },
+      assignedTo: { _id: 'e1', name: 'Engineer XYZ', type: 'engineer' },
+      proposalsCount: 8,
+      createdAt: new Date(Date.now() - 172800000).toISOString(),
+      targetRoles: ['engineer'],
+      requiredSkills: ['MEP', 'HVAC', 'Electrical Systems'],
+      budget: 75000,
+    },
+    {
+      _id: '4',
+      name: 'Hotel Renovation Project',
+      description: 'Complete renovation of a 5-star hotel in Cairo',
+      category: 'interior',
+      country: 'Egypt',
+      status: 'in_progress',
+      client: { _id: 'c4', name: 'Sara Ibrahim', email: 'sara@example.com' },
+      assignedTo: { _id: 'c5', name: 'Design Co.', type: 'company' },
+      proposalsCount: 12,
+      createdAt: new Date(Date.now() - 259200000).toISOString(),
+      targetRoles: ['company'],
+      requiredSkills: ['Interior Design', 'Project Management', 'Hotel Design'],
+      budget: 120000,
+    },
+    {
+      _id: '5',
+      name: 'Shopping Mall Architecture',
+      description: 'Architectural design for a large shopping mall',
+      category: 'architecture',
+      country: 'Saudi Arabia',
+      status: 'rejected',
+      client: { _id: 'c6', name: 'Khalid Al-Mansouri', email: 'khalid@example.com' },
+      proposalsCount: 0,
+      createdAt: new Date(Date.now() - 345600000).toISOString(),
+      targetRoles: ['engineer', 'company'],
+      requiredSkills: ['Architecture', 'Commercial Design', 'Large Scale Projects'],
+      budget: 200000,
+    },
+  ];
+
+  // Fetch projects
   const fetchProjects = async () => {
     try {
       setLoading(true);
       const response = await http.get('/projects');
-      // Handle different response structures
-      let projectsData = response.data;
-      
-      // If response.data is an object with a data property
-      if (projectsData && typeof projectsData === 'object' && !Array.isArray(projectsData)) {
-        projectsData = projectsData.data || projectsData.projects || [];
-      }
-      
-      // Ensure it's always an array
-      if (!Array.isArray(projectsData)) {
-        console.warn("Projects data is not an array:", projectsData);
-        projectsData = [];
-      }
-      
+      let projectsData = response.data?.data || response.data?.projects || response.data || [];
+      if (!Array.isArray(projectsData)) projectsData = [];
       setProjects(projectsData);
     } catch (error: any) {
       console.error('Error fetching projects:', error);
-      // Don't show error toast for 404, as there might not be projects yet
-      if (error.response?.status !== 404) {
-        toast.error(language === 'en' ? 'Failed to load projects' : 'فشل تحميل المشاريع');
+      // Use mock data if API fails
+      if (error.response?.status === 404 || error.code === 'ERR_NETWORK') {
+        console.log('Using mock data for projects');
+        setProjects(getMockProjects());
+      } else {
+        if (error.response?.status !== 404) {
+          toast.error(language === 'en' ? 'Failed to load projects' : 'فشل تحميل المشاريع');
+        }
+        setProjects([]);
       }
-      setProjects([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch project statistics
+  // Fetch statistics
   const fetchStatistics = async () => {
     try {
       const response = await http.get('/projects/statistics');
-      setStatistics(response.data || { total: 0, active: 0, pending: 0, completed: 0 });
+      setStatistics(response.data?.data || response.data || statistics);
     } catch (error: any) {
-      console.error('Error fetching statistics:', error);
-      // Calculate from projects if API fails
-      const active = projects.filter((p: any) => p.status === 'in_progress' || p.status === 'active').length;
-      const pending = projects.filter((p: any) => p.status === 'pending').length;
-      const completed = projects.filter((p: any) => p.status === 'completed').length;
+      // Calculate from projects
+      const pendingReview = projects.filter(p => p.status === 'pending_review' || p.status === 'draft').length;
+      const active = projects.filter(p => p.status === 'approved' || p.status === 'published').length;
+      const assigned = projects.filter(p => p.status === 'assigned' || p.status === 'in_progress').length;
+      const rejected = projects.filter(p => p.status === 'rejected' || p.status === 'archived').length;
+      
       setStatistics({
-        total: projects.length,
+        pendingReview,
         active,
-        pending,
-        completed
+        assigned,
+        rejected,
+        total: projects.length,
       });
     }
   };
 
-  // Fetch project by ID
-  const fetchProjectById = async (id: string) => {
+  // Update project status
+  const updateProjectStatus = async (projectId: string, newStatus: string, reason?: string) => {
     try {
-      const response = await http.get(`/projects/${id}`);
-      return response.data;
-    } catch (error: any) {
-      console.error('Error fetching project:', error);
-      toast.error(language === 'en' ? 'Failed to load project' : 'فشل تحميل المشروع');
-      return null;
-    }
-  };
-
-  // Add new project
-  const handleAddProject = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await http.post('/projects', projectForm);
-      toast.success(language === 'en' ? 'Project added successfully' : 'تم إضافة المشروع بنجاح');
-      setShowAddModal(false);
-      resetForm();
+      await http.put(`/projects/${projectId}/status`, { status: newStatus, reason });
+      toast.success(language === 'en' ? 'Project status updated' : 'تم تحديث حالة المشروع');
       fetchProjects();
       fetchStatistics();
     } catch (error: any) {
-      console.error('Error adding project:', error);
-      toast.error(
-        language === 'en' 
-          ? error.response?.data?.message || 'Failed to add project'
-          : error.response?.data?.message || 'فشل إضافة المشروع'
-      );
+      console.error('Error updating project status:', error);
+      toast.error(language === 'en' ? 'Failed to update status' : 'فشل تحديث الحالة');
     }
   };
 
-  // Update project
-  const handleUpdateProject = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedProject) return;
+  // Approve and publish project
+  const approveProject = async (projectId: string) => {
     try {
-      await http.put(`/projects/${selectedProject._id || selectedProject.id}`, projectForm);
-      toast.success(language === 'en' ? 'Project updated successfully' : 'تم تحديث المشروع بنجاح');
-      setShowEditModal(false);
-      resetForm();
-      setSelectedProject(null);
+      await http.put(`/projects/${projectId}/approve`);
+      toast.success(language === 'en' ? 'Project approved and published' : 'تم الموافقة على المشروع ونشره');
       fetchProjects();
       fetchStatistics();
     } catch (error: any) {
-      console.error('Error updating project:', error);
-      toast.error(
-        language === 'en' 
-          ? error.response?.data?.message || 'Failed to update project'
-          : error.response?.data?.message || 'فشل تحديث المشروع'
-      );
+      console.error('Error approving project:', error);
+      toast.error(language === 'en' ? 'Failed to approve project' : 'فشل الموافقة على المشروع');
     }
   };
 
-  // Delete project
-  const handleDeleteProject = async (id: string) => {
-    if (!confirm(language === 'en' ? 'Are you sure you want to delete this project?' : 'هل أنت متأكد من حذف هذا المشروع؟')) {
+  // Reject project
+  const rejectProject = async (projectId: string, reason: string) => {
+    if (!reason.trim()) {
+      toast.error(language === 'en' ? 'Please provide a rejection reason' : 'يرجى إدخال سبب الرفض');
       return;
     }
     try {
-      await http.delete(`/client/projects/${id}`);
-      toast.success(language === 'en' ? 'Project deleted successfully' : 'تم حذف المشروع بنجاح');
+      await http.put(`/projects/${projectId}/reject`, { reason });
+      toast.success(language === 'en' ? 'Project rejected' : 'تم رفض المشروع');
       fetchProjects();
       fetchStatistics();
     } catch (error: any) {
-      console.error('Error deleting project:', error);
-      toast.error(language === 'en' ? 'Failed to delete project' : 'فشل حذف المشروع');
+      console.error('Error rejecting project:', error);
+      toast.error(language === 'en' ? 'Failed to reject project' : 'فشل رفض المشروع');
     }
-  };
-
-  // Upload attachment
-  const handleUploadAttachment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedProject || !attachmentFile) return;
-    try {
-      const formData = new FormData();
-      formData.append('attachment', attachmentFile);
-      await http.post(`/client/projects/${selectedProject._id || selectedProject.id}/attachments`, formData);
-      toast.success(language === 'en' ? 'Attachment uploaded successfully' : 'تم رفع المرفق بنجاح');
-      setShowAttachmentModal(false);
-      setAttachmentFile(null);
-      // Refresh project data
-      const updatedProject = await fetchProjectById(selectedProject._id || selectedProject.id);
-      if (updatedProject) {
-        setSelectedProject(updatedProject);
-      }
-    } catch (error: any) {
-      console.error('Error uploading attachment:', error);
-      toast.error(language === 'en' ? 'Failed to upload attachment' : 'فشل رفع المرفق');
-    }
-  };
-
-  // Delete attachment
-  const handleDeleteAttachment = async (projectId: string, attachmentId: string) => {
-    if (!confirm(language === 'en' ? 'Are you sure you want to delete this attachment?' : 'هل أنت متأكد من حذف هذا المرفق؟')) {
-      return;
-    }
-    try {
-      await http.delete(`/client/projects/${projectId}/attachments/${attachmentId}`);
-      toast.success(language === 'en' ? 'Attachment deleted successfully' : 'تم حذف المرفق بنجاح');
-      // Refresh project data
-      const updatedProject = await fetchProjectById(projectId);
-      if (updatedProject) {
-        setSelectedProject(updatedProject);
-      }
-      fetchProjects();
-    } catch (error: any) {
-      console.error('Error deleting attachment:', error);
-      toast.error(language === 'en' ? 'Failed to delete attachment' : 'فشل حذف المرفق');
-    }
-  };
-
-  // Reset form
-  const resetForm = () => {
-    setProjectForm({
-      name: '',
-      description: '',
-      clientId: '',
-      engineerId: '',
-      status: 'pending',
-      deadline: '',
-      budget: ''
-    });
-  };
-
-  // Open edit modal
-  const openEditModal = async (project: any) => {
-    setSelectedProject(project);
-    setProjectForm({
-      name: project.name || '',
-      description: project.description || '',
-      clientId: project.clientId || project.client?._id || '',
-      engineerId: project.engineerId || project.engineer?._id || '',
-      status: project.status || 'pending',
-      deadline: project.deadline ? new Date(project.deadline).toISOString().split('T')[0] : '',
-      budget: project.budget || ''
-    });
-    setShowEditModal(true);
-  };
-
-  // Open attachment modal
-  const openAttachmentModal = async (project: any) => {
-    const fullProject = await fetchProjectById(project._id || project.id);
-    setSelectedProject(fullProject || project);
-    setShowAttachmentModal(true);
   };
 
   useEffect(() => {
@@ -260,69 +259,94 @@ const AdminProjects = () => {
     }
   }, [projects]);
 
-  // Filter projects by search term
-  const filteredProjects = projects.filter((project: any) => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      (project.name || '').toLowerCase().includes(searchLower) ||
-      (project.client?.name || project.client || '').toLowerCase().includes(searchLower) ||
-      (project.engineer?.name || project.engineer || '').toLowerCase().includes(searchLower)
-    );
+  // Filter projects
+  const filteredProjects = projects.filter(project => {
+    // Status filter
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'pending') {
+        if (project.status !== 'pending_review' && project.status !== 'draft') return false;
+      } else if (project.status !== statusFilter) return false;
+    }
+
+    // Category filter
+    if (categoryFilter !== 'all' && project.category !== categoryFilter) return false;
+
+    // Search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        project.name?.toLowerCase().includes(searchLower) ||
+        project.title?.toLowerCase().includes(searchLower) ||
+        project.description?.toLowerCase().includes(searchLower) ||
+        project.client?.name?.toLowerCase().includes(searchLower) ||
+        project.country?.toLowerCase().includes(searchLower) ||
+        project.category?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return true;
   });
 
-  // Sample project data (fallback)
-  const sampleProjects = [
-    { 
-      id: '1', 
-      name: language === 'en' ? 'Bridge Construction' : 'بناء الجسر',
-      client: 'ABC Corp',
-      engineer: 'John Smith',
-      status: language === 'en' ? 'In Progress' : 'قيد التنفيذ',
-      progress: 75,
-      deadline: '2023-12-15',
-      budget: '$125,000'
-    },
-    { 
-      id: '2', 
-      name: language === 'en' ? 'HVAC System Design' : 'تصميم نظام التكييف',
-      client: 'XYZ Ltd',
-      engineer: 'Sarah Johnson',
-      status: language === 'en' ? 'Review' : 'مراجعة',
-      progress: 90,
-      deadline: '2023-11-30',
-      budget: '$45,000'
-    },
-    { 
-      id: '3', 
-      name: language === 'en' ? 'Structural Analysis' : 'تحليل هيكلي',
-      client: 'DEF Inc',
-      engineer: 'Mike Chen',
-      status: language === 'en' ? 'Completed' : 'مكتمل',
-      progress: 100,
-      deadline: '2023-10-20',
-      budget: '$32,500'
-    },
-    { 
-      id: '4', 
-      name: language === 'en' ? 'Electrical Plan' : 'خطة كهربائية',
-      client: 'GHI Co',
-      engineer: 'Emma Wilson',
-      status: language === 'en' ? 'In Progress' : 'قيد التنفيذ',
-      progress: 40,
-      deadline: '2024-01-10',
-      budget: '$18,750'
-    },
-    { 
-      id: '5', 
-      name: language === 'en' ? 'Plumbing System' : 'نظام السباكة',
-      client: 'JKL Enterprises',
-      engineer: 'David Brown',
-      status: language === 'en' ? 'Pending' : 'قيد الانتظار',
-      progress: 0,
-      deadline: '2024-02-28',
-      budget: '$22,300'
-    },
-  ];
+  const getStatusBadge = (status: string) => {
+    const statusMap: Record<string, { label: { en: string; ar: string }; className: string }> = {
+      draft: {
+        label: { en: 'Draft', ar: 'مسودة' },
+        className: 'bg-gray-500/20 text-gray-500'
+      },
+      pending_review: {
+        label: { en: 'Pending Review', ar: 'قيد المراجعة' },
+        className: 'bg-yellow-500/20 text-yellow-500'
+      },
+      approved: {
+        label: { en: 'Approved', ar: 'موافق عليه' },
+        className: 'bg-blue-500/20 text-blue-500'
+      },
+      published: {
+        label: { en: 'Published', ar: 'منشور' },
+        className: 'bg-green-500/20 text-green-500'
+      },
+      assigned: {
+        label: { en: 'Assigned', ar: 'معيّن' },
+        className: 'bg-cyan/20 text-cyan'
+      },
+      in_progress: {
+        label: { en: 'In Progress', ar: 'قيد التنفيذ' },
+        className: 'bg-blue-500/20 text-blue-500'
+      },
+      completed: {
+        label: { en: 'Completed', ar: 'مكتمل' },
+        className: 'bg-green-500/20 text-green-500'
+      },
+      rejected: {
+        label: { en: 'Rejected', ar: 'مرفوض' },
+        className: 'bg-red-500/20 text-red-500'
+      },
+      archived: {
+        label: { en: 'Archived', ar: 'مؤرشف' },
+        className: 'bg-gray-500/20 text-gray-500'
+      },
+    };
+
+    const statusInfo = statusMap[status] || statusMap.pending_review;
+    return (
+      <Badge className={statusInfo.className}>
+        {statusInfo.label[language as 'en' | 'ar']}
+      </Badge>
+    );
+  };
+
+  const getCategoryLabel = (category: string) => {
+    const categoryMap: Record<string, { en: string; ar: string }> = {
+      architecture: { en: 'Architecture', ar: 'عمارة' },
+      interior: { en: 'Interior Design', ar: 'تصميم داخلي' },
+      mep: { en: 'MEP', ar: 'ميكانيكا وكهرباء' },
+      structural: { en: 'Structural', ar: 'هيكلي' },
+      civil: { en: 'Civil', ar: 'مدني' },
+    };
+    return categoryMap[category]?.[language as 'en' | 'ar'] || category;
+  };
+
+  const categories = Array.from(new Set(projects.map(p => p.category).filter(Boolean)));
 
   return (
     <div className="flex min-h-screen">
@@ -338,47 +362,27 @@ const AdminProjects = () => {
             </h2>
             <p className="text-muted-foreground">
               {language === 'en'
-                ? 'Track and manage engineering projects'
-                : 'تتبع وإدارة المشاريع الهندسية'}
+                ? 'Review, approve, and manage all projects on the platform'
+                : 'مراجعة، الموافقة، وإدارة جميع المشاريع على المنصة'}
             </p>
           </div>
 
-          {/* Toolbar */}
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder={language === 'en' ? "Search projects..." : "البحث عن مشاريع..."} 
-                className="pl-10"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <Button 
-              className="bg-cyan hover:bg-cyan-dark"
-              onClick={() => {
-                resetForm();
-                setShowAddModal(true);
-              }}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              {language === 'en' ? 'Create Project' : 'إنشاء مشروع'}
-            </Button>
-          </div>
-
-          {/* Project Statistics */}
+          {/* Statistics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <Card className="glass-card">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {language === 'en' ? 'Total Projects' : 'إجمالي المشاريع'}
+                  {language === 'en' ? 'Pending Review' : 'قيد المراجعة'}
                 </CardTitle>
-                <HexagonIcon size="sm" className="text-cyan">
-                  <Briefcase className="h-5 w-5 text-cyan" />
+                <HexagonIcon size="sm" className="text-yellow-500">
+                  <Clock className="h-5 w-5 text-yellow-500" />
                 </HexagonIcon>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{statistics.total}</div>
+                <div className="text-3xl font-bold">{statistics.pendingReview}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {language === 'en' ? 'Awaiting approval' : 'في انتظار الموافقة'}
+                </p>
               </CardContent>
             </Card>
             
@@ -393,444 +397,247 @@ const AdminProjects = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">{statistics.active}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {language === 'en' ? 'Published & live' : 'منشورة ومتاحة'}
+                </p>
               </CardContent>
             </Card>
             
             <Card className="glass-card">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {language === 'en' ? 'Pending Projects' : 'المشاريع المعلقة'}
+                  {language === 'en' ? 'Assigned Projects' : 'المشاريع المعيّنة'}
                 </CardTitle>
-                <HexagonIcon size="sm" className="text-yellow-500">
-                  <Clock className="h-5 w-5 text-yellow-500" />
+                <HexagonIcon size="sm" className="text-cyan">
+                  <Briefcase className="h-5 w-5 text-cyan" />
                 </HexagonIcon>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{statistics.pending}</div>
+                <div className="text-3xl font-bold">{statistics.assigned}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {language === 'en' ? 'In progress' : 'قيد التنفيذ'}
+                </p>
               </CardContent>
             </Card>
             
             <Card className="glass-card">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {language === 'en' ? 'Completed' : 'مكتملة'}
+                  {language === 'en' ? 'Rejected / Archived' : 'مرفوضة / مؤرشفة'}
                 </CardTitle>
-                <HexagonIcon size="sm" className="text-blue-500">
-                  <CheckCircle className="h-5 w-5 text-blue-500" />
+                <HexagonIcon size="sm" className="text-red-500">
+                  <AlertCircle className="h-5 w-5 text-red-500" />
                 </HexagonIcon>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{statistics.completed}</div>
+                <div className="text-3xl font-bold">{statistics.rejected}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {language === 'en' ? 'Not active' : 'غير نشطة'}
+                </p>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Toolbar */}
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder={language === 'en' ? "Search projects..." : "البحث عن مشاريع..."} 
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Filter className="h-4 w-4 mr-2" />
+                  {language === 'en' ? 'Status' : 'الحالة'}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => setStatusFilter('all')}>
+                  {language === 'en' ? 'All' : 'الكل'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter('pending')}>
+                  {language === 'en' ? 'Pending Review' : 'قيد المراجعة'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter('approved')}>
+                  {language === 'en' ? 'Approved' : 'موافق عليه'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter('assigned')}>
+                  {language === 'en' ? 'Assigned' : 'معيّن'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter('in_progress')}>
+                  {language === 'en' ? 'In Progress' : 'قيد التنفيذ'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter('completed')}>
+                  {language === 'en' ? 'Completed' : 'مكتمل'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter('rejected')}>
+                  {language === 'en' ? 'Rejected' : 'مرفوض'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {categories.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Filter className="h-4 w-4 mr-2" />
+                    {language === 'en' ? 'Category' : 'الفئة'}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => setCategoryFilter('all')}>
+                    {language === 'en' ? 'All Categories' : 'جميع الفئات'}
+                  </DropdownMenuItem>
+                  {categories.map(cat => (
+                    <DropdownMenuItem key={cat} onClick={() => setCategoryFilter(cat)}>
+                      {getCategoryLabel(cat)}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
 
           {/* Projects Table */}
           <Card className="glass-card">
             <CardHeader>
-              <CardTitle>
-                {language === 'en' ? 'Project List' : 'قائمة المشاريع'}
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>
+                  {language === 'en' ? 'Projects List' : 'قائمة المشاريع'} ({filteredProjects.length})
+                </CardTitle>
+                {projects.length > 0 && projects[0]?._id === '1' && (
+                  <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+                    {language === 'en' ? 'Demo Data' : 'بيانات تجريبية'}
+                  </Badge>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                        {language === 'en' ? 'Project' : 'المشروع'}
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                        {language === 'en' ? 'Client' : 'العميل'}
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                        {language === 'en' ? 'Engineer' : 'المهندس'}
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                        {language === 'en' ? 'Status' : 'الحالة'}
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                        {language === 'en' ? 'Progress' : 'التقدم'}
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                        {language === 'en' ? 'Deadline' : 'الموعد النهائي'}
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                        {language === 'en' ? 'Budget' : 'الميزانية'}
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                        {language === 'en' ? 'Actions' : 'الإجراءات'}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loading ? (
-                      <tr>
-                        <td colSpan={8} className="py-8 text-center text-muted-foreground">
-                          {language === 'en' ? 'Loading projects...' : 'جاري تحميل المشاريع...'}
-                        </td>
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-cyan" />
+                </div>
+              ) : filteredProjects.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  {language === 'en' ? 'No projects found' : 'لا توجد مشاريع'}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-3 px-4 font-medium text-muted-foreground">
+                          {language === 'en' ? 'Project Title' : 'اسم المشروع'}
+                        </th>
+                        <th className="text-left py-3 px-4 font-medium text-muted-foreground">
+                          {language === 'en' ? 'Client' : 'العميل'}
+                        </th>
+                        <th className="text-left py-3 px-4 font-medium text-muted-foreground">
+                          {language === 'en' ? 'Category' : 'الفئة'}
+                        </th>
+                        <th className="text-left py-3 px-4 font-medium text-muted-foreground">
+                          {language === 'en' ? 'Country' : 'البلد'}
+                        </th>
+                        <th className="text-left py-3 px-4 font-medium text-muted-foreground">
+                          {language === 'en' ? 'Target Roles' : 'الأدوار المستهدفة'}
+                        </th>
+                        <th className="text-left py-3 px-4 font-medium text-muted-foreground">
+                          {language === 'en' ? 'Status' : 'الحالة'}
+                        </th>
+                        <th className="text-left py-3 px-4 font-medium text-muted-foreground">
+                          {language === 'en' ? 'Proposals' : 'العروض'}
+                        </th>
+                        <th className="text-left py-3 px-4 font-medium text-muted-foreground">
+                          {language === 'en' ? 'Created At' : 'تاريخ الإضافة'}
+                        </th>
+                        <th className="text-left py-3 px-4 font-medium text-muted-foreground">
+                          {language === 'en' ? 'Actions' : 'الإجراءات'}
+                        </th>
                       </tr>
-                    ) : filteredProjects.length === 0 ? (
-                      <tr>
-                        <td colSpan={8} className="py-8 text-center text-muted-foreground">
-                          {language === 'en' ? 'No projects found' : 'لا توجد مشاريع'}
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredProjects.map((project: any) => {
-                        const projectId = project._id || project.id;
+                    </thead>
+                    <tbody>
+                      {filteredProjects.map((project) => {
                         const projectName = project.name || project.title || '';
-                        const clientName = project.client?.name || project.client || '';
-                        const engineerName = project.engineer?.name || project.engineer || '';
-                        const status = project.status || 'pending';
-                        const progress = project.progress || 0;
-                        const deadline = project.deadline ? new Date(project.deadline).toLocaleDateString() : '-';
-                        const budget = project.budget ? `$${project.budget}` : '-';
+                        const clientName = project.client?.name || 'N/A';
+                        const proposalsCount = project.proposalsCount || 0;
                         
                         return (
-                          <tr key={projectId} className="border-b border-border/50 hover:bg-muted/30">
-                            <td className="py-4 px-4 font-medium">
-                              {projectName}
-                            </td>
-                            <td className="py-4 px-4 text-muted-foreground">
-                              {clientName}
-                            </td>
-                            <td className="py-4 px-4 text-muted-foreground">
-                              {engineerName}
-                            </td>
+                          <tr key={project._id} className="border-b border-border/50 hover:bg-muted/30">
                             <td className="py-4 px-4">
-                              <span className={`px-2 py-1 rounded-full text-xs ${
-                                status === 'completed' 
-                                  ? 'bg-blue-500/20 text-blue-500' 
-                                  : status === 'in_progress' || status === 'active'
-                                    ? 'bg-green-500/20 text-green-500'
-                                    : status === 'review'
-                                      ? 'bg-purple-500/20 text-purple-500'
-                                      : 'bg-yellow-500/20 text-yellow-500'
-                              }`}>
-                                {status === 'completed' ? (language === 'en' ? 'Completed' : 'مكتمل')
-                                  : status === 'in_progress' || status === 'active' ? (language === 'en' ? 'In Progress' : 'قيد التنفيذ')
-                                  : status === 'review' ? (language === 'en' ? 'Review' : 'مراجعة')
-                                  : (language === 'en' ? 'Pending' : 'قيد الانتظار')}
-                              </span>
-                            </td>
-                            <td className="py-4 px-4">
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 bg-muted rounded-full h-2">
-                                  <div 
-                                    className="bg-cyan h-2 rounded-full" 
-                                    style={{ width: `${progress}%` }}
-                                  ></div>
-                                </div>
-                                <span className="text-sm text-muted-foreground">{progress}%</span>
+                              <div className="font-medium max-w-xs truncate" title={projectName}>
+                                {projectName}
                               </div>
                             </td>
-                            <td className="py-4 px-4 text-muted-foreground">
-                              {deadline}
+                            <td className="py-4 px-4">
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm">{clientName}</span>
+                              </div>
                             </td>
-                            <td className="py-4 px-4 font-medium">
-                              {budget}
+                            <td className="py-4 px-4">
+                              <Badge variant="outline">
+                                {getCategoryLabel(project.category)}
+                              </Badge>
                             </td>
                             <td className="py-4 px-4">
                               <div className="flex items-center gap-2">
-                                <Button 
-                                  variant="ghost" 
+                                <MapPin className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm">{project.country || project.location || 'N/A'}</span>
+                              </div>
+                            </td>
+                            <td className="py-4 px-4">
+                              <div className="flex flex-wrap gap-1">
+                                {project.targetRoles?.map((role, idx) => (
+                                  <Badge key={idx} variant="outline" className="text-xs">
+                                    {role === 'engineer' ? (language === 'en' ? 'Engineers' : 'مهندسين') : 
+                                     role === 'company' ? (language === 'en' ? 'Companies' : 'شركات') : role}
+                                  </Badge>
+                                )) || (
+                                  <span className="text-sm text-muted-foreground">
+                                    {language === 'en' ? 'All' : 'الكل'}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-4 px-4">
+                              {getStatusBadge(project.status)}
+                            </td>
+                            <td className="py-4 px-4">
+                              <div className="flex items-center gap-2">
+                                <Users className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm font-medium">{proposalsCount}</span>
+                              </div>
+                            </td>
+                            <td className="py-4 px-4 text-muted-foreground text-sm">
+                              {new Date(project.createdAt).toLocaleDateString()}
+                            </td>
+                            <td className="py-4 px-4">
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
                                   size="sm"
-                                  onClick={() => openEditModal(project)}
-                                  title={language === 'en' ? 'Edit' : 'تعديل'}
+                                  onClick={() => navigate(`/admin/projects/${project._id}`)}
                                 >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  onClick={() => openAttachmentModal(project)}
-                                  title={language === 'en' ? 'Attachments' : 'المرفقات'}
-                                >
-                                  <Upload className="h-4 w-4" />
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  onClick={() => handleDeleteProject(projectId)}
-                                  title={language === 'en' ? 'Delete' : 'حذف'}
-                                >
-                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  {language === 'en' ? 'View' : 'عرض'}
                                 </Button>
                               </div>
                             </td>
                           </tr>
                         );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </main>
       </div>
-
-      {/* Add Project Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <CardHeader className="flex items-center justify-between">
-              <CardTitle>{language === 'en' ? 'Create New Project' : 'إنشاء مشروع جديد'}</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => setShowAddModal(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleAddProject} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">{language === 'en' ? 'Project Name' : 'اسم المشروع'}</label>
-                  <Input
-                    value={projectForm.name}
-                    onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">{language === 'en' ? 'Description' : 'الوصف'}</label>
-                  <textarea
-                    className="w-full px-3 py-2 border border-border rounded-lg"
-                    rows={4}
-                    value={projectForm.description}
-                    onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">{language === 'en' ? 'Client ID' : 'معرف العميل'}</label>
-                    <Input
-                      value={projectForm.clientId}
-                      onChange={(e) => setProjectForm({ ...projectForm, clientId: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">{language === 'en' ? 'Engineer ID' : 'معرف المهندس'}</label>
-                    <Input
-                      value={projectForm.engineerId}
-                      onChange={(e) => setProjectForm({ ...projectForm, engineerId: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">{language === 'en' ? 'Status' : 'الحالة'}</label>
-                    <select
-                      className="w-full px-3 py-2 border border-border rounded-lg"
-                      value={projectForm.status}
-                      onChange={(e) => setProjectForm({ ...projectForm, status: e.target.value })}
-                    >
-                      <option value="pending">{language === 'en' ? 'Pending' : 'قيد الانتظار'}</option>
-                      <option value="in_progress">{language === 'en' ? 'In Progress' : 'قيد التنفيذ'}</option>
-                      <option value="review">{language === 'en' ? 'Review' : 'مراجعة'}</option>
-                      <option value="completed">{language === 'en' ? 'Completed' : 'مكتمل'}</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">{language === 'en' ? 'Deadline' : 'الموعد النهائي'}</label>
-                    <Input
-                      type="date"
-                      value={projectForm.deadline}
-                      onChange={(e) => setProjectForm({ ...projectForm, deadline: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">{language === 'en' ? 'Budget' : 'الميزانية'}</label>
-                  <Input
-                    type="number"
-                    value={projectForm.budget}
-                    onChange={(e) => setProjectForm({ ...projectForm, budget: e.target.value })}
-                  />
-                </div>
-                <div className="flex justify-end gap-4">
-                  <Button type="button" variant="outline" onClick={() => setShowAddModal(false)}>
-                    {language === 'en' ? 'Cancel' : 'إلغاء'}
-                  </Button>
-                  <Button type="submit" className="bg-cyan hover:bg-cyan-dark">
-                    {language === 'en' ? 'Create' : 'إنشاء'}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Edit Project Modal */}
-      {showEditModal && selectedProject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <CardHeader className="flex items-center justify-between">
-              <CardTitle>{language === 'en' ? 'Edit Project' : 'تعديل المشروع'}</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => setShowEditModal(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleUpdateProject} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">{language === 'en' ? 'Project Name' : 'اسم المشروع'}</label>
-                  <Input
-                    value={projectForm.name}
-                    onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">{language === 'en' ? 'Description' : 'الوصف'}</label>
-                  <textarea
-                    className="w-full px-3 py-2 border border-border rounded-lg"
-                    rows={4}
-                    value={projectForm.description}
-                    onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">{language === 'en' ? 'Client ID' : 'معرف العميل'}</label>
-                    <Input
-                      value={projectForm.clientId}
-                      onChange={(e) => setProjectForm({ ...projectForm, clientId: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">{language === 'en' ? 'Engineer ID' : 'معرف المهندس'}</label>
-                    <Input
-                      value={projectForm.engineerId}
-                      onChange={(e) => setProjectForm({ ...projectForm, engineerId: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">{language === 'en' ? 'Status' : 'الحالة'}</label>
-                    <select
-                      className="w-full px-3 py-2 border border-border rounded-lg"
-                      value={projectForm.status}
-                      onChange={(e) => setProjectForm({ ...projectForm, status: e.target.value })}
-                    >
-                      <option value="pending">{language === 'en' ? 'Pending' : 'قيد الانتظار'}</option>
-                      <option value="in_progress">{language === 'en' ? 'In Progress' : 'قيد التنفيذ'}</option>
-                      <option value="review">{language === 'en' ? 'Review' : 'مراجعة'}</option>
-                      <option value="completed">{language === 'en' ? 'Completed' : 'مكتمل'}</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">{language === 'en' ? 'Deadline' : 'الموعد النهائي'}</label>
-                    <Input
-                      type="date"
-                      value={projectForm.deadline}
-                      onChange={(e) => setProjectForm({ ...projectForm, deadline: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">{language === 'en' ? 'Budget' : 'الميزانية'}</label>
-                  <Input
-                    type="number"
-                    value={projectForm.budget}
-                    onChange={(e) => setProjectForm({ ...projectForm, budget: e.target.value })}
-                  />
-                </div>
-                <div className="flex justify-end gap-4">
-                  <Button type="button" variant="outline" onClick={() => setShowEditModal(false)}>
-                    {language === 'en' ? 'Cancel' : 'إلغاء'}
-                  </Button>
-                  <Button type="submit" className="bg-cyan hover:bg-cyan-dark">
-                    {language === 'en' ? 'Update' : 'تحديث'}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Attachment Modal */}
-      {showAttachmentModal && selectedProject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <CardHeader className="flex items-center justify-between">
-              <CardTitle>{language === 'en' ? 'Project Attachments' : 'مرفقات المشروع'}</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => setShowAttachmentModal(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Upload New Attachment */}
-                <form onSubmit={handleUploadAttachment} className="space-y-4 border-b pb-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">{language === 'en' ? 'Upload Attachment' : 'رفع مرفق'}</label>
-                    <Input
-                      type="file"
-                      onChange={(e) => setAttachmentFile(e.target.files?.[0] || null)}
-                      required
-                    />
-                  </div>
-                  <Button type="submit" className="bg-cyan hover:bg-cyan-dark">
-                    <Upload className="h-4 w-4 mr-2" />
-                    {language === 'en' ? 'Upload' : 'رفع'}
-                  </Button>
-                </form>
-
-                {/* List Attachments */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">{language === 'en' ? 'Attachments' : 'المرفقات'}</h3>
-                  {selectedProject.attachments && selectedProject.attachments.length > 0 ? (
-                    <div className="space-y-2">
-                      {selectedProject.attachments.map((attachment: any) => (
-                        <div key={attachment._id || attachment.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <FileText className="h-5 w-5 text-muted-foreground" />
-                            <div>
-                              <p className="font-medium">{attachment.name || attachment.filename || 'Attachment'}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {attachment.size ? `${(attachment.size / 1024).toFixed(2)} KB` : ''}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {attachment.url && (
-                              <a
-                                href={attachment.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-cyan hover:underline"
-                              >
-                                {language === 'en' ? 'View' : 'عرض'}
-                              </a>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteAttachment(
-                                selectedProject._id || selectedProject.id,
-                                attachment._id || attachment.id
-                              )}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground text-center py-8">
-                      {language === 'en' ? 'No attachments' : 'لا توجد مرفقات'}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   );
 };

@@ -9,8 +9,16 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 // ---------- AXIOS INSTANCE WITH INTERCEPTOR ----------
+let baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
+// Normalize baseURL - fix double /api/api and remove trailing slashes
+baseURL = baseURL.trim();
+baseURL = baseURL.replace(/\/api\/api(\/|$)/g, '/api$1');
+baseURL = baseURL.replace(/\/+$/, '');
+
+console.log("🔐 AdminLogin API baseURL:", baseURL);
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: baseURL + '/',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -55,15 +63,25 @@ const AdminLogin = () => {
       let lastError: any = null;
       for (const endpoint of loginEndpoints) {
         try {
-          console.log(`🔄 Trying login endpoint: ${endpoint.name}`);
+          const fullUrl = `${baseURL}${endpoint.path}`;
+          console.log(`🔄 Trying login endpoint: ${endpoint.name} (Full URL: ${fullUrl})`);
           res = await api.post(endpoint.path, { email, password });
-          console.log(`✅ Login successful via ${endpoint.name}`);
+          console.log(`✅ Login successful via ${endpoint.name}`, res.data);
           break; // Success, exit loop
         } catch (err: any) {
           lastError = err;
-          console.log(`❌ ${endpoint.name} failed:`, err.response?.status || err.message);
+          const status = err.response?.status;
+          const statusText = err.response?.statusText;
+          const errorData = err.response?.data;
+          console.log(`❌ ${endpoint.name} failed:`, {
+            status,
+            statusText,
+            message: err.message,
+            data: errorData,
+            url: err.config?.url
+          });
           // If it's not a 404, don't try other endpoints (it's a real error like 401)
-          if (err.response?.status !== 404) {
+          if (status !== 404 && status !== undefined) {
             throw err;
           }
         }

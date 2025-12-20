@@ -36,21 +36,79 @@ const EngineerProjectDetails = () => {
       try {
         setLoading(true);
         const response = await http.get(`/projects/${id}`);
-        const projectData = response.data;
+        
+        // Handle different response structures
+        let projectData = response.data;
+        
+        // If response.data is an object with a data property (like {data: {...}, meta: {}})
+        if (projectData && typeof projectData === 'object' && !Array.isArray(projectData)) {
+          // Check if it has a data property that contains the project
+          if (projectData.data && typeof projectData.data === 'object') {
+            projectData = projectData.data;
+          } else if (projectData.project && typeof projectData.project === 'object') {
+            projectData = projectData.project;
+          }
+        }
+        
+        console.log("🔍 Project data structure:", {
+          type: typeof projectData,
+          keys: projectData ? Object.keys(projectData) : null,
+          projectData: projectData
+        });
+        
+        // Format deadline if it's a date
+        let formattedDeadline = "";
+        if (projectData.deadline) {
+          try {
+            const deadlineDate = new Date(projectData.deadline);
+            if (!isNaN(deadlineDate.getTime())) {
+              formattedDeadline = deadlineDate.toLocaleDateString(language === "ar" ? "ar-SA" : "en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric"
+              });
+            } else {
+              formattedDeadline = projectData.deadline;
+            }
+          } catch (e) {
+            formattedDeadline = projectData.deadline;
+          }
+        } else if (projectData.endDate) {
+          try {
+            const deadlineDate = new Date(projectData.endDate);
+            if (!isNaN(deadlineDate.getTime())) {
+              formattedDeadline = deadlineDate.toLocaleDateString(language === "ar" ? "ar-SA" : "en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric"
+              });
+            } else {
+              formattedDeadline = projectData.endDate;
+            }
+          } catch (e) {
+            formattedDeadline = projectData.endDate;
+          }
+        }
         
         // Transform project data to match expected format
         setProject({
           id: projectData._id || projectData.id || id,
-          title: projectData.name || projectData.title || "Unknown Project",
-          category: projectData.category || "N/A",
+          title: projectData.title || projectData.name || "Unknown Project",
+          category: projectData.category || projectData.projectType || "N/A",
           location: projectData.location || "N/A",
           description: projectData.description || "",
           requirements: projectData.requirements || projectData.requirement || "",
-          deadline: projectData.deadline || projectData.endDate || "",
+          deadline: formattedDeadline,
           files: projectData.files || projectData.attachments || [],
+          status: projectData.status,
+          projectType: projectData.projectType,
+          budget: projectData.budget,
+          tags: projectData.tags || [],
+          isActive: projectData.isActive,
         });
       } catch (error: any) {
         console.error("Error fetching project:", error);
+        console.error("Error response:", error.response);
         toast.error(
           language === "en" ? "Failed to load project details" : "فشل تحميل تفاصيل المشروع"
         );
@@ -79,7 +137,32 @@ const EngineerProjectDetails = () => {
       try {
         setProposalsLoading(true);
         const response = await http.get(`/proposals/project/${id}`);
-        setProposals(response.data || []);
+        
+        // Handle different response structures
+        let proposalsData = response.data;
+        
+        // If response.data is an object with a data property (like {data: [], meta: {}})
+        if (proposalsData && typeof proposalsData === 'object' && !Array.isArray(proposalsData)) {
+          // Check if it has a data property that is an array
+          if (proposalsData.data && Array.isArray(proposalsData.data)) {
+            proposalsData = proposalsData.data;
+          } else if (proposalsData.proposals && Array.isArray(proposalsData.proposals)) {
+            proposalsData = proposalsData.proposals;
+          } else if (proposalsData.items && Array.isArray(proposalsData.items)) {
+            proposalsData = proposalsData.items;
+          } else if (proposalsData.results && Array.isArray(proposalsData.results)) {
+            proposalsData = proposalsData.results;
+          } else {
+            proposalsData = [];
+          }
+        }
+        
+        // Ensure it's always an array
+        if (!Array.isArray(proposalsData)) {
+          proposalsData = [];
+        }
+        
+        setProposals(proposalsData);
       } catch (error: any) {
         console.error("Error fetching proposals:", error);
         // Don't show error toast for 404, as project might not have proposals yet
@@ -88,6 +171,7 @@ const EngineerProjectDetails = () => {
             language === "en" ? "Failed to load proposals" : "فشل تحميل العروض"
           );
         }
+        setProposals([]);
       } finally {
         setProposalsLoading(false);
       }
@@ -220,20 +304,26 @@ const EngineerProjectDetails = () => {
                   <p className="text-sm text-hexa-text-light mb-2">
                     {language === "en" ? "Description" : "الوصف"}
                   </p>
-                  <p className="text-hexa-text-dark">{project.description}</p>
+                  <p className="text-hexa-text-dark">
+                    {project.description || (language === "en" ? "No description available" : "لا يوجد وصف متاح")}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-hexa-text-light mb-2">
                     {language === "en" ? "Requirements" : "المتطلبات"}
                   </p>
-                  <p className="text-hexa-text-dark">{project.requirements}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-hexa-text-light mb-2">
-                    {language === "en" ? "Expected Deadline" : "الموعد المتوقع"}
+                  <p className="text-hexa-text-dark">
+                    {project.requirements || (language === "en" ? "No requirements specified" : "لا توجد متطلبات محددة")}
                   </p>
-                  <p className="font-medium text-hexa-text-dark">{project.deadline}</p>
                 </div>
+                {project.deadline && (
+                  <div>
+                    <p className="text-sm text-hexa-text-light mb-2">
+                      {language === "en" ? "Expected Deadline" : "الموعد المتوقع"}
+                    </p>
+                    <p className="font-medium text-hexa-text-dark">{project.deadline}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
