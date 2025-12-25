@@ -662,13 +662,13 @@ const AdminProjects = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredProjects.map((project) => {
+                      {filteredProjects.map((project, index) => {
                         const projectName = project.name || project.title || '';
                         const clientName = project.client?.name || 'N/A';
                         const proposalsCount = project.proposalsCount || 0;
                         
                         return (
-                          <tr key={project._id} className="border-b border-border/50 hover:bg-muted/30">
+                          <tr key={project._id || `project-${index}`} className="border-b border-border/50 hover:bg-muted/30">
                             <td className="py-4 px-4">
                               <div className="font-medium max-w-xs truncate" title={projectName}>
                                 {projectName}

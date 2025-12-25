@@ -137,32 +137,38 @@ const AdminUsers = () => {
       const response = await http.get('/users/statistics');
       setStatistics(response.data?.data || response.data || statistics);
     } catch (error: any) {
-      // Calculate from users if API fails
-      const engineers = users.filter(u => u.role === 'engineer');
-      const clients = users.filter(u => u.role === 'client');
-      const companies = users.filter(u => u.role === 'company');
-      
-      setStatistics({
-        total: users.length,
-        engineers: {
-          total: engineers.length,
-          active: engineers.filter(u => u.status === 'active').length,
-          pending: engineers.filter(u => u.status === 'pending').length,
-          suspended: engineers.filter(u => u.status === 'suspended').length,
-        },
-        clients: {
-          total: clients.length,
-          active: clients.filter(u => u.status === 'active').length,
-          pending: clients.filter(u => u.status === 'pending').length,
-          suspended: clients.filter(u => u.status === 'suspended').length,
-        },
-        companies: {
-          total: companies.length,
-          active: companies.filter(u => u.status === 'active').length,
-          pending: companies.filter(u => u.status === 'pending').length,
-          suspended: companies.filter(u => u.status === 'suspended').length,
-        },
-      });
+      // Silently handle 400/404 errors - endpoint might not exist yet
+      if (error.response?.status === 400 || error.response?.status === 404) {
+        // Calculate from users if API fails
+        const engineers = users.filter(u => u.role === 'engineer');
+        const clients = users.filter(u => u.role === 'client');
+        const companies = users.filter(u => u.role === 'company');
+        
+        setStatistics({
+          total: users.length,
+          engineers: {
+            total: engineers.length,
+            active: engineers.filter(u => u.status === 'active').length,
+            pending: engineers.filter(u => u.status === 'pending').length,
+            suspended: engineers.filter(u => u.status === 'suspended').length,
+          },
+          clients: {
+            total: clients.length,
+            active: clients.filter(u => u.status === 'active').length,
+            pending: clients.filter(u => u.status === 'pending').length,
+            suspended: clients.filter(u => u.status === 'suspended').length,
+          },
+          companies: {
+            total: companies.length,
+            active: companies.filter(u => u.status === 'active').length,
+            pending: companies.filter(u => u.status === 'pending').length,
+            suspended: companies.filter(u => u.status === 'suspended').length,
+          },
+        });
+      } else {
+        // Only log non-400/404 errors
+        console.error('Error fetching statistics:', error);
+      }
     }
   };
 
@@ -546,10 +552,10 @@ const AdminUsers = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {filteredUsers.map((user) => {
+                          {filteredUsers.map((user, index) => {
                             const RoleIcon = getRoleIcon(user.role);
                             return (
-                              <tr key={user._id} className="border-b border-border/50 hover:bg-muted/30">
+                              <tr key={user._id || `user-${index}`} className="border-b border-border/50 hover:bg-muted/30">
                                 <td className="py-4 px-4">
                                   <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-cyan flex items-center justify-center text-white font-semibold">
@@ -676,10 +682,10 @@ const AdminUsers = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {filteredUsers.map((user) => {
+                          {filteredUsers.map((user, index) => {
                             const RoleIcon = getRoleIcon(user.role);
                             return (
-                              <tr key={user._id} className="border-b border-border/50 hover:bg-muted/30">
+                              <tr key={user._id || `user-${index}`} className="border-b border-border/50 hover:bg-muted/30">
                                 <td className="py-4 px-4">
                                   <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-cyan flex items-center justify-center text-white font-semibold">
@@ -806,10 +812,10 @@ const AdminUsers = () => {
                     </tr>
                   </thead>
                   <tbody>
-                          {filteredUsers.map((user) => {
+                          {filteredUsers.map((user, index) => {
                             const RoleIcon = getRoleIcon(user.role);
                             return (
-                              <tr key={user._id} className="border-b border-border/50 hover:bg-muted/30">
+                              <tr key={user._id || `user-${index}`} className="border-b border-border/50 hover:bg-muted/30">
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-cyan flex items-center justify-center text-white font-semibold">
