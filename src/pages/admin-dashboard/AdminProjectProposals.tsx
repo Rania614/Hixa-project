@@ -58,7 +58,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const AdminProjectProposals = () => {
-  const { projectId } = useParams<{ projectId: string }>();
+  const { id } = useParams<{ id: string }>();
+  const projectId = id; // Use id from URL params as projectId
   const { language } = useApp();
   const navigate = useNavigate();
   
@@ -441,14 +442,15 @@ const AdminProjectProposals = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {proposals.map((proposal) => {
+                  {proposals.map((proposal, index) => {
                     const engineer = proposal.engineer;
+                    const proposalId = proposal._id || proposal.id || `proposal-${index}`;
                     const isAccepted = proposal.status === 'accepted';
-                    const isLoading = actionLoading === proposal._id;
+                    const isLoading = actionLoading === proposalId;
                     const canTakeAction = proposal.status === 'pending' || proposal.status === 'reviewed';
 
                     return (
-                      <Card key={proposal._id} className="glass-card">
+                      <Card key={proposalId} className="glass-card">
                         <CardHeader>
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-4">
@@ -552,11 +554,11 @@ const AdminProjectProposals = () => {
                                       <Button
                                         variant="default"
                                         size="sm"
-                                        onClick={() => handleAcceptProposal(proposal._id)}
+                                        onClick={() => handleAcceptProposal(proposalId)}
                                         disabled={isLoading || hasAcceptedProposal}
                                         className="bg-green-600 hover:bg-green-700"
                                       >
-                                        {isLoading && actionLoading === proposal._id ? (
+                                        {isLoading && actionLoading === proposalId ? (
                                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                         ) : (
                                           <CheckCircle className="h-4 w-4 mr-2" />
@@ -566,10 +568,10 @@ const AdminProjectProposals = () => {
                                       <Button
                                         variant="destructive"
                                         size="sm"
-                                        onClick={() => handleRejectProposal(proposal._id)}
+                                        onClick={() => handleRejectProposal(proposalId)}
                                         disabled={isLoading}
                                       >
-                                        {isLoading && actionLoading === proposal._id ? (
+                                        {isLoading && actionLoading === proposalId ? (
                                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                         ) : (
                                           <XCircle className="h-4 w-4 mr-2" />
@@ -579,10 +581,10 @@ const AdminProjectProposals = () => {
                                       <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => handleMarkAsReviewed(proposal._id)}
+                                        onClick={() => handleMarkAsReviewed(proposalId)}
                                         disabled={isLoading || proposal.status === 'reviewed'}
                                       >
-                                        {isLoading && actionLoading === proposal._id ? (
+                                        {isLoading && actionLoading === proposalId ? (
                                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                         ) : (
                                           <Eye className="h-4 w-4 mr-2" />

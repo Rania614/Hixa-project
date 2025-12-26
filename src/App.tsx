@@ -16,6 +16,7 @@ import AdminMessages from "./pages/admin-dashboard/AdminMessages";
 import AdminUsers from "./pages/admin-dashboard/AdminUsers";
 import AdminProjects from "./pages/admin-dashboard/AdminProjects";
 import AdminProjectDetails from "./pages/admin-dashboard/AdminProjectDetails";
+import AdminProjectProposals from "./pages/admin-dashboard/AdminProjectProposals";
 import AdminSettings from "./pages/admin-dashboard/AdminSettings";
 import NotFound from "./pages/NotFound";
 import CompanyLanding from "./pages/CompanyLanding";
@@ -280,6 +281,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <AdminProjectDetails />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/projects/:id/proposals"
+        element={
+          <ProtectedRoute>
+            <AdminProjectProposals />
           </ProtectedRoute>
         }
       />

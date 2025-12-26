@@ -45,10 +45,11 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { X, CheckCircle2 } from 'lucide-react';
+import { X, CheckCircle2, Trash2, Copy, MoreHorizontal } from 'lucide-react';
 
 interface Project {
-  _id: string;
+  _id?: string;
+  id?: string;
   name: string;
   title?: string;
   description: string;
@@ -88,6 +89,11 @@ interface Project {
   };
 }
 
+// Helper function to get project ID (supports both _id and id)
+const getProjectId = (project: Project): string => {
+  return project._id || project.id || '';
+};
+
 const AdminProjects = () => {
   const { language } = useApp();
   const navigate = useNavigate();
@@ -106,6 +112,10 @@ const AdminProjects = () => {
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [hardDeleteDialogOpen, setHardDeleteDialogOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [hardDeleting, setHardDeleting] = useState(false);
+  const [duplicating, setDuplicating] = useState<string | null>(null);
 
   // Mock Data for demonstration
   const getMockProjects = (): Project[] => [
@@ -297,7 +307,12 @@ const AdminProjects = () => {
           });
           let projectsData = response.data?.data || response.data?.projects || response.data || [];
           if (!Array.isArray(projectsData)) projectsData = [];
-          setProjects(projectsData);
+          // Normalize project IDs - ensure _id exists
+          const normalizedProjects = projectsData.map((project: any) => ({
+            ...project,
+            _id: project._id || project.id,
+          }));
+          setProjects(normalizedProjects);
           return;
         } catch (err: any) {
           // If pending endpoint doesn't exist, fall back to regular endpoint
@@ -363,6 +378,10 @@ const AdminProjects = () => {
 
   // Approve project
   const approveProject = async (projectId: string) => {
+    if (!projectId) {
+      toast.error(language === 'en' ? 'Invalid project ID' : 'معرف المشروع غير صحيح');
+      return;
+    }
     try {
       const response = await http.patch(`/projects/${projectId}/approve`);
       toast.success(language === 'en' ? 'Project approved successfully' : 'تم الموافقة على المشروع بنجاح');
@@ -377,6 +396,10 @@ const AdminProjects = () => {
 
   // Open reject dialog
   const openRejectDialog = (projectId: string) => {
+    if (!projectId) {
+      toast.error(language === 'en' ? 'Invalid project ID' : 'معرف المشروع غير صحيح');
+      return;
+    }
     setSelectedProjectId(projectId);
     setRejectionReason('');
     setRejectDialogOpen(true);
@@ -405,6 +428,66 @@ const AdminProjects = () => {
       console.error('Error rejecting project:', error);
       const errorMessage = error.response?.data?.message || (language === 'en' ? 'Failed to reject project' : 'فشل رفض المشروع');
       toast.error(errorMessage);
+    }
+  };
+
+  // Hard delete project
+  const handleHardDelete = async () => {
+    if (!projectToDelete) return;
+    
+    try {
+      setHardDeleting(true);
+      await http.delete(`/projects/${projectToDelete.id}/hard`);
+      toast.success(language === 'en' ? 'Project deleted permanently' : 'تم حذف المشروع نهائياً');
+      setHardDeleteDialogOpen(false);
+      setProjectToDelete(null);
+      fetchProjects();
+      fetchStatistics();
+    } catch (error: any) {
+      console.error('Error hard deleting project:', error);
+      const errorMessage = error.response?.data?.message || (language === 'en' ? 'Failed to delete project' : 'فشل حذف المشروع');
+      toast.error(errorMessage);
+    } finally {
+      setHardDeleting(false);
+    }
+  };
+
+  // Open hard delete dialog
+  const openHardDeleteDialog = (project: Project) => {
+    const projectId = getProjectId(project);
+    if (!projectId) {
+      toast.error(language === 'en' ? 'Invalid project ID' : 'معرف المشروع غير صحيح');
+      return;
+    }
+    const projectName = project.name || project.title || '';
+    setProjectToDelete({ id: projectId, name: projectName });
+    setHardDeleteDialogOpen(true);
+  };
+
+  // Duplicate project
+  const handleDuplicate = async (projectId: string) => {
+    if (!projectId) {
+      toast.error(language === 'en' ? 'Invalid project ID' : 'معرف المشروع غير صحيح');
+      return;
+    }
+    try {
+      setDuplicating(projectId);
+      const response = await http.post(`/projects/${projectId}/duplicate`);
+      toast.success(language === 'en' ? 'Project duplicated successfully' : 'تم نسخ المشروع بنجاح');
+      fetchProjects();
+      fetchStatistics();
+      
+      // Navigate to the duplicated project if available
+      const duplicatedId = response.data?.data?._id || response.data?.data?.id;
+      if (duplicatedId) {
+        navigate(`/admin/projects/${duplicatedId}`);
+      }
+    } catch (error: any) {
+      console.error('Error duplicating project:', error);
+      const errorMessage = error.response?.data?.message || (language === 'en' ? 'Failed to duplicate project' : 'فشل نسخ المشروع');
+      toast.error(errorMessage);
+    } finally {
+      setDuplicating(null);
     }
   };
 
@@ -753,12 +836,13 @@ const AdminProjects = () => {
                     </thead>
                     <tbody>
                       {filteredProjects.map((project, index) => {
+                        const projectId = getProjectId(project);
                         const projectName = project.name || project.title || '';
                         const clientName = project.client?.name || 'N/A';
                         const proposalsCount = project.proposalsCount || 0;
                         
                         return (
-                          <tr key={project._id || `project-${index}`} className="border-b border-border/50 hover:bg-muted/30">
+                          <tr key={projectId || `project-${index}`} className="border-b border-border/50 hover:bg-muted/30">
                             <td className="py-4 px-4">
                               <div className="font-medium max-w-xs truncate" title={projectName}>
                                 {projectName}
@@ -808,60 +892,72 @@ const AdminProjects = () => {
                               {new Date(project.createdAt).toLocaleDateString()}
                             </td>
                             <td className="py-4 px-4">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => navigate(`/admin/projects/${project._id}`)}
-                                >
-                                  <Eye className="h-4 w-4 mr-1" />
-                                  {language === 'en' ? 'View' : 'عرض'}
-                                </Button>
-                                {/* Show Approve/Reject buttons for pending projects */}
-                                {(project.status === 'Pending Review' || 
-                                  project.status === 'pending_review' || 
-                                  project.status === 'Draft' ||
-                                  project.adminApproval?.status === 'pending') && (
-                                  <>
-                                    <Button
-                                      variant="default"
-                                      size="sm"
-                                      onClick={() => approveProject(project._id)}
-                                      className="bg-green-600 hover:bg-green-700 text-white"
-                                    >
-                                      <CheckCircle2 className="h-4 w-4 mr-1" />
-                                      {language === 'en' ? 'Approve' : 'موافقة'}
-                                    </Button>
-                                    <Button
-                                      variant="destructive"
-                                      size="sm"
-                                      onClick={() => openRejectDialog(project._id)}
-                                    >
-                                      <X className="h-4 w-4 mr-1" />
-                                      {language === 'en' ? 'Reject' : 'رفض'}
-                                    </Button>
-                                  </>
-                                )}
-                                {project._id && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      if (project._id) {
-                                        navigate(`/admin/projects/${project._id}/proposals`);
-                                      } else {
-                                        toast.error(language === 'en' ? 'Invalid project ID' : 'معرف المشروع غير صحيح');
-                                      }
-                                    }}
-                                  >
-                                    <FileText className="h-4 w-4 mr-1" />
-                                    {language === 'en' ? 'Proposals' : 'العروض'}
-                                    {proposalsCount !== undefined && proposalsCount > 0 && (
-                                      <span className="ml-1 text-xs">({proposalsCount})</span>
-                                    )}
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <MoreHorizontal className="h-4 w-4" />
                                   </Button>
-                                )}
-                              </div>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => projectId && navigate(`/admin/projects/${projectId}`)}>
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    {language === 'en' ? 'View' : 'عرض'}
+                                  </DropdownMenuItem>
+                                  
+                                  {/* Show Approve/Reject buttons for pending projects */}
+                                  {(project.status === 'Pending Review' || 
+                                    project.status === 'pending_review' || 
+                                    project.status === 'Draft' ||
+                                    project.adminApproval?.status === 'pending') && (
+                                    <>
+                                      <DropdownMenuItem onClick={() => projectId && approveProject(projectId)}>
+                                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                                        {language === 'en' ? 'Approve' : 'موافقة'}
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => projectId && openRejectDialog(projectId)}>
+                                        <X className="h-4 w-4 mr-2" />
+                                        {language === 'en' ? 'Reject' : 'رفض'}
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                  
+                                  {projectId && (
+                                    <DropdownMenuItem 
+                                      onClick={() => navigate(`/admin/projects/${projectId}/proposals`)}
+                                    >
+                                      <FileText className="h-4 w-4 mr-2" />
+                                      {language === 'en' ? 'Proposals' : 'العروض'}
+                                      {proposalsCount !== undefined && proposalsCount > 0 && (
+                                        <span className="ml-1 text-xs">({proposalsCount})</span>
+                                      )}
+                                    </DropdownMenuItem>
+                                  )}
+                                  
+                                  {projectId && (
+                                    <DropdownMenuItem 
+                                      onClick={() => handleDuplicate(projectId)}
+                                      disabled={duplicating === projectId}
+                                    >
+                                      {duplicating === projectId ? (
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                      ) : (
+                                        <Copy className="h-4 w-4 mr-2" />
+                                      )}
+                                      {language === 'en' ? 'Duplicate' : 'نسخ المشروع'}
+                                    </DropdownMenuItem>
+                                  )}
+                                  
+                                  {projectId && (
+                                    <DropdownMenuItem 
+                                      onClick={() => openHardDeleteDialog(project)}
+                                      className="text-destructive"
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      {language === 'en' ? 'Hard Delete' : 'حذف نهائي'}
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </td>
                           </tr>
                         );
@@ -922,6 +1018,65 @@ const AdminProjects = () => {
               disabled={!rejectionReason.trim()}
             >
               {language === 'en' ? 'Reject Project' : 'رفض المشروع'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Hard Delete Dialog */}
+      <Dialog open={hardDeleteDialogOpen} onOpenChange={setHardDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">
+              {language === 'en' ? '⚠️ Hard Delete Project' : '⚠️ حذف نهائي للمشروع'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'en' 
+                ? 'This action cannot be undone. The project will be permanently deleted from the database.'
+                : 'لا يمكن التراجع عن هذا الإجراء. سيتم حذف المشروع نهائياً من قاعدة البيانات.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <p className="text-sm font-medium text-destructive">
+                {language === 'en' 
+                  ? `Are you sure you want to permanently delete "${projectToDelete?.name}"?`
+                  : `هل أنت متأكد من حذف "${projectToDelete?.name}" نهائياً؟`}
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                {language === 'en' 
+                  ? '⚠️ This action cannot be undone. All project data will be lost permanently.'
+                  : '⚠️ لا يمكن التراجع عن هذا الإجراء. سيتم فقدان جميع بيانات المشروع نهائياً.'}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setHardDeleteDialogOpen(false);
+                setProjectToDelete(null);
+              }}
+              disabled={hardDeleting}
+            >
+              {language === 'en' ? 'Cancel' : 'إلغاء'}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleHardDelete}
+              disabled={hardDeleting}
+            >
+              {hardDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {language === 'en' ? 'Deleting...' : 'جاري الحذف...'}
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {language === 'en' ? 'Delete Permanently' : 'حذف نهائي'}
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

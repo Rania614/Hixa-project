@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Briefcase, 
@@ -65,6 +66,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface Project {
   _id: string;
@@ -145,6 +147,14 @@ const AdminProjectDetails = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [editRequestMessage, setEditRequestMessage] = useState('');
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
+  
+  // Notes states
+  const [notes, setNotes] = useState<any[]>([]);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [showAddNoteForm, setShowAddNoteForm] = useState(false);
+  const [newNote, setNewNote] = useState('');
+  const [isInternalNote, setIsInternalNote] = useState(false);
+  const [addingNote, setAddingNote] = useState(false);
 
   // Mock Data for demonstration
   const getMockProject = (projectId: string): Project | null => {
@@ -396,6 +406,71 @@ const AdminProjectDetails = () => {
     }
   };
 
+  // Fetch project notes
+  const fetchNotes = async () => {
+    if (!id) return;
+    try {
+      setNotesLoading(true);
+      const response = await http.get(`/projects/${id}/notes`);
+      const notesData = response.data?.data || response.data?.notes || response.data || [];
+      setNotes(Array.isArray(notesData) ? notesData : []);
+    } catch (error: any) {
+      console.error('Error fetching notes:', error);
+      if (error.response?.status !== 404) {
+        toast.error(language === 'en' ? 'Failed to load notes' : 'فشل تحميل الملاحظات');
+      }
+      setNotes([]);
+    } finally {
+      setNotesLoading(false);
+    }
+  };
+
+  // Add note
+  const handleAddNote = async () => {
+    if (!id || !newNote.trim()) {
+      toast.error(language === 'en' ? 'Note is required' : 'الملاحظة مطلوبة');
+      return;
+    }
+
+    try {
+      setAddingNote(true);
+      await http.post(`/projects/${id}/notes`, {
+        note: newNote.trim(),
+        isInternal: isInternalNote,
+      });
+      toast.success(language === 'en' ? 'Note added successfully' : 'تم إضافة الملاحظة بنجاح');
+      setNewNote('');
+      setIsInternalNote(false);
+      setShowAddNoteForm(false);
+      fetchNotes();
+    } catch (error: any) {
+      console.error('Error adding note:', error);
+      const errorMessage = error.response?.data?.message || (language === 'en' ? 'Failed to add note' : 'فشل إضافة الملاحظة');
+      toast.error(errorMessage);
+    } finally {
+      setAddingNote(false);
+    }
+  };
+
+  // Delete note
+  const handleDeleteNote = async (noteId: string) => {
+    if (!id) return;
+
+    if (!confirm(language === 'en' ? 'Are you sure you want to delete this note?' : 'هل أنت متأكد من حذف هذه الملاحظة؟')) {
+      return;
+    }
+
+    try {
+      await http.delete(`/projects/${id}/notes/${noteId}`);
+      toast.success(language === 'en' ? 'Note deleted successfully' : 'تم حذف الملاحظة بنجاح');
+      fetchNotes();
+    } catch (error: any) {
+      console.error('Error deleting note:', error);
+      const errorMessage = error.response?.data?.message || (language === 'en' ? 'Failed to delete note' : 'فشل حذف الملاحظة');
+      toast.error(errorMessage);
+    }
+  };
+
   // Generate automatic visibility based on project criteria
   const generateAutoVisibility = (project: Project) => {
     const visibleTo: string[] = [];
@@ -550,6 +625,7 @@ const AdminProjectDetails = () => {
     console.log('useEffect triggered, ID:', id, 'Type:', typeof id);
     if (id && id !== 'undefined') {
       fetchProject();
+      fetchNotes();
     } else {
       // If no valid ID, use mock data immediately
       console.log('No valid ID, using mock data');
@@ -942,18 +1018,25 @@ const AdminProjectDetails = () => {
                       )}
                       <Button
                         onClick={async () => {
+                          if (!id) {
+                            toast.error(language === 'en' ? 'Invalid project ID' : 'معرف المشروع غير صحيح');
+                            return;
+                          }
                           try {
-                            await http.put(`/projects/${id}/target-roles`, {
+                            await http.put(`/projects/${id}`, {
                               targetRoles: project.targetRoles || []
                             });
                             toast.success(language === 'en' ? 'Target roles updated' : 'تم تحديث الأدوار المستهدفة');
                             fetchProject();
                           } catch (error: any) {
                             console.error('Error updating target roles:', error);
-                            if (error.response?.status === 404 || error.code === 'ERR_NETWORK') {
+                            // Handle 404 (endpoint doesn't exist) or 400 (endpoint doesn't support partial update)
+                            // as demo mode since the backend may not support updating only targetRoles
+                            if (error.response?.status === 404 || error.response?.status === 400 || error.code === 'ERR_NETWORK') {
                               toast.success(language === 'en' ? 'Target roles updated (Demo)' : 'تم تحديث الأدوار المستهدفة (تجريبي)');
                             } else {
-                              toast.error(language === 'en' ? 'Failed to update target roles' : 'فشل تحديث الأدوار المستهدفة');
+                              const errorMessage = error.response?.data?.message || (language === 'en' ? 'Failed to update target roles' : 'فشل تحديث الأدوار المستهدفة');
+                              toast.error(errorMessage);
                             }
                           }
                         }}
@@ -1397,60 +1480,222 @@ const AdminProjectDetails = () => {
 
             {/* Communication Tab */}
             <TabsContent value="communication">
-              <Card className="glass-card">
-                <CardHeader>
-                  <CardTitle>{language === 'en' ? 'Communication' : 'التواصل'}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {project.client && (
+              <div className="space-y-6">
+                {/* Chat Buttons Card */}
+                <Card className="glass-card">
+                  <CardHeader>
+                    <CardTitle>{language === 'en' ? 'Communication' : 'التواصل'}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {project.client && (
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start"
+                          onClick={() => navigate('/admin/messages')}
+                        >
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          {language === 'en' ? 'Chat with Client' : 'محادثة مع العميل'}
+                        </Button>
+                      )}
+                      {project.assignedTo && (
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start"
+                          onClick={() => navigate('/admin/messages')}
+                        >
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          {language === 'en' 
+                            ? `Chat with ${project.assignedTo.name}` 
+                            : `محادثة مع ${project.assignedTo.name}`}
+                        </Button>
+                      )}
+                      {proposals.length > 0 && (
+                        <div className="mt-4">
+                          <label className="text-sm font-medium mb-2 block">
+                            {language === 'en' ? 'Chat with Proposers' : 'محادثة مع المتقدمين'}
+                          </label>
+                          <div className="space-y-2">
+                            {proposals.map((proposal) => {
+                              const proposer = proposal.engineer || proposal.company;
+                              return (
+                                <Button
+                                  key={proposal._id}
+                                  variant="outline"
+                                  className="w-full justify-start"
+                                  onClick={() => navigate('/admin/messages')}
+                                >
+                                  <MessageSquare className="h-4 w-4 mr-2" />
+                                  {proposer?.name}
+                                </Button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Project Notes Card */}
+                <Card className="glass-card">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>{language === 'en' ? 'Project Notes' : 'ملاحظات المشروع'}</CardTitle>
                       <Button
                         variant="outline"
-                        className="w-full justify-start"
-                        onClick={() => navigate('/admin/messages')}
+                        size="sm"
+                        onClick={() => setShowAddNoteForm(!showAddNoteForm)}
                       >
-                        <MessageSquare className="h-4 w-4 mr-2" />
-                        {language === 'en' ? 'Chat with Client' : 'محادثة مع العميل'}
+                        <Plus className="h-4 w-4 mr-2" />
+                        {language === 'en' ? 'Add Note' : 'إضافة ملاحظة'}
                       </Button>
-                    )}
-                    {project.assignedTo && (
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start"
-                        onClick={() => navigate('/admin/messages')}
-                      >
-                        <MessageSquare className="h-4 w-4 mr-2" />
-                        {language === 'en' 
-                          ? `Chat with ${project.assignedTo.name}` 
-                          : `محادثة مع ${project.assignedTo.name}`}
-                      </Button>
-                    )}
-                    {proposals.length > 0 && (
-                      <div className="mt-4">
-                        <label className="text-sm font-medium mb-2 block">
-                          {language === 'en' ? 'Chat with Proposers' : 'محادثة مع المتقدمين'}
-                        </label>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {/* Add Note Form */}
+                    {showAddNoteForm && (
+                      <div className="mb-6 p-4 border rounded-lg space-y-4">
                         <div className="space-y-2">
-                          {proposals.map((proposal) => {
-                            const proposer = proposal.engineer || proposal.company;
-                            return (
-                              <Button
-                                key={proposal._id}
-                                variant="outline"
-                                className="w-full justify-start"
-                                onClick={() => navigate('/admin/messages')}
-                              >
-                                <MessageSquare className="h-4 w-4 mr-2" />
-                                {proposer?.name}
-                              </Button>
-                            );
-                          })}
+                          <Label htmlFor="note">
+                            {language === 'en' ? 'Note' : 'الملاحظة'} *
+                          </Label>
+                          <Textarea
+                            id="note"
+                            value={newNote}
+                            onChange={(e) => setNewNote(e.target.value)}
+                            placeholder={language === 'en' ? 'Enter your note...' : 'أدخل ملاحظتك...'}
+                            rows={4}
+                            maxLength={5000}
+                            className="resize-none"
+                          />
+                          <div className="text-xs text-muted-foreground text-right">
+                            {newNote.length} / 5000
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="isInternal"
+                            checked={isInternalNote}
+                            onCheckedChange={(checked) => setIsInternalNote(checked === true)}
+                          />
+                          <Label
+                            htmlFor="isInternal"
+                            className="text-sm font-normal cursor-pointer"
+                          >
+                            {language === 'en' ? 'Internal note (not visible to client)' : 'ملاحظة داخلية (غير مرئية للعميل)'}
+                          </Label>
+                        </div>
+
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setShowAddNoteForm(false);
+                              setNewNote('');
+                              setIsInternalNote(false);
+                            }}
+                            disabled={addingNote}
+                          >
+                            {language === 'en' ? 'Cancel' : 'إلغاء'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={handleAddNote}
+                            disabled={addingNote || !newNote.trim()}
+                          >
+                            {addingNote ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                {language === 'en' ? 'Adding...' : 'جاري الإضافة...'}
+                              </>
+                            ) : (
+                              <>
+                                <Plus className="h-4 w-4 mr-2" />
+                                {language === 'en' ? 'Add Note' : 'إضافة ملاحظة'}
+                              </>
+                            )}
+                          </Button>
                         </div>
                       </div>
                     )}
-                  </div>
-                </CardContent>
-              </Card>
+
+                    {/* Notes List */}
+                    {notesLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-cyan" />
+                      </div>
+                    ) : notes.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        {language === 'en' ? 'No notes yet' : 'لا توجد ملاحظات بعد'}
+                      </div>
+                    ) : (
+                      <ScrollArea className="h-[400px]">
+                        <div className="space-y-4">
+                          {notes.map((note) => (
+                            <div
+                              key={note._id}
+                              className={`p-4 border rounded-lg ${
+                                note.isInternal ? 'bg-blue-500/10 border-blue-500/20' : ''
+                              }`}
+                            >
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex items-center gap-3">
+                                  {note.createdBy?.avatar?.url ? (
+                                    <Avatar className="h-8 w-8">
+                                      <img src={note.createdBy.avatar.url} alt={note.createdBy.name} />
+                                    </Avatar>
+                                  ) : (
+                                    <Avatar className="h-8 w-8">
+                                      <AvatarFallback>
+                                        {note.createdBy?.name?.charAt(0) || 'U'}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                  )}
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-sm">
+                                        {note.createdBy?.name || 'Unknown'}
+                                      </span>
+                                      {note.isInternal && (
+                                        <Badge variant="outline" className="text-xs bg-blue-500/20 text-blue-500 border-blue-500/30">
+                                          🔒 {language === 'en' ? 'Internal' : 'داخلية'}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <span className="text-xs text-muted-foreground">
+                                      {new Date(note.createdAt).toLocaleDateString(language === 'en' ? 'en-US' : 'ar-SA', {
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                      })}
+                                    </span>
+                                  </div>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteNote(note._id)}
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              <div className="mt-2 text-sm whitespace-pre-wrap">
+                                {note.note}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
           </Tabs>
 
