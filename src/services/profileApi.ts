@@ -41,7 +41,7 @@ export interface ProfileUpdateData {
 export interface ChangePasswordData {
   currentPassword: string;
   newPassword: string;
-  confirmPassword: string;
+  confirmNewPassword: string;
 }
 
 export interface ProfileResponse {
