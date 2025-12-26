@@ -49,6 +49,31 @@ const CreateProject = () => {
     e.preventDefault();
     
     try {
+      // القيم المسموحة من الباك إند (case-sensitive)
+      const validProjectTypes = [
+        "Architecture",
+        "Construction",
+        "Civil Engineering",
+        "Mechanical Engineering",
+        "Electrical Engineering",
+        "Interior Design",
+        "Landscape Design",
+        "Structural Engineering",
+        "Other"
+      ];
+      
+      const selectedProjectType = formData.type.trim();
+      
+      // التحقق من صحة projectType قبل الإرسال
+      if (!validProjectTypes.includes(selectedProjectType)) {
+        toast.error(
+          language === "en" 
+            ? "Invalid project type. Please select a valid type." 
+            : "نوع المشروع غير صحيح. يرجى اختيار نوع صحيح."
+        );
+        return;
+      }
+
       // Prepare payload matching database structure:
       // title, projectType, country, city, location, description, deadline (optional)
       const payload: {
@@ -61,7 +86,7 @@ const CreateProject = () => {
         deadline?: string;
       } = {
         title: formData.title.trim(),
-        projectType: formData.type.trim(),
+        projectType: selectedProjectType, // استخدام القيمة المفحوصة
         country: formData.country.trim(),
         city: formData.city.trim(),
         location: formData.location.trim(),
@@ -131,12 +156,17 @@ const CreateProject = () => {
     }
   };
 
+  // القيم المسموحة من الباك إند (case-sensitive مع مسافات)
   const projectTypes = [
-    { value: "architecture", label: language === "en" ? "Architecture" : "الهندسة المعمارية" },
-    { value: "construction", label: language === "en" ? "Construction" : "البناء" },
-    { value: "civil", label: language === "en" ? "Civil Engineering" : "الهندسة المدنية" },
-    { value: "mechanical", label: language === "en" ? "Mechanical Engineering" : "الهندسة الميكانيكية" },
-    { value: "electrical", label: language === "en" ? "Electrical Engineering" : "الهندسة الكهربائية" },
+    { value: "Architecture", label: language === "en" ? "Architecture" : "الهندسة المعمارية" },
+    { value: "Construction", label: language === "en" ? "Construction" : "البناء" },
+    { value: "Civil Engineering", label: language === "en" ? "Civil Engineering" : "الهندسة المدنية" },
+    { value: "Mechanical Engineering", label: language === "en" ? "Mechanical Engineering" : "الهندسة الميكانيكية" },
+    { value: "Electrical Engineering", label: language === "en" ? "Electrical Engineering" : "الهندسة الكهربائية" },
+    { value: "Interior Design", label: language === "en" ? "Interior Design" : "التصميم الداخلي" },
+    { value: "Landscape Design", label: language === "en" ? "Landscape Design" : "تصميم المناظر الطبيعية" },
+    { value: "Structural Engineering", label: language === "en" ? "Structural Engineering" : "الهندسة الإنشائية" },
+    { value: "Other", label: language === "en" ? "Other" : "أخرى" },
   ];
 
   const countries = [
