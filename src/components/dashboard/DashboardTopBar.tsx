@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { useUnreadNotificationsCount } from "@/hooks/useUnreadNotificationsCount";
 import { useNotificationWebSocket } from "@/hooks/useNotificationWebSocket";
+import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 
 interface DashboardTopBarProps {
   userType: "client" | "engineer";
@@ -25,6 +26,7 @@ export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({ userType }) =>
   const { language, setLanguage } = useApp();
   const navigate = useNavigate();
   const { unreadCount, refetch: refetchCount } = useUnreadNotificationsCount({ autoRefresh: true });
+  const { unreadCount: unreadMessagesCount, refetch: refetchMessagesCount } = useUnreadMessagesCount(30000);
 
   // WebSocket integration for real-time notifications
   useNotificationWebSocket({
@@ -58,12 +60,19 @@ export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({ userType }) =>
 
         {/* Messages */}
         <div className="relative">
-          <Button variant="ghost" size="icon" className="hover:bg-hexa-secondary/20 text-hexa-text-light hover:text-hexa-secondary">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="hover:bg-hexa-secondary/20 text-hexa-text-light hover:text-hexa-secondary"
+            onClick={() => navigate(userType === "client" ? "/client/messages" : "/engineer/messages")}
+          >
             <MessageSquare className="w-5 h-5" />
           </Button>
-          <Badge className={`absolute -top-1 rounded-full h-6 min-w-[24px] px-1.5 flex items-center justify-center bg-hexa-secondary text-black text-xs font-bold shadow-lg border-2 border-hexa-card z-10 ${language === "ar" ? "left-0" : "right-0"}`}>
-            3
-          </Badge>
+          {unreadMessagesCount && unreadMessagesCount.total > 0 && (
+            <Badge className={`absolute -top-1 rounded-full h-6 min-w-[24px] px-1.5 flex items-center justify-center bg-hexa-secondary text-black text-xs font-bold shadow-lg border-2 border-hexa-card z-10 ${language === "ar" ? "left-0" : "right-0"}`}>
+              {unreadMessagesCount.total > 99 ? "99+" : unreadMessagesCount.total}
+            </Badge>
+          )}
         </div>
 
         {/* Notifications */}
