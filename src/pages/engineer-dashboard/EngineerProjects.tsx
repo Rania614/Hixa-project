@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, MessageSquare, Star, Edit } from "lucide-react";
+import { MapPin, MessageSquare, Star, Edit, Trash2 } from "lucide-react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -18,6 +18,15 @@ import {
 } from "@/components/ui/breadcrumb";
 import { http } from "@/services/http";
 import { toast } from "@/components/ui/sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { deleteProposal } from "@/services/proposal.service";
 
 const EngineerProjects = () => {
   const { language } = useApp();
@@ -25,6 +34,9 @@ const EngineerProjects = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [proposals, setProposals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [proposalToDelete, setProposalToDelete] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Fetch engineer's proposals
   useEffect(() => {
@@ -72,6 +84,46 @@ const EngineerProjects = () => {
       completed: "completed",
     };
     return statusMap[status] || "waitingForAdminDecision";
+  };
+
+  const handleDeleteClick = (proposalId: string) => {
+    setProposalToDelete(proposalId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!proposalToDelete) return;
+    
+    try {
+      setDeleting(true);
+      await deleteProposal(proposalToDelete);
+      toast.success(language === "en" ? "Proposal deleted successfully" : "تم حذف العرض بنجاح");
+      
+      // Remove proposal from list
+      setProposals(proposals.filter(p => p._id !== proposalToDelete));
+      
+      setDeleteDialogOpen(false);
+      setProposalToDelete(null);
+    } catch (error: any) {
+      console.error("Error deleting proposal:", error);
+      const errorMessage = error.response?.data?.message || 
+        (language === "en" ? "Failed to delete proposal" : "فشل حذف العرض");
+      toast.error(errorMessage);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const canEditProposal = (proposal: any) => {
+    if (proposal.status !== "pending") return false;
+    
+    if (!proposal.createdAt) return false; // Backend will handle validation
+    
+    const createdAt = new Date(proposal.createdAt);
+    const now = new Date();
+    const hoursDiff = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+    
+    return hoursDiff < 1;
   };
 
   const getStatusBadge = (status: string) => {
@@ -261,30 +313,40 @@ const EngineerProjects = () => {
                       </div>
                       {/* Right Section - Actions */}
                       <div className="flex flex-col justify-center gap-3 md:w-auto w-full md:border-s md:border-hexa-border md:ps-6 pt-4 md:pt-0 border-t md:border-t-0 border-hexa-border">
-                        {project.proposalStatus === "pending" && (() => {
-                          // Check if proposal can be edited (within 1 hour of creation)
-                          let canEdit = false;
-                          if (project.proposal?.createdAt) {
-                            const createdAt = new Date(project.proposal.createdAt);
-                            const now = new Date();
-                            const hoursDiff = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-                            canEdit = hoursDiff < 1;
-                          } else {
-                            // If createdAt is not available, allow edit (backend will handle validation)
-                            canEdit = true;
-                          }
+                        {project.proposalStatus === "pending" && project.proposal && (() => {
+                          const canEdit = canEditProposal(project.proposal);
                           
-                          return canEdit ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => navigate(`/engineer/projects/${project.id}/proposal`)}
-                              className="w-full md:w-auto border-hexa-border bg-hexa-bg text-hexa-text-light hover:bg-hexa-secondary hover:text-black hover:border-hexa-secondary transition-all"
-                            >
-                              <Edit className="w-4 h-4 ms-2" />
-                              {language === "en" ? "Edit Proposal" : "تعديل العرض"}
-                            </Button>
-                          ) : null;
+                          return (
+                            <>
+                              {canEdit ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => navigate(`/engineer/projects/${project.id}/proposal`)}
+                                  className="w-full md:w-auto border-hexa-border bg-hexa-bg text-hexa-text-light hover:bg-hexa-secondary hover:text-black hover:border-hexa-secondary transition-all"
+                                >
+                                  <Edit className="w-4 h-4 ms-2" />
+                                  {language === "en" ? "Edit Proposal" : "تعديل العرض"}
+                                </Button>
+                              ) : (
+                                <div
+                                  className="text-xs text-hexa-text-light text-center p-2 bg-hexa-bg rounded border border-hexa-border"
+                                  title={language === "en" ? "Cannot edit proposal after 1 hour" : "لا يمكن تعديل العرض بعد مرور ساعة"}
+                                >
+                                  {language === "en" ? "Cannot edit after 1 hour" : "لا يمكن التعديل بعد ساعة"}
+                                </div>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteClick(project.proposalId)}
+                                className="w-full md:w-auto border-red-500/50 bg-hexa-bg text-red-500 hover:bg-red-500/10 hover:text-red-600 hover:border-red-500 transition-all"
+                              >
+                                <Trash2 className="w-4 h-4 ms-2" />
+                                {language === "en" ? "Delete" : "حذف"}
+                              </Button>
+                            </>
+                          );
                         })()}
                         {project.status === "inProgress" && (
                           <Button
@@ -307,6 +369,43 @@ const EngineerProjects = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {language === "en" ? "Delete Proposal" : "حذف العرض"}
+            </DialogTitle>
+            <DialogDescription>
+              {language === "en" 
+                ? "Are you sure you want to delete this proposal? This action cannot be undone."
+                : "هل أنت متأكد من حذف هذا العرض؟ لا يمكن التراجع عن هذا الإجراء."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setProposalToDelete(null);
+              }}
+              disabled={deleting}
+            >
+              {language === "en" ? "Cancel" : "إلغاء"}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={deleting}
+            >
+              {deleting 
+                ? (language === "en" ? "Deleting..." : "جاري الحذف...")
+                : (language === "en" ? "Delete" : "حذف")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };

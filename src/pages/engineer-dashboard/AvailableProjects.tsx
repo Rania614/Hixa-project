@@ -194,6 +194,7 @@ const AvailableProjects = () => {
           requirements: project.requirements,
           projectType: project.projectType || project.category || "N/A", // Use projectType for filtering
           isActive: project.isActive,
+          adminApproval: project.adminApproval || project.admin_approval,
         }));
         
         setAvailableProjects(transformedProjects);
@@ -418,13 +419,36 @@ const AvailableProjects = () => {
                           <Eye className="w-4 h-4 ms-2" />
                           {getDashboardText("viewDetails", language)}
                         </Button>
-                        <Button
-                          onClick={() => navigate(`/engineer/projects/${project.id}/proposal`)}
-                          className="w-full md:w-auto bg-hexa-secondary hover:bg-hexa-secondary/90 text-black font-semibold"
-                        >
-                          <FileText className="w-4 h-4 ms-2" />
-                          {getDashboardText("submitProposal", language)}
-                        </Button>
+                        {(() => {
+                          // Check if submit button should be shown
+                          // Button shows only if: project.status === "Waiting for Engineers" AND project.adminApproval.status === "approved"
+                          // Note: Backend will prevent duplicate proposals, so we don't check here
+                          const status = project.status?.toLowerCase() || "";
+                          const isWaitingForEngineers = 
+                            status === "waiting for engineers" || 
+                            status === "waiting_for_engineers" ||
+                            status === "waitingforengineers" ||
+                            status === "published" ||
+                            status === "approved";
+                          
+                          const adminApprovalStatus = project.adminApproval?.status?.toLowerCase() || 
+                            project.adminApproval?.toLowerCase() || "";
+                          const isApproved = adminApprovalStatus === "approved" || adminApprovalStatus === "accept" || adminApprovalStatus === "";
+                          
+                          const shouldShowSubmit = isWaitingForEngineers && isApproved;
+                          
+                          if (!shouldShowSubmit) return null;
+                          
+                          return (
+                            <Button
+                              onClick={() => navigate(`/engineer/projects/${project.id}/proposal`)}
+                              className="w-full md:w-auto bg-hexa-secondary hover:bg-hexa-secondary/90 text-black font-semibold"
+                            >
+                              <FileText className="w-4 h-4 ms-2" />
+                              {getDashboardText("submitProposal", language)}
+                            </Button>
+                          );
+                        })()}
                       </div>
                     </div>
                   </Card>

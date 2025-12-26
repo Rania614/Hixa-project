@@ -35,6 +35,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { X, CheckCircle2 } from 'lucide-react';
 
 interface Project {
   _id: string;
@@ -45,7 +56,7 @@ interface Project {
   country: string;
   location?: string;
   budget?: number;
-  status: 'draft' | 'pending_review' | 'approved' | 'published' | 'assigned' | 'in_progress' | 'completed' | 'rejected' | 'archived';
+  status: 'Draft' | 'Pending Review' | 'Waiting for Engineers' | 'In Progress' | 'Completed' | 'Cancelled' | 'Rejected' | 'draft' | 'pending_review' | 'approved' | 'published' | 'assigned' | 'in_progress' | 'completed' | 'rejected' | 'archived';
   client?: {
     _id: string;
     name: string;
@@ -65,6 +76,16 @@ interface Project {
     visibleTo?: string[];
     hiddenFrom?: string[];
   };
+  adminApproval?: {
+    status: 'pending' | 'approved' | 'rejected';
+    reviewedBy?: {
+      _id: string;
+      name: string;
+      email: string;
+    } | null;
+    reviewedAt?: string | null;
+    rejectionReason?: string | null;
+  };
 }
 
 const AdminProjects = () => {
@@ -82,6 +103,9 @@ const AdminProjects = () => {
     rejected: 0,
     total: 0,
   });
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   // Mock Data for demonstration
   const getMockProjects = (): Project[] => [
@@ -265,6 +289,22 @@ const AdminProjects = () => {
   const fetchProjects = async () => {
     try {
       setLoading(true);
+      // If filtering by pending, use the pending endpoint
+      if (statusFilter === 'pending') {
+        try {
+          const response = await http.get('/projects/pending', {
+            params: { page: 1, limit: 100 }
+          });
+          let projectsData = response.data?.data || response.data?.projects || response.data || [];
+          if (!Array.isArray(projectsData)) projectsData = [];
+          setProjects(projectsData);
+          return;
+        } catch (err: any) {
+          // If pending endpoint doesn't exist, fall back to regular endpoint
+          console.warn('Pending endpoint not available, using regular endpoint');
+        }
+      }
+      
       const response = await http.get('/projects');
       let projectsData = response.data?.data || response.data?.projects || response.data || [];
       if (!Array.isArray(projectsData)) projectsData = [];
@@ -321,39 +361,56 @@ const AdminProjects = () => {
     }
   };
 
-  // Approve and publish project
+  // Approve project
   const approveProject = async (projectId: string) => {
     try {
-      await http.put(`/projects/${projectId}/approve`);
-      toast.success(language === 'en' ? 'Project approved and published' : 'تم الموافقة على المشروع ونشره');
+      const response = await http.patch(`/projects/${projectId}/approve`);
+      toast.success(language === 'en' ? 'Project approved successfully' : 'تم الموافقة على المشروع بنجاح');
       fetchProjects();
       fetchStatistics();
     } catch (error: any) {
       console.error('Error approving project:', error);
-      toast.error(language === 'en' ? 'Failed to approve project' : 'فشل الموافقة على المشروع');
+      const errorMessage = error.response?.data?.message || (language === 'en' ? 'Failed to approve project' : 'فشل الموافقة على المشروع');
+      toast.error(errorMessage);
     }
   };
 
+  // Open reject dialog
+  const openRejectDialog = (projectId: string) => {
+    setSelectedProjectId(projectId);
+    setRejectionReason('');
+    setRejectDialogOpen(true);
+  };
+
   // Reject project
-  const rejectProject = async (projectId: string, reason: string) => {
-    if (!reason.trim()) {
+  const rejectProject = async () => {
+    if (!selectedProjectId) return;
+    
+    if (!rejectionReason.trim()) {
       toast.error(language === 'en' ? 'Please provide a rejection reason' : 'يرجى إدخال سبب الرفض');
       return;
     }
+    
     try {
-      await http.put(`/projects/${projectId}/reject`, { reason });
+      const response = await http.patch(`/projects/${selectedProjectId}/reject`, {
+        rejectionReason: rejectionReason.trim()
+      });
       toast.success(language === 'en' ? 'Project rejected' : 'تم رفض المشروع');
+      setRejectDialogOpen(false);
+      setSelectedProjectId(null);
+      setRejectionReason('');
       fetchProjects();
       fetchStatistics();
     } catch (error: any) {
       console.error('Error rejecting project:', error);
-      toast.error(language === 'en' ? 'Failed to reject project' : 'فشل رفض المشروع');
+      const errorMessage = error.response?.data?.message || (language === 'en' ? 'Failed to reject project' : 'فشل رفض المشروع');
+      toast.error(errorMessage);
     }
   };
 
   useEffect(() => {
     fetchProjects();
-  }, []);
+  }, [statusFilter]);
 
   useEffect(() => {
     if (projects.length > 0) {
@@ -366,7 +423,12 @@ const AdminProjects = () => {
     // Status filter
     if (statusFilter !== 'all') {
       if (statusFilter === 'pending') {
-        if (project.status !== 'pending_review' && project.status !== 'draft') return false;
+        // Check for pending review status (both old and new formats)
+        const isPending = project.status === 'Pending Review' || 
+                         project.status === 'pending_review' || 
+                         project.status === 'draft' ||
+                         project.adminApproval?.status === 'pending';
+        if (!isPending) return false;
       } else if (project.status !== statusFilter) return false;
     }
 
@@ -391,6 +453,34 @@ const AdminProjects = () => {
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: { en: string; ar: string }; className: string }> = {
+      'Draft': {
+        label: { en: 'Draft', ar: 'مسودة' },
+        className: 'bg-gray-500/20 text-gray-500'
+      },
+      'Pending Review': {
+        label: { en: 'Pending Review', ar: 'في انتظار المراجعة' },
+        className: 'bg-yellow-500/20 text-yellow-500'
+      },
+      'Waiting for Engineers': {
+        label: { en: 'Waiting for Engineers', ar: 'في انتظار المهندسين' },
+        className: 'bg-green-500/20 text-green-500'
+      },
+      'In Progress': {
+        label: { en: 'In Progress', ar: 'قيد التنفيذ' },
+        className: 'bg-blue-500/20 text-blue-500'
+      },
+      'Completed': {
+        label: { en: 'Completed', ar: 'مكتمل' },
+        className: 'bg-green-500/20 text-green-500'
+      },
+      'Cancelled': {
+        label: { en: 'Cancelled', ar: 'ملغي' },
+        className: 'bg-gray-500/20 text-gray-500'
+      },
+      'Rejected': {
+        label: { en: 'Rejected', ar: 'مرفوض' },
+        className: 'bg-red-500/20 text-red-500'
+      },
       draft: {
         label: { en: 'Draft', ar: 'مسودة' },
         className: 'bg-gray-500/20 text-gray-500'
@@ -429,7 +519,7 @@ const AdminProjects = () => {
       },
     };
 
-    const statusInfo = statusMap[status] || statusMap.pending_review;
+    const statusInfo = statusMap[status] || statusMap['Pending Review'];
     return (
       <Badge className={statusInfo.className}>
         {statusInfo.label[language as 'en' | 'ar']}
@@ -718,7 +808,7 @@ const AdminProjects = () => {
                               {new Date(project.createdAt).toLocaleDateString()}
                             </td>
                             <td className="py-4 px-4">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -727,6 +817,50 @@ const AdminProjects = () => {
                                   <Eye className="h-4 w-4 mr-1" />
                                   {language === 'en' ? 'View' : 'عرض'}
                                 </Button>
+                                {/* Show Approve/Reject buttons for pending projects */}
+                                {(project.status === 'Pending Review' || 
+                                  project.status === 'pending_review' || 
+                                  project.status === 'Draft' ||
+                                  project.adminApproval?.status === 'pending') && (
+                                  <>
+                                    <Button
+                                      variant="default"
+                                      size="sm"
+                                      onClick={() => approveProject(project._id)}
+                                      className="bg-green-600 hover:bg-green-700 text-white"
+                                    >
+                                      <CheckCircle2 className="h-4 w-4 mr-1" />
+                                      {language === 'en' ? 'Approve' : 'موافقة'}
+                                    </Button>
+                                    <Button
+                                      variant="destructive"
+                                      size="sm"
+                                      onClick={() => openRejectDialog(project._id)}
+                                    >
+                                      <X className="h-4 w-4 mr-1" />
+                                      {language === 'en' ? 'Reject' : 'رفض'}
+                                    </Button>
+                                  </>
+                                )}
+                                {project._id && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      if (project._id) {
+                                        navigate(`/admin/projects/${project._id}/proposals`);
+                                      } else {
+                                        toast.error(language === 'en' ? 'Invalid project ID' : 'معرف المشروع غير صحيح');
+                                      }
+                                    }}
+                                  >
+                                    <FileText className="h-4 w-4 mr-1" />
+                                    {language === 'en' ? 'Proposals' : 'العروض'}
+                                    {proposalsCount !== undefined && proposalsCount > 0 && (
+                                      <span className="ml-1 text-xs">({proposalsCount})</span>
+                                    )}
+                                  </Button>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -740,6 +874,58 @@ const AdminProjects = () => {
           </Card>
         </main>
       </div>
+
+      {/* Reject Project Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'en' ? 'Reject Project' : 'رفض المشروع'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'en' 
+                ? 'Please provide a reason for rejecting this project. The client will see this reason.'
+                : 'يرجى إدخال سبب رفض هذا المشروع. العميل سيرى هذا السبب.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="rejectionReason">
+                {language === 'en' ? 'Rejection Reason' : 'سبب الرفض'} *
+              </Label>
+              <Textarea
+                id="rejectionReason"
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder={language === 'en' 
+                  ? 'Enter the reason for rejection...' 
+                  : 'أدخل سبب الرفض...'}
+                rows={4}
+                className="resize-none"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRejectDialogOpen(false);
+                setRejectionReason('');
+                setSelectedProjectId(null);
+              }}
+            >
+              {language === 'en' ? 'Cancel' : 'إلغاء'}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={rejectProject}
+              disabled={!rejectionReason.trim()}
+            >
+              {language === 'en' ? 'Reject Project' : 'رفض المشروع'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

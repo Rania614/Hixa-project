@@ -48,6 +48,8 @@ http.interceptors.request.use((config) => {
     baseURL: config.baseURL,
     url: config.url,
     fullURL: fullURL,
+    hasToken: !!token,
+    tokenLength: token?.length,
     data: config.data,
   });
   
@@ -67,8 +69,21 @@ http.interceptors.response.use(
     return response;
   },
   (error) => {
+    // Log error details for debugging
+    if (error.response) {
+      console.error(`❌ HTTP Error: ${error.response.status} ${error.response.statusText}`, {
+        url: error.config?.url,
+        method: error.config?.method,
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data,
+        headers: error.response.headers,
+      });
+    }
+
     if (error.response?.status === 401) {
       // Token is invalid or expired
+      console.warn("🔒 401 Unauthorized - Token invalid or expired");
       localStorage.removeItem("token");
       // Redirect to appropriate login page based on current route
       const pathname = window.location.pathname;
@@ -79,6 +94,13 @@ http.interceptors.response.use(
       } else if (pathname.startsWith('/client')) {
         window.location.href = '/client/login';
       }
+    } else if (error.response?.status === 403) {
+      // Forbidden - user doesn't have permission
+      console.error("🚫 403 Forbidden - Access denied", {
+        url: error.config?.url,
+        user: localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")) : null,
+        token: localStorage.getItem("token") ? "exists" : "missing",
+      });
     }
     // Suppress 404 errors from console for optional endpoints
     // These endpoints may not be implemented yet or are expected to not exist
@@ -97,6 +119,7 @@ http.interceptors.response.use(
         /^\/content\/upload$/,
         /^\/upload-image/,
         /^\/upload$/,
+        /^\/project-rooms\/[^/]+\/chat-rooms$/, // Chat rooms endpoint - may not exist yet
       ];
       
       // Check if this URL matches any expected 404 pattern

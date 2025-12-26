@@ -37,8 +37,10 @@ class SocketService {
       },
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5
+      reconnectionDelay: 2000,
+      reconnectionAttempts: 3,
+      timeout: 5000,
+      autoConnect: true
     });
 
     this.socket.on('connect', () => {
@@ -46,11 +48,21 @@ class SocketService {
     });
 
     this.socket.on('disconnect', () => {
-      console.log('❌ Socket disconnected');
+      // Only log if it was a manual disconnect
+      if (this.socket?.disconnected) {
+        console.log('❌ Socket disconnected');
+      }
     });
 
+    let lastErrorTime = 0;
     this.socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
+      // Only log errors if they're not too frequent (max once per 10 seconds)
+      const now = Date.now();
+      if (now - lastErrorTime > 10000) {
+        console.warn('Socket connection error (will retry silently)');
+        lastErrorTime = now;
+      }
+      // Don't spam console with repeated errors
     });
 
     // Set up global listeners

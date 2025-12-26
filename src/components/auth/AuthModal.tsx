@@ -17,13 +17,13 @@ interface AuthModalProps {
 
 export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 'login' }: AuthModalProps) => {
   const { setIsAuthenticated } = useApp();
-  // Always start with login mode, regardless of initialMode
-  const [isLogin, setIsLogin] = useState(true);
+  // Start with initialMode (login or register)
+  const [isLogin, setIsLogin] = useState(initialMode === 'login');
   
-  // Reset to login when modal opens (ignore initialMode for now)
+  // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
-      setIsLogin(true);
+      setIsLogin(initialMode === 'login');
       // Reset form fields
       setEmail('');
       setPassword('');
@@ -34,7 +34,7 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
       setLicenseNumber('');
       setPartnerType(null);
     }
-  }, [isOpen]);
+  }, [isOpen, initialMode]);
   const [partnerType, setPartnerType] = useState<'engineer' | 'company' | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -86,47 +86,95 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
       }
     } else {
       // Registration
-      if (!name || !email || !password) {
+      // Trim and validate fields
+      const trimmedName = name?.trim() || '';
+      const trimmedEmail = email?.trim() || '';
+      const trimmedPassword = password?.trim() || '';
+      const trimmedConfirmPassword = confirmPassword?.trim() || '';
+      
+      if (!trimmedName || !trimmedEmail || !trimmedPassword || !trimmedConfirmPassword) {
         setError('Please fill in all required fields');
         return;
       }
       
-      if (password !== confirmPassword) {
+      if (trimmedPassword !== trimmedConfirmPassword) {
         setError('Passwords do not match');
         return;
       }
 
       try {
         setLoading(true);
-        const registrationData: any = {
-          email,
-          password,
-          name,
+        
+        // Determine the correct endpoint and prepare data based on role
+        let endpoint = '';
+        let registrationData: any = {
+          email: trimmedEmail,
+          password: trimmedPassword,
+          confirmPassword: trimmedConfirmPassword,
         };
 
-        // Add role-specific data
         if (role === 'client') {
-          registrationData.role = 'client';
-          if (companyName) {
-            registrationData.companyName = companyName;
+          // Client registration
+          endpoint = '/auth/register/client';
+          // Ensure name is provided and not empty
+          if (!trimmedName || trimmedName.length === 0) {
+            setError('Full name is required');
+            setLoading(false);
+            return;
+          }
+          registrationData.name = trimmedName;
+          if (companyName?.trim()) {
+            registrationData.companyName = companyName.trim();
           }
         } else if (role === 'partner') {
-          registrationData.role = 'partner';
-          if (partnerType) {
-            registrationData.partnerType = partnerType;
+          if (partnerType === 'engineer') {
+            // Engineer registration
+            endpoint = '/auth/register/engineer';
+            // Ensure name is provided and not empty
+            if (!trimmedName || trimmedName.length === 0) {
+              setError('Full name is required');
+              setLoading(false);
+              return;
+            }
+            registrationData.name = trimmedName;
+            if (specialization?.trim()) {
+              registrationData.specialization = specialization.trim();
+            }
+            if (licenseNumber?.trim()) {
+              registrationData.licenseNumber = licenseNumber.trim();
+            }
+          } else if (partnerType === 'company') {
+            // Company registration
+            endpoint = '/auth/register/company';
+            // Ensure name and companyName are provided
+            if (!trimmedName || trimmedName.length === 0) {
+              setError('Contact person name is required');
+              setLoading(false);
+              return;
+            }
+            if (!companyName?.trim()) {
+              setError('Company name is required');
+              setLoading(false);
+              return;
+            }
+            // Backend expects only: companyName and contactPersonName (NOT name)
+            registrationData.companyName = companyName.trim();
+            registrationData.contactPersonName = trimmedName;
+          } else {
+            setError('Please select a partner type');
+            setLoading(false);
+            return;
           }
-          if (companyName) {
-            registrationData.companyName = companyName;
-          }
-          if (specialization) {
-            registrationData.specialization = specialization;
-          }
-          if (licenseNumber) {
-            registrationData.licenseNumber = licenseNumber;
-          }
+        } else {
+          setError('Invalid role');
+          setLoading(false);
+          return;
         }
 
-        const response = await http.post('/auth/register', registrationData);
+        // Log registration data for debugging
+        console.log('Registration data:', { endpoint, registrationData });
+        
+        const response = await http.post(endpoint, registrationData);
         
         if (response.data && response.data.token) {
           // Save token
@@ -142,8 +190,15 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
         }
       } catch (err: any) {
         console.error('Registration failed:', err);
+        console.error('Error response:', err.response?.data);
+        
+        // Extract error message from various possible locations
         const errorMessage = err.response?.data?.message || 
                            err.response?.data?.error || 
+                           err.response?.data?.errors?.name?.message ||
+                           err.response?.data?.errors?.email?.message ||
+                           err.response?.data?.errors?.password?.message ||
+                           (err.response?.data?.errors && Object.values(err.response.data.errors)[0]?.message) ||
                            err.message || 
                            'Registration failed. Please try again.';
         setError(errorMessage);
@@ -243,14 +298,13 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
                 >
                   Login
                 </Button>
-                {/* TEMPORARILY HIDDEN - Register button */}
-                {/* <Button
+                <Button
                   variant="outline"
                   onClick={handleRegisterClick}
                   size="sm"
                 >
                   Register
-                </Button> */}
+                </Button>
               </div>
               
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -302,9 +356,7 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
               </form>
             </>
           ) : (
-            // TEMPORARILY HIDDEN - All registration forms (Partner type selection + Client/Partner registration forms)
-            // Uncomment the code below to restore registration functionality
-            /* role === 'partner' && !partnerType ? (
+            role === 'partner' && !partnerType ? (
               // Partner type selection
               <div className="space-y-4">
                 <p className="text-center text-muted-foreground">
@@ -499,20 +551,22 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
                     />
                   </div>
                   
+                  {error && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">
+                      {error}
+                    </div>
+                  )}
+                  
                   <Button
                     type="submit"
+                    disabled={loading}
                     className="w-full bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold"
                   >
-                    Create Account
+                    {loading ? 'Creating Account...' : 'Create Account'}
                   </Button>
                 </form>
               </>
-            ) */
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">
-                Registration is temporarily disabled. Please use login only.
-              </p>
-            </div>
+            )
           )}
         </CardContent>
       </Card>

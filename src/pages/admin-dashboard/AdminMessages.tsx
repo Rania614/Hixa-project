@@ -294,6 +294,7 @@ const AdminMessages = () => {
     try {
       const rooms = await messagesApi.getChatRooms(projectRoomId);
       if (!rooms || rooms.length === 0) {
+        // Use mock data if API returns empty or 404
         const mockRooms = getMockChatRooms(projectRoomId);
         setChatRooms(mockRooms);
         setSelectedChatRoom((prev) => {
@@ -312,7 +313,8 @@ const AdminMessages = () => {
         });
       }
     } catch (error: any) {
-      if (error.response?.status === 404 || error.code === 'ERR_NETWORK') {
+      // Handle other errors (not 404, as that's handled in messagesApi)
+      if (error.code === 'ERR_NETWORK') {
         const mockRooms = getMockChatRooms(projectRoomId);
         setChatRooms(mockRooms);
         setSelectedChatRoom((prev) => {
@@ -322,7 +324,13 @@ const AdminMessages = () => {
           return prev;
         });
       } else {
-        toast.error(language === 'en' ? 'Failed to load chats' : 'فشل تحميل المحادثات');
+        // Only show error for non-404 errors
+        if (error.response?.status !== 404) {
+          toast.error(language === 'en' ? 'Failed to load chats' : 'فشل تحميل المحادثات');
+        }
+        // Fallback to mock data
+        const mockRooms = getMockChatRooms(projectRoomId);
+        setChatRooms(mockRooms);
       }
     }
   }, [language]);

@@ -123,12 +123,19 @@ const ContentManagement = () => {
   } = useContentStore();
 
   // Helper لتجنب الأخطاء - services الآن object يحتوي على item1, item2, item3, item4
-  const servicesData = services || {};
+  type ServicesDataObject = {
+    item1?: any;
+    item2?: any;
+    item3?: any;
+    item4?: any;
+    [key: string]: any;
+  };
+  const servicesData: ServicesDataObject = (services as ServicesDataObject) || {};
   const safeServices = [
-    { ...servicesData.item1, itemId: 'item1', index: 0 },
-    { ...servicesData.item2, itemId: 'item2', index: 1 },
-    { ...servicesData.item3, itemId: 'item3', index: 2 },
-    { ...servicesData.item4, itemId: 'item4', index: 3 },
+    { ...(servicesData.item1 || {}), itemId: 'item1', index: 0 },
+    { ...(servicesData.item2 || {}), itemId: 'item2', index: 1 },
+    { ...(servicesData.item3 || {}), itemId: 'item3', index: 2 },
+    { ...(servicesData.item4 || {}), itemId: 'item4', index: 3 },
   ].filter(item => item.title_en || item.title_ar); // Filter out empty services
   
   // Debug: Log services data
@@ -197,16 +204,16 @@ const ContentManagement = () => {
       services: {
         ...servicesData,
         [itemId]: {
-          ...servicesData[itemId],
+          ...(servicesData[itemId] || {}),
           details: {
-            ...servicesData[itemId]?.details,
+            ...(servicesData[itemId]?.details || {}),
             [detailId]: {
-              ...servicesData[itemId]?.details?.[detailId],
+              ...(servicesData[itemId]?.details?.[detailId] || {}),
               [field]: value,
             },
           },
         },
-      },
+      } as any,
     });
     
     // Save to backend
@@ -242,16 +249,16 @@ const ContentManagement = () => {
           services: {
             ...servicesData,
             [itemId]: {
-              ...servicesData[itemId],
+              ...(servicesData[itemId] || {}),
               details: {
-                ...servicesData[itemId]?.details,
+                ...(servicesData[itemId]?.details || {}),
                 [detailId]: {
-                  ...servicesData[itemId]?.details?.[detailId],
+                  ...(servicesData[itemId]?.details?.[detailId] || {}),
                   image: imageUrl,
                 },
               },
             },
-          },
+          } as any,
         });
       toast.success(language === 'en' ? 'Image uploaded successfully' : 'تم رفع الصورة بنجاح');
       } else {
@@ -556,24 +563,18 @@ const ContentManagement = () => {
               );
               return;
             }
-          }
-          
-          // If individual save failed or no services, check if it's a 404
-          const has404 = results.some(r => {
-            if (r.success) return false;
-            return r.skipped || r.error?.response?.status === 404;
-          });
-          
-          if (has404) {
-            console.warn('⚠️ Services details endpoint not implemented on backend. Data saved locally only.');
+          } else {
+            // No services to save
+            console.warn('⚠️ No services found to save details for');
             toast.warning(
               language === 'en' 
-                ? 'Services details endpoint not available. Data saved locally only.' 
-                : 'نقطة نهاية تفاصيل الخدمات غير متاحة. تم حفظ البيانات محلياً فقط.'
+                ? 'No services found to save details for' 
+                : 'لم يتم العثور على خدمات لحفظ التفاصيل'
             );
             return;
           }
           
+          // If we reach here, individual save failed
           console.error('❌ Individual service details save failed');
           throw new Error('Failed to save services details. Please try again.');
         } else {
@@ -2280,7 +2281,7 @@ const ContentManagement = () => {
                         services: {
                           ...servicesData,
                           [itemId]: { ...selectedService },
-                        },
+                        } as any,
                       });
                       
                       toast.success(
@@ -2444,16 +2445,16 @@ const ContentManagement = () => {
                               services: {
                                 ...servicesData,
                                 [selectedDetail.itemId]: {
-                                  ...servicesData[selectedDetail.itemId],
+                                  ...(servicesData[selectedDetail.itemId] || {}),
                                   details: {
-                                    ...servicesData[selectedDetail.itemId]?.details,
+                                    ...(servicesData[selectedDetail.itemId]?.details || {}),
                                     [selectedDetail.detailId]: {
                                       ...selectedDetail,
                                       image: imageUrl,
                                     },
                                   },
                                 },
-                              },
+                              } as any,
                             });
                             
                             toast.success(language === 'en' ? 'Image uploaded successfully' : 'تم رفع الصورة بنجاح');
@@ -2637,13 +2638,13 @@ const ContentManagement = () => {
                         services: {
                           ...servicesData,
                           [itemId]: {
-                            ...servicesData[itemId],
+                            ...(servicesData[itemId] || {}),
                             details: {
-                              ...servicesData[itemId]?.details,
+                              ...(servicesData[itemId]?.details || {}),
                               [detailId]: { ...selectedDetail },
                             },
                           },
-                        },
+                        } as any,
                       });
                       
                       toast.success(

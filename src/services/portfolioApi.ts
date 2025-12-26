@@ -16,8 +16,45 @@ export interface PortfolioWork {
   features?: string[];
 }
 
-// GET all portfolio works
-export const getAllPortfolioWorks = async (): Promise<PortfolioWork[]> => {
+// GET portfolio works by user ID
+export const getPortfolioWorksByUserId = async (userId: string | number): Promise<PortfolioWork[]> => {
+  try {
+    console.log("Fetching portfolio works for user ID:", userId);
+    const response = await http.get(`/portfolio/user/${userId}`);
+    console.log("API Response:", response.data);
+    
+    // Handle different response formats
+    let works: PortfolioWork[] = [];
+    
+    if (Array.isArray(response.data)) {
+      works = response.data;
+    } else if (response.data?.data && Array.isArray(response.data.data)) {
+      works = response.data.data;
+    } else if (response.data?.items && Array.isArray(response.data.items)) {
+      works = response.data.items;
+    } else if (response.data?.works && Array.isArray(response.data.works)) {
+      works = response.data.works;
+    } else if (response.data && typeof response.data === 'object') {
+      // If it's a single object, wrap it in an array
+      works = [response.data as PortfolioWork];
+    }
+    
+    console.log("Processed works:", works);
+    return works;
+  } catch (error: any) {
+    console.error("Error fetching portfolio works by user ID:", error);
+    toast.error(error.response?.data?.message || "Failed to fetch portfolio works");
+    throw error;
+  }
+};
+
+// GET all portfolio works (fallback - uses user-specific endpoint if userId provided)
+export const getAllPortfolioWorks = async (userId?: string | number): Promise<PortfolioWork[]> => {
+  // If userId is provided, use user-specific endpoint
+  if (userId) {
+    return getPortfolioWorksByUserId(userId);
+  }
+  
   try {
     const response = await http.get("/portfolio");
     console.log("API Response:", response.data);

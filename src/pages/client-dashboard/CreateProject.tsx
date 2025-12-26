@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, MapPin, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, MapPin } from "lucide-react";
 import { http } from "@/services/http";
 import { toast } from "@/components/ui/sonner";
 import {
@@ -35,7 +35,6 @@ const CreateProject = () => {
     requirements: "",
     deadline: "",
   });
-  const [submitting, setSubmitting] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -43,101 +42,92 @@ const CreateProject = () => {
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => {
-      const updated = { ...prev, [name]: value };
-      
-      // If country changes, reset city
-      if (name === "country") {
-        updated.city = "";
-        updated.location = "";
-      }
-      
-      // Update location when both country and city are selected
-      if (name === "city" && updated.country && value) {
-        const selectedCountry = countries.find(c => c.value === updated.country);
-        const selectedCity = citiesByCountry[updated.country]?.find(c => c.value === value);
-        if (selectedCountry && selectedCity) {
-          updated.location = `${language === "en" ? selectedCity.label.en : selectedCity.label.ar}, ${language === "en" ? selectedCountry.label : selectedCountry.label}`;
-        }
-      } else if (updated.country && updated.city) {
-        const selectedCountry = countries.find(c => c.value === updated.country);
-        const selectedCity = citiesByCountry[updated.country]?.find(c => c.value === updated.city);
-        if (selectedCountry && selectedCity) {
-          updated.location = `${language === "en" ? selectedCity.label.en : selectedCity.label.ar}, ${language === "en" ? selectedCountry.label : selectedCountry.label}`;
-        }
-      }
-      
-      return updated;
-    });
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate required fields
-    if (!formData.title || !formData.type || !formData.country || !formData.city || !formData.description) {
-      toast.error(language === "en" ? "Please fill in all required fields" : "يرجى ملء جميع الحقول المطلوبة");
-      return;
-    }
-
     try {
-      setSubmitting(true);
-      
-      // Prepare project data
-      const projectData = {
-        title: formData.title,
-        name: formData.title, // Some APIs use 'name' instead of 'title'
-        type: formData.type,
-        category: formData.category || formData.type,
-        description: formData.description,
-        requirements: formData.requirements || "",
-        country: formData.country,
-        location: formData.location || `${formData.city}, ${countries.find(c => c.value === formData.country)?.label || ""}`,
-        city: formData.city,
-        deadline: formData.deadline || undefined,
-        status: "draft", // New projects start as draft
+      // Prepare payload matching database structure:
+      // title, projectType, country, city, location, description, deadline (optional)
+      const payload: {
+        title: string;
+        projectType: string;
+        country: string;
+        city: string;
+        location: string;
+        description: string;
+        deadline?: string;
+      } = {
+        title: formData.title.trim(),
+        projectType: formData.type.trim(),
+        country: formData.country.trim(),
+        city: formData.city.trim(),
+        location: formData.location.trim(),
+        description: formData.description.trim(),
       };
 
-      console.log("📤 Sending project data:", projectData);
-
-      // Try different possible endpoints
-      let response;
-      const possibleEndpoints = [
-        '/projects',
-        '/client/projects',
-      ];
-
-      let lastError;
-      for (const endpoint of possibleEndpoints) {
-        try {
-          response = await http.post(endpoint, projectData);
-          if (response && response.data) {
-            console.log(`✅ Successfully created project via ${endpoint}`);
-            break;
-          }
-        } catch (err: any) {
-          lastError = err;
-          console.warn(`⚠️ Failed to create via ${endpoint}:`, err.response?.status || err.message);
-          if (err.response?.status !== 404) {
-            // If it's not 404, it means endpoint exists but failed, so stop trying
-            break;
-          }
-          continue;
-        }
+      // Add optional deadline only if it has a value
+      if (formData.deadline?.trim()) {
+        payload.deadline = formData.deadline.trim();
       }
 
-      if (!response || !response.data) {
-        throw lastError || new Error('Failed to create project');
-      }
+      console.log("📤 Sending project data:", payload);
 
-      toast.success(language === "en" ? "Project created successfully" : "تم إنشاء المشروع بنجاح");
+      // Send POST request to /projects endpoint
+      const response = await http.post('/projects', payload);
+
+      console.log("✅ Project created successfully:", response.data);
+
+      // Show success message
+      toast.success(
+        language === "en" 
+          ? "Project created successfully!" 
+          : "تم إنشاء المشروع بنجاح!"
+      );
+
+      // Navigate to projects list only after successful creation
       navigate("/client/projects");
     } catch (error: any) {
       console.error("❌ Error creating project:", error);
-      const errorMessage = error.response?.data?.message || error.message || (language === "en" ? "Failed to create project" : "فشل إنشاء المشروع");
+      console.error("❌ Error response data:", error.response?.data);
+      console.error("❌ Error response status:", error.response?.status);
+      
+      // Extract error message from response
+      const getErrorMessage = () => {
+        if (!error.response?.data) {
+          return language === "en" 
+            ? "Failed to create project. Please try again." 
+            : "فشل إنشاء المشروع. يرجى المحاولة مرة أخرى.";
+        }
+
+        // Log full error data for debugging
+        const errorData = error.response.data;
+        console.log("🔍 Full error data:", JSON.stringify(errorData, null, 2));
+
+        // Handle validation errors that might be in errors array or fields object
+        if (errorData.errors) {
+          const validationErrors = Array.isArray(errorData.errors) 
+            ? errorData.errors.join(", ")
+            : Object.values(errorData.errors).flat().join(", ");
+          return validationErrors;
+        }
+
+        if (typeof errorData === "string") {
+          return errorData;
+        }
+
+        return errorData.message || 
+               errorData.error || 
+               errorData.msg || 
+               (language === "en" 
+                 ? "Failed to create project. Please check your input and try again." 
+                 : "فشل إنشاء المشروع. يرجى التحقق من المدخلات والمحاولة مرة أخرى.");
+      };
+
+      const errorMessage = getErrorMessage();
       toast.error(errorMessage);
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -372,7 +362,11 @@ const CreateProject = () => {
                     </Label>
                     <Select
                       value={formData.country}
-                      onValueChange={(value) => handleSelectChange("country", value)}
+                      onValueChange={(value) => {
+                        handleSelectChange("country", value);
+                        // Reset city when country changes
+                        setFormData((prev) => ({ ...prev, city: "", location: "" }));
+                      }}
                       required
                     >
                       <SelectTrigger className="bg-hexa-bg border-hexa-border text-hexa-text-dark h-11">
@@ -399,7 +393,18 @@ const CreateProject = () => {
                     </Label>
                     <Select
                       value={formData.city}
-                      onValueChange={(value) => handleSelectChange("city", value)}
+                      onValueChange={(value) => {
+                        handleSelectChange("city", value);
+                        // Update location field
+                        const selectedCity = availableCities.find(c => c.value === value);
+                        const selectedCountry = countries.find(c => c.value === formData.country);
+                        if (selectedCity && selectedCountry) {
+                          const locationValue = language === "en" 
+                            ? `${selectedCity.label.en}, ${selectedCountry.label}`
+                            : `${selectedCity.label.ar}، ${selectedCountry.label}`;
+                          setFormData((prev) => ({ ...prev, location: locationValue }));
+                        }
+                      }}
                       required
                       disabled={!formData.country || availableCities.length === 0}
                     >
@@ -495,20 +500,10 @@ const CreateProject = () => {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={submitting}
                   className="bg-hexa-secondary hover:bg-hexa-secondary/90 text-black font-semibold px-6 h-11"
                 >
-                  {submitting ? (
-                    <>
-                      <Loader2 className={`w-4 h-4 animate-spin ${language === "ar" ? "ml-2" : "mr-2"}`} />
-                      {language === "en" ? "Creating..." : "جاري الإنشاء..."}
-                    </>
-                  ) : (
-                    <>
-                      <Save className={`w-4 h-4 ${language === "ar" ? "ml-2" : "mr-2"}`} />
-                      {language === "en" ? "Create Project" : "إنشاء المشروع"}
-                    </>
-                  )}
+                  <Save className={`w-4 h-4 ${language === "ar" ? "ml-2" : "mr-2"}`} />
+                  {language === "en" ? "Create Project" : "إنشاء المشروع"}
                 </Button>
               </div>
             </form>

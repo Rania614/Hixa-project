@@ -28,6 +28,7 @@ const EngineerProjectDetails = () => {
   const [proposals, setProposals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [proposalsLoading, setProposalsLoading] = useState(false);
+  const [canSubmitProposal, setCanSubmitProposal] = useState(false);
 
   // Fetch project details
   useEffect(() => {
@@ -105,6 +106,7 @@ const EngineerProjectDetails = () => {
           budget: projectData.budget,
           tags: projectData.tags || [],
           isActive: projectData.isActive,
+          adminApproval: projectData.adminApproval || projectData.admin_approval,
         });
       } catch (error: any) {
         console.error("Error fetching project:", error);
@@ -163,6 +165,9 @@ const EngineerProjectDetails = () => {
         }
         
         setProposals(proposalsData);
+        
+        // Check if engineer can submit proposal (no existing proposal)
+        setCanSubmitProposal(proposalsData.length === 0);
       } catch (error: any) {
         console.error("Error fetching proposals:", error);
         // Don't show error toast for 404, as project might not have proposals yet
@@ -251,13 +256,34 @@ const EngineerProjectDetails = () => {
               </span>
             </div>
           </div>
-          <Button
-            onClick={() => navigate(`/engineer/projects/${project.id}/proposal`)}
-            className="bg-hexa-secondary hover:bg-hexa-secondary/90 text-black font-semibold"
-          >
-            <FileText className={`w-4 h-4 ${language === "ar" ? "ml-2" : "mr-2"}`} />
-            {getDashboardText("submitProposal", language)}
-          </Button>
+          {(() => {
+            // Check if submit button should be shown
+            const status = project.status?.toLowerCase() || "";
+            const isWaitingForEngineers = 
+              status === "waiting for engineers" || 
+              status === "waiting_for_engineers" ||
+              status === "waitingforengineers" ||
+              status === "published" ||
+              status === "approved";
+            
+            const adminApprovalStatus = project.adminApproval?.status?.toLowerCase() || 
+              project.adminApproval?.toLowerCase() || "";
+            const isApproved = adminApprovalStatus === "approved" || adminApprovalStatus === "accept" || adminApprovalStatus === "";
+            
+            const shouldShowSubmit = isWaitingForEngineers && isApproved && canSubmitProposal;
+            
+            if (!shouldShowSubmit) return null;
+            
+            return (
+              <Button
+                onClick={() => navigate(`/engineer/projects/${project.id}/proposal`)}
+                className="bg-hexa-secondary hover:bg-hexa-secondary/90 text-black font-semibold"
+              >
+                <FileText className={`w-4 h-4 ${language === "ar" ? "ml-2" : "mr-2"}`} />
+                {getDashboardText("submitProposal", language)}
+              </Button>
+            );
+          })()}
         </div>
 
         {/* Tabs */}

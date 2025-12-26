@@ -40,6 +40,7 @@ import {
 import { HexagonIcon } from '@/components/ui/hexagon-icon';
 import { http } from '@/services/http';
 import { toast } from '@/components/ui/sonner';
+import { updateProposalStatus, deleteProposal } from '@/services/proposal.service';
 import {
   Dialog,
   DialogContent,
@@ -140,6 +141,7 @@ const AdminProjectDetails = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showRequestEditModal, setShowRequestEditModal] = useState(false);
+  const [showAcceptConfirmModal, setShowAcceptConfirmModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [editRequestMessage, setEditRequestMessage] = useState('');
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
@@ -376,7 +378,7 @@ const AdminProjectDetails = () => {
   const fetchProposals = async () => {
     if (!id) return;
     try {
-      const response = await http.get(`/projects/${id}/proposals`);
+      const response = await http.get(`/proposals/project/${id}`);
       const proposalsData = response.data?.data || response.data?.proposals || response.data || [];
       setProposals(Array.isArray(proposalsData) ? proposalsData : []);
     } catch (error: any) {
@@ -492,51 +494,54 @@ const AdminProjectDetails = () => {
     }
   };
 
-  // Assign project
-  const handleAssign = async () => {
-    if (!id || !selectedProposal) return;
-    try {
-      const assigneeId = selectedProposal.engineer?._id || selectedProposal.company?._id;
-      const assigneeType = selectedProposal.engineer ? 'engineer' : 'company';
-      
-      await http.put(`/projects/${id}/assign`, {
-        assigneeId,
-        assigneeType,
-        proposalId: selectedProposal._id
-      });
-      
-      toast.success(language === 'en' ? 'Project assigned successfully' : 'تم تعيين المشروع بنجاح');
-      setShowAssignModal(false);
+  // Accept proposal and assign project (called from confirmation modal)
+  const handleConfirmAccept = async () => {
+    if (!selectedProposal) return;
+    await handleAcceptProposal(selectedProposal._id);
+    setShowAcceptConfirmModal(false);
       setSelectedProposal(null);
+  };
+
+  // Accept proposal - PUT /api/proposals/:id/status with { status: "accepted" }
+  const handleAcceptProposal = async (proposalId: string) => {
+    try {
+      await updateProposalStatus(proposalId, 'accepted');
+      toast.success(language === 'en' ? 'Proposal accepted. Project status updated to In Progress.' : 'تم قبول العرض. تم تحديث حالة المشروع إلى قيد التنفيذ.');
       fetchProject();
       fetchProposals();
     } catch (error: any) {
-      console.error('Error assigning project:', error);
-      toast.error(language === 'en' ? 'Failed to assign project' : 'فشل تعيين المشروع');
+      console.error('Error accepting proposal:', error);
+      const errorMessage = error.response?.data?.message || 
+        (language === 'en' ? 'Failed to accept proposal' : 'فشل قبول العرض');
+      toast.error(errorMessage);
     }
   };
 
-  // Shortlist proposal
-  const handleShortlist = async (proposalId: string) => {
-    try {
-      await http.put(`/proposals/${proposalId}/shortlist`);
-      toast.success(language === 'en' ? 'Proposal shortlisted' : 'تم إضافة العرض للقائمة المختصرة');
-      fetchProposals();
-    } catch (error: any) {
-      console.error('Error shortlisting proposal:', error);
-      toast.error(language === 'en' ? 'Failed to shortlist proposal' : 'فشل إضافة العرض للقائمة المختصرة');
-    }
-  };
-
-  // Reject proposal
+  // Reject proposal - PUT /api/proposals/:id/status with { status: "rejected" }
   const handleRejectProposal = async (proposalId: string) => {
     try {
-      await http.put(`/proposals/${proposalId}/reject`);
+      await updateProposalStatus(proposalId, 'rejected');
       toast.success(language === 'en' ? 'Proposal rejected' : 'تم رفض العرض');
       fetchProposals();
     } catch (error: any) {
       console.error('Error rejecting proposal:', error);
-      toast.error(language === 'en' ? 'Failed to reject proposal' : 'فشل رفض العرض');
+      const errorMessage = error.response?.data?.message || 
+        (language === 'en' ? 'Failed to reject proposal' : 'فشل رفض العرض');
+      toast.error(errorMessage);
+    }
+  };
+
+  // Delete proposal - DELETE /api/proposals/:id
+  const handleDeleteProposal = async (proposalId: string) => {
+    try {
+      await deleteProposal(proposalId);
+      toast.success(language === 'en' ? 'Proposal deleted' : 'تم حذف العرض');
+      fetchProposals();
+    } catch (error: any) {
+      console.error('Error deleting proposal:', error);
+      const errorMessage = error.response?.data?.message || 
+        (language === 'en' ? 'Failed to delete proposal' : 'فشل حذف العرض');
+      toast.error(errorMessage);
     }
   };
 
@@ -1035,10 +1040,10 @@ const AdminProjectDetails = () => {
                               {language === 'en' ? 'Rating' : 'التقييم'}
                             </th>
                             <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                              {language === 'en' ? 'Price' : 'السعر'}
+                              {language === 'en' ? 'Budget' : 'الميزانية'}
                             </th>
                             <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                              {language === 'en' ? 'Duration' : 'المدة'}
+                              {language === 'en' ? 'Timeline' : 'الجدول الزمني'}
                             </th>
                             <th className="text-left py-3 px-4 font-medium text-muted-foreground">
                               {language === 'en' ? 'Status' : 'الحالة'}
@@ -1092,14 +1097,20 @@ const AdminProjectDetails = () => {
                                   )}
                                 </td>
                                 <td className="py-4 px-4">
-                                  {proposal.price ? (
+                                  {(proposal as any).proposedBudget ? (
+                                    <span className="font-medium">
+                                      {(proposal as any).proposedBudget.amount} {(proposal as any).proposedBudget.currency}
+                                    </span>
+                                  ) : proposal.price ? (
                                     <span className="font-medium">${proposal.price.toLocaleString()}</span>
                                   ) : (
                                     <span className="text-sm text-muted-foreground">N/A</span>
                                   )}
                                 </td>
                                 <td className="py-4 px-4">
-                                  {proposal.duration ? (
+                                  {(proposal as any).estimatedTimeline ? (
+                                    <span className="text-sm">{(proposal as any).estimatedTimeline}</span>
+                                  ) : proposal.duration ? (
                                     <span className="text-sm">{proposal.duration} {language === 'en' ? 'days' : 'يوم'}</span>
                                   ) : (
                                     <span className="text-sm text-muted-foreground">N/A</span>
@@ -1131,20 +1142,12 @@ const AdminProjectDetails = () => {
                                         <Button
                                           variant="ghost"
                                           size="sm"
-                                          onClick={() => handleShortlist(proposal._id)}
-                                          title={language === 'en' ? 'Shortlist' : 'إضافة للقائمة المختصرة'}
-                                        >
-                                          <UserCheck className="h-4 w-4 text-blue-500" />
-                                        </Button>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
                                           onClick={() => {
                                             setSelectedProposal(proposal);
-                                            setShowAssignModal(true);
+                                            setShowAcceptConfirmModal(true);
                                           }}
                                           className="bg-green-500/20 hover:bg-green-500/30"
-                                          title={language === 'en' ? 'Assign' : 'تعيين'}
+                                          title={language === 'en' ? 'Accept' : 'قبول'}
                                         >
                                           <CheckCircle className="h-4 w-4 text-green-500" />
                                         </Button>
@@ -1155,6 +1158,15 @@ const AdminProjectDetails = () => {
                                           title={language === 'en' ? 'Reject' : 'رفض'}
                                         >
                                           <UserX className="h-4 w-4 text-red-500" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleDeleteProposal(proposal._id)}
+                                          title={language === 'en' ? 'Delete' : 'حذف'}
+                                          className="text-red-500 hover:text-red-600"
+                                        >
+                                          <X className="h-4 w-4" />
                                         </Button>
                                       </>
                                     )}
@@ -1553,15 +1565,15 @@ const AdminProjectDetails = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Assign Modal */}
-          <Dialog open={showAssignModal} onOpenChange={setShowAssignModal}>
+          {/* Accept Proposal Confirmation Modal */}
+          <Dialog open={showAcceptConfirmModal} onOpenChange={setShowAcceptConfirmModal}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>{language === 'en' ? 'Assign Project' : 'تعيين المشروع'}</DialogTitle>
+                <DialogTitle>{language === 'en' ? 'Accept Proposal' : 'قبول العرض'}</DialogTitle>
                 <DialogDescription>
                   {language === 'en' 
-                    ? 'Assign this project to the selected proposer. Other proposals will be automatically rejected.'
-                    : 'تعيين هذا المشروع للمتقدم المختار. سيتم رفض باقي العروض تلقائياً.'}
+                    ? 'The engineer will be assigned to the project and other proposals will be rejected. Are you sure?'
+                    : 'سيتم تعيين المهندس ورفض باقي العروض، هل أنت متأكد؟'}
                 </DialogDescription>
               </DialogHeader>
               {selectedProposal && (
@@ -1582,28 +1594,31 @@ const AdminProjectDetails = () => {
                         </p>
                       </div>
                     </div>
-                    {selectedProposal.price && (
+                    {(selectedProposal as any).proposedBudget && (
                       <p className="text-sm mt-2">
-                        <span className="font-medium">{language === 'en' ? 'Price:' : 'السعر:'}</span> ${selectedProposal.price.toLocaleString()}
+                        <span className="font-medium">{language === 'en' ? 'Budget:' : 'الميزانية:'}</span> {(selectedProposal as any).proposedBudget.amount} {(selectedProposal as any).proposedBudget.currency}
                       </p>
                     )}
-                    {selectedProposal.duration && (
+                    {(selectedProposal as any).estimatedTimeline && (
                       <p className="text-sm">
-                        <span className="font-medium">{language === 'en' ? 'Duration:' : 'المدة:'}</span> {selectedProposal.duration} {language === 'en' ? 'days' : 'يوم'}
+                        <span className="font-medium">{language === 'en' ? 'Timeline:' : 'الجدول الزمني:'}</span> {(selectedProposal as any).estimatedTimeline}
                       </p>
                     )}
                   </div>
                 </div>
               )}
               <DialogFooter>
-                <Button variant="outline" onClick={() => setShowAssignModal(false)}>
+                <Button variant="outline" onClick={() => {
+                  setShowAcceptConfirmModal(false);
+                  setSelectedProposal(null);
+                }}>
                   {language === 'en' ? 'Cancel' : 'إلغاء'}
                 </Button>
                 <Button
-                  onClick={handleAssign}
+                  onClick={handleConfirmAccept}
                   className="bg-green-500 hover:bg-green-600"
                 >
-                  {language === 'en' ? 'Assign Project' : 'تعيين المشروع'}
+                  {language === 'en' ? 'Accept & Assign' : 'قبول وتعيين'}
                 </Button>
               </DialogFooter>
             </DialogContent>

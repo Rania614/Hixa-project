@@ -55,7 +55,25 @@ const EngineerPortfolio = () => {
     try {
       setLoading(true);
       console.log("Fetching portfolio works...");
-      const works = await getAllPortfolioWorks();
+      
+      // Get user ID from localStorage
+      const userStr = localStorage.getItem("user");
+      let userId: string | undefined;
+      
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          userId = user._id || user.id;
+          console.log("Found user ID:", userId);
+        } catch (e) {
+          console.error("Error parsing user from localStorage:", e);
+        }
+      }
+      
+      // Use user-specific endpoint if userId is available
+      const works = userId 
+        ? await getAllPortfolioWorks(userId)
+        : await getAllPortfolioWorks();
       console.log("Raw fetched portfolio works:", works);
       console.log("Type of works:", typeof works);
       console.log("Is array?", Array.isArray(works));

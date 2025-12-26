@@ -167,6 +167,19 @@ const SubmitProposal = () => {
     e.preventDefault();
     setLoading(true);
     try {
+      // Check if token exists
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error(
+          language === "en" 
+            ? "You must be logged in to submit a proposal" 
+            : "يجب تسجيل الدخول لتقديم عرض"
+        );
+        navigate("/engineer/login");
+        setLoading(false);
+        return;
+      }
+
       const proposalData = {
         description: formData.description,
         estimatedTimeline: formData.estimatedTimeline,
@@ -176,6 +189,16 @@ const SubmitProposal = () => {
           currency: formData.proposedBudget.currency,
         },
       };
+
+      console.log("📤 Submitting proposal:", {
+        projectId: id,
+        isEditMode,
+        proposalId,
+        endpoint: isEditMode ? `PUT /proposals/${proposalId}` : `POST /proposals (with projectId in body)`,
+        hasToken: !!token,
+        tokenLength: token?.length,
+        proposalData: isEditMode ? proposalData : { ...proposalData, project: id, projectId: id },
+      });
 
       if (isEditMode && proposalId) {
         // Check if still within 1 hour (client-side validation)
@@ -195,13 +218,54 @@ const SubmitProposal = () => {
       } else {
         // Create new proposal using POST /api/proposals/project/:projectId
         await http.post(`/proposals/project/${id}`, proposalData);
-        toast.success(language === "en" ? "Proposal submitted successfully" : "تم تقديم العرض بنجاح");
+        toast.success(language === "en" ? "Proposal submitted successfully" : "تم إرسال العرض بنجاح");
       }
+      // Redirect to My Proposals page
       navigate("/engineer/projects");
     } catch (error: any) {
-      console.error("Error submitting proposal:", error);
-      const errorMessage = error.response?.data?.message || 
-        (language === "en" ? "Failed to submit proposal" : "فشل تقديم العرض");
+      console.error("❌ Error submitting proposal:", {
+        error,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+        url: error.config?.url,
+        method: error.config?.method,
+        headers: error.config?.headers,
+      });
+
+      // Handle different error types with specific messages
+      let errorMessage = "";
+      
+      if (error.response?.status === 401) {
+        // Unauthorized - token is invalid or expired
+        errorMessage = language === "en" 
+          ? "Your session has expired. Please log in again." 
+          : "انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.";
+        localStorage.removeItem("token");
+        setTimeout(() => navigate("/engineer/login"), 2000);
+      } else if (error.response?.status === 403) {
+        // Forbidden - user doesn't have permission
+        errorMessage = error.response?.data?.message || 
+          (language === "en" 
+            ? "You are not authorized to perform this action" 
+            : "غير مصرح لك بتنفيذ هذا الإجراء");
+      } else if (error.response?.status === 404) {
+        errorMessage = language === "en" 
+          ? "Project not found. Please check the project ID." 
+          : "المشروع غير موجود. يرجى التحقق من معرف المشروع.";
+      } else if (error.response?.status >= 500) {
+        errorMessage = language === "en" 
+          ? "Server error. Please try again later." 
+          : "خطأ في الخادم. يرجى المحاولة مرة أخرى لاحقاً.";
+      } else {
+        // Try to get error message from response
+        errorMessage = error.response?.data?.message || 
+          error.response?.data?.error ||
+          error.message ||
+          (language === "en" ? "Failed to submit proposal" : "فشل تقديم العرض");
+      }
+      
       toast.error(errorMessage);
     } finally {
       setLoading(false);

@@ -70,8 +70,16 @@ export const messagesApi = {
 
   // Get chat rooms for a specific project room
   getChatRooms: async (projectRoomId: string): Promise<ChatRoom[]> => {
-    const response = await http.get(`/project-rooms/${projectRoomId}/chat-rooms`);
-    return response.data?.data || response.data || [];
+    try {
+      const response = await http.get(`/project-rooms/${projectRoomId}/chat-rooms`);
+      return response.data?.data || response.data || [];
+    } catch (error: any) {
+      // Silently handle 404 - endpoint might not exist yet
+      if (error.response?.status === 404) {
+        return [];
+      }
+      throw error;
+    }
   },
 
   // Get messages for a chat room with pagination

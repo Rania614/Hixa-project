@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { useApp } from "@/context/AppContext";
@@ -9,6 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, MapPin, FileText, Star } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { http } from "@/services/http";
+import { toast } from "@/components/ui/sonner";
+import { getProjectProposals } from "@/services/proposal.service";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -23,9 +26,73 @@ const ProjectDetails = () => {
   const { language } = useApp();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
+  const [project, setProject] = useState<any>(null);
+  const [proposals, setProposals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [proposalsLoading, setProposalsLoading] = useState(false);
 
-  // Mock project data
-  const project = {
+  // Fetch project details
+  useEffect(() => {
+    const fetchProject = async () => {
+      if (!id) return;
+      try {
+        setLoading(true);
+        const response = await http.get(`/projects/${id}`);
+        
+        let projectData = response.data?.data || response.data?.project || response.data;
+        
+        setProject({
+          id: projectData._id || projectData.id || id,
+          title: projectData.title || projectData.name || "Unknown Project",
+          type: projectData.category || projectData.projectType || "N/A",
+          location: projectData.location || "N/A",
+          status: projectData.status || "pending",
+          description: projectData.description || "",
+          startDate: projectData.startDate || projectData.createdAt,
+          endDate: projectData.endDate || projectData.deadline,
+          engineer: projectData.assignedTo ? {
+            name: projectData.assignedTo.name || "Unknown Engineer",
+            rating: projectData.assignedTo.rating || 0,
+            specializations: projectData.assignedTo.specializations || [],
+          } : null,
+        });
+      } catch (error: any) {
+        console.error("Error fetching project:", error);
+        toast.error(
+          language === "en" ? "Failed to load project details" : "فشل تحميل تفاصيل المشروع"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProject();
+  }, [id, language]);
+
+  // Fetch proposals for this project
+  useEffect(() => {
+    const fetchProposals = async () => {
+      if (!id) return;
+      try {
+        setProposalsLoading(true);
+        const proposalsData = await getProjectProposals(id);
+        setProposals(proposalsData);
+      } catch (error: any) {
+        console.error("Error fetching proposals:", error);
+        if (error.response?.status !== 404) {
+          toast.error(
+            language === "en" ? "Failed to load proposals" : "فشل تحميل العروض"
+          );
+        }
+        setProposals([]);
+      } finally {
+        setProposalsLoading(false);
+      }
+    };
+    fetchProposals();
+  }, [id, language]);
+
+  // Fallback project data
+  const fallbackProject = {
     id: id,
     title: "Residential Building Design",
     type: "Architecture",
@@ -70,6 +137,18 @@ const ProjectDetails = () => {
     ],
   };
 
+  const displayProject = project || fallbackProject;
+
+  if (loading && !project) {
+    return (
+      <DashboardLayout userType="client">
+        <div className="text-center py-12 text-hexa-text-light">
+          {language === "en" ? "Loading..." : "جاري التحميل..."}
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout userType="client">
       <div className="space-y-6">
@@ -104,7 +183,7 @@ const ProjectDetails = () => {
             <BreadcrumbSeparator className="text-hexa-text-light" />
             <BreadcrumbItem>
               <BreadcrumbPage className="text-hexa-secondary font-semibold">
-                {project.title}
+                {displayProject.title}
               </BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
@@ -121,14 +200,14 @@ const ProjectDetails = () => {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-3xl font-bold text-hexa-text-dark">{project.title}</h1>
+            <h1 className="text-3xl font-bold text-hexa-text-dark">{displayProject.title}</h1>
             <div className="flex items-center gap-4 mt-2">
               <Badge className="bg-hexa-secondary/20 text-hexa-secondary border-hexa-secondary/40 font-medium">
                 {getDashboardText("inProgress", language)}
               </Badge>
               <span className="text-sm text-hexa-text-light flex items-center gap-1">
                 <MapPin className="w-4 h-4" />
-                {project.location}
+                {displayProject.location}
               </span>
             </div>
           </div>
@@ -160,7 +239,7 @@ const ProjectDetails = () => {
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-4">
             {/* Assigned Engineer Card */}
-            {project.engineer && (
+            {displayProject.engineer && (
               <Card className="bg-hexa-card border-hexa-border border-hexa-secondary/30">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-hexa-text-dark text-lg flex items-center gap-2">
@@ -171,23 +250,26 @@ const ProjectDetails = () => {
                 <CardContent>
                   <div 
                     className="flex items-center gap-4 p-4 bg-hexa-bg rounded-lg border border-hexa-border cursor-pointer hover:border-hexa-secondary/60 hover:bg-hexa-secondary/5 transition-all"
-                    onClick={() => navigate(`/client/engineers/${project.engineer.id || 1}`)}
+                    onClick={() => navigate(`/client/engineers/${displayProject.engineer?.id || 1}`)}
                   >
                     <Avatar className="w-16 h-16">
                       <AvatarFallback className="bg-hexa-secondary text-black text-xl font-bold">
-                        {project.engineer.name.charAt(0)}
+                        {displayProject.engineer.name.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <p className="font-bold text-lg text-hexa-text-dark hover:text-hexa-secondary transition-colors">{project.engineer.name}</p>
-                        <div className="flex items-center gap-1 px-2 py-1 bg-hexa-secondary/20 rounded-md">
-                          <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                          <span className="text-sm font-semibold text-hexa-text-dark">{project.engineer.rating}</span>
-                        </div>
+                        <p className="font-bold text-lg text-hexa-text-dark hover:text-hexa-secondary transition-colors">{displayProject.engineer.name}</p>
+                        {displayProject.engineer.rating > 0 && (
+                          <div className="flex items-center gap-1 px-2 py-1 bg-hexa-secondary/20 rounded-md">
+                            <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                            <span className="text-sm font-semibold text-hexa-text-dark">{displayProject.engineer.rating}</span>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {project.engineer.specializations.map((spec, idx) => (
+                      {displayProject.engineer.specializations && displayProject.engineer.specializations.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {displayProject.engineer.specializations.map((spec: string, idx: number) => (
                           <Badge 
                             key={idx} 
                             variant="outline" 
@@ -195,8 +277,9 @@ const ProjectDetails = () => {
                           >
                             {spec}
                           </Badge>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -210,66 +293,118 @@ const ProjectDetails = () => {
               <CardContent className="space-y-4">
                 <div>
                   <p className="text-sm text-hexa-text-light mb-2">{getDashboardText("projectType", language)}</p>
-                  <p className="font-medium text-hexa-text-dark">{project.type}</p>
+                  <p className="font-medium text-hexa-text-dark">{displayProject.type}</p>
                 </div>
                 <div>
                   <p className="text-sm text-hexa-text-light mb-2">{language === "en" ? "Description" : "الوصف"}</p>
-                  <p className="text-hexa-text-dark">{project.description}</p>
+                  <p className="text-hexa-text-dark">{displayProject.description || (language === "en" ? "No description available" : "لا يوجد وصف متاح")}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-hexa-text-light mb-2">{language === "en" ? "Timeline" : "الجدول الزمني"}</p>
-                  <p className="font-medium text-hexa-text-dark">{project.startDate} - {project.endDate}</p>
-                </div>
+                {(displayProject.startDate || displayProject.endDate) && (
+                  <div>
+                    <p className="text-sm text-hexa-text-light mb-2">{language === "en" ? "Timeline" : "الجدول الزمني"}</p>
+                    <p className="font-medium text-hexa-text-dark">
+                      {displayProject.startDate ? new Date(displayProject.startDate).toLocaleDateString() : "N/A"} - {displayProject.endDate ? new Date(displayProject.endDate).toLocaleDateString() : "N/A"}
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
           {/* Proposals Tab */}
           <TabsContent value="proposals" className="space-y-4">
-            {project.proposals.map((proposal) => (
-              <Card key={proposal.id} className="bg-hexa-card border-hexa-border">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarFallback className="bg-hexa-secondary text-black">
-                          {proposal.engineer.charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <CardTitle className="text-lg text-hexa-text-dark">{proposal.engineer}</CardTitle>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                          <span className="text-sm text-hexa-text-light">{proposal.rating}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <p className="text-sm text-hexa-text-light mb-2">{getDashboardText("specializations", language)}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {proposal.specializations.map((spec, idx) => (
-                        <Badge key={idx} variant="outline" className="border-hexa-border bg-hexa-bg text-hexa-text-light">
-                          {spec}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-hexa-text-light mb-2">{language === "en" ? "Proposal" : "العرض"}</p>
-                    <p className="text-hexa-text-dark">{proposal.proposal}</p>
-                  </div>
-                  <div className="pt-2 border-t border-hexa-border">
-                    <div>
-                      <p className="text-sm text-hexa-text-light">{language === "en" ? "Timeline" : "الجدول الزمني"}</p>
-                      <p className="font-medium text-hexa-text-dark">{proposal.timeline}</p>
-                    </div>
-                  </div>
+            {proposalsLoading ? (
+              <Card className="bg-hexa-card border-hexa-border">
+                <CardContent className="py-12 text-center text-hexa-text-light">
+                  {language === "en" ? "Loading proposals..." : "جاري تحميل العروض..."}
                 </CardContent>
               </Card>
-            ))}
+            ) : proposals.length === 0 ? (
+              <Card className="bg-hexa-card border-hexa-border">
+                <CardContent className="py-12 text-center text-hexa-text-light">
+                  {language === "en" ? "No proposals found for this project" : "لم تقم بتقديم أي عروض بعد"}
+                </CardContent>
+              </Card>
+            ) : (
+              proposals.map((proposal) => {
+                const engineer = proposal.engineer || {};
+                const engineerName = engineer.name || engineer.email || "Unknown Engineer";
+                const engineerAvatar = engineer.avatar || engineerName.charAt(0);
+                
+                return (
+                  <Card key={proposal._id || proposal.id} className="bg-hexa-card border-hexa-border">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <Avatar>
+                            <AvatarFallback className="bg-hexa-secondary text-black">
+                              {typeof engineerAvatar === 'string' ? engineerAvatar.charAt(0) : engineerAvatar}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <CardTitle className="text-lg text-hexa-text-dark">{engineerName}</CardTitle>
+                            {proposal.status && (
+                              <Badge 
+                                variant={
+                                  proposal.status === "accepted" ? "default" :
+                                  proposal.status === "rejected" ? "destructive" :
+                                  "outline"
+                                }
+                                className="mt-1"
+                              >
+                                {proposal.status === "pending" 
+                                  ? (language === "en" ? "Pending" : "قيد الانتظار")
+                                  : proposal.status === "accepted"
+                                  ? (language === "en" ? "Accepted" : "مقبول")
+                                  : proposal.status === "rejected"
+                                  ? (language === "en" ? "Rejected" : "مرفوض")
+                                  : proposal.status}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <p className="text-sm text-hexa-text-light mb-2">{language === "en" ? "Description" : "الوصف"}</p>
+                        <p className="text-hexa-text-dark">{proposal.description}</p>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {proposal.estimatedTimeline && (
+                          <div>
+                            <p className="text-sm text-hexa-text-light mb-2">{language === "en" ? "Estimated Timeline" : "الجدول الزمني المتوقع"}</p>
+                            <p className="font-medium text-hexa-text-dark">{proposal.estimatedTimeline}</p>
+                          </div>
+                        )}
+                        {proposal.proposedBudget && (
+                          <div>
+                            <p className="text-sm text-hexa-text-light mb-2">{language === "en" ? "Proposed Budget" : "الميزانية المقترحة"}</p>
+                            <p className="font-medium text-hexa-text-dark">
+                              {proposal.proposedBudget.amount} {proposal.proposedBudget.currency}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      {proposal.relevantExperience && (
+                        <div>
+                          <p className="text-sm text-hexa-text-light mb-2">{language === "en" ? "Relevant Experience" : "الخبرة ذات الصلة"}</p>
+                          <p className="text-hexa-text-dark">{proposal.relevantExperience}</p>
+                        </div>
+                      )}
+                      {proposal.createdAt && (
+                        <div className="pt-2 border-t border-hexa-border">
+                          <p className="text-sm text-hexa-text-light">
+                            {language === "en" ? "Submitted:" : "تاريخ التقديم:"}{" "}
+                            {new Date(proposal.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })
+            )}
           </TabsContent>
 
           {/* Files Tab */}
@@ -280,7 +415,7 @@ const ProjectDetails = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {project.files.map((file, idx) => (
+                  {((displayProject.files && displayProject.files.length > 0) ? displayProject.files : []).map((file: any, idx: number) => (
                     <div key={idx} className="flex items-center justify-between p-3 border-hexa-border rounded-lg hover:bg-hexa-bg transition-colors bg-hexa-card border">
                       <div className="flex items-center gap-3">
                         <FileText className="w-5 h-5 text-hexa-secondary" />
