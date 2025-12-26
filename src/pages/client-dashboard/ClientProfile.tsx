@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { User, Mail, Phone, MapPin, Save } from "lucide-react";
+import { User, Mail, Phone, MapPin, Save, Lock, Loader2 } from "lucide-react";
 import { CountryPhoneInput } from "@/components/shared/CountryPhoneInput";
 import {
   Select,
@@ -26,10 +26,18 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { http } from "@/services/http";
+import { toast } from "@/components/ui/sonner";
 
 const ClientProfile = () => {
   const { language } = useApp();
   const navigate = useNavigate();
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
   
   const { control, handleSubmit, formState: { errors } } = useForm({
     defaultValues: {
@@ -45,6 +53,73 @@ const ClientProfile = () => {
   const onSubmit = (data: any) => {
     console.log("Form data:", data);
     // TODO: Implement API call to update profile
+  };
+
+  // Handle password change
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      toast.error(
+        language === "en"
+          ? "Please fill all password fields"
+          : "يرجى ملء جميع حقول كلمة المرور"
+      );
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error(
+        language === "en"
+          ? "New password and confirmation do not match"
+          : "كلمة المرور الجديدة والتأكيد غير متطابقين"
+      );
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      toast.error(
+        language === "en"
+          ? "Password must be at least 6 characters"
+          : "يجب أن تكون كلمة المرور 6 أحرف على الأقل"
+      );
+      return;
+    }
+
+    try {
+      setChangingPassword(true);
+      await http.put("/users/me/change-password", {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+        confirmNewPassword: passwordForm.confirmPassword,
+      });
+
+      toast.success(
+        language === "en"
+          ? "Password changed successfully"
+          : "تم تغيير كلمة المرور بنجاح"
+      );
+
+      // Reset password form
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+    } catch (error: any) {
+      console.error("Error changing password:", error);
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          "";
+      toast.error(
+        language === "en"
+          ? `Failed to change password${errorMessage ? ": " + errorMessage : ""}`
+          : `فشل تغيير كلمة المرور${errorMessage ? ": " + errorMessage : ""}`
+      );
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   return (
@@ -165,6 +240,88 @@ const ClientProfile = () => {
                 <Button type="submit" className="bg-hexa-secondary hover:bg-hexa-secondary/90 text-black font-semibold h-11 px-6">
                   <Save className={`w-4 h-4 ${language === "ar" ? "ml-2" : "mr-2"}`} />
                   {language === "en" ? "Save Changes" : "حفظ التغييرات"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Change Password Card */}
+        <Card className="bg-hexa-card border-hexa-border">
+          <CardHeader className="pb-6">
+            <CardTitle className="text-hexa-text-dark text-xl flex items-center gap-2">
+              <Lock className="w-5 h-5" />
+              {language === "en" ? "Change Password" : "تغيير كلمة المرور"}
+            </CardTitle>
+            <CardDescription className="text-hexa-text-light mt-2">
+              {language === "en" 
+                ? "Update your password to keep your account secure" 
+                : "قم بتحديث كلمة المرور للحفاظ على أمان حسابك"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6 px-6 md:px-8 pb-8">
+            <form onSubmit={handleChangePassword} className="space-y-6">
+              <div className="space-y-2.5">
+                <Label className="text-hexa-text-dark text-base font-medium">
+                  {language === "en" ? "Current Password" : "كلمة المرور الحالية"} *
+                </Label>
+                <Input
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                  className="bg-hexa-bg border-hexa-border text-hexa-text-dark placeholder:text-hexa-text-light h-11"
+                  placeholder={language === "en" ? "Enter current password" : "أدخل كلمة المرور الحالية"}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2.5">
+                <Label className="text-hexa-text-dark text-base font-medium">
+                  {language === "en" ? "New Password" : "كلمة المرور الجديدة"} *
+                </Label>
+                <Input
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                  className="bg-hexa-bg border-hexa-border text-hexa-text-dark placeholder:text-hexa-text-light h-11"
+                  placeholder={language === "en" ? "Enter new password" : "أدخل كلمة المرور الجديدة"}
+                  required
+                  minLength={6}
+                />
+              </div>
+
+              <div className="space-y-2.5">
+                <Label className="text-hexa-text-dark text-base font-medium">
+                  {language === "en" ? "Confirm New Password" : "تأكيد كلمة المرور الجديدة"} *
+                </Label>
+                <Input
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                  className="bg-hexa-bg border-hexa-border text-hexa-text-dark placeholder:text-hexa-text-light h-11"
+                  placeholder={language === "en" ? "Confirm new password" : "أكد كلمة المرور الجديدة"}
+                  required
+                  minLength={6}
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-4 pt-6 border-t border-hexa-border">
+                <Button
+                  type="submit"
+                  disabled={changingPassword}
+                  className="bg-hexa-secondary hover:bg-hexa-secondary/90 text-black font-semibold h-11 px-6"
+                >
+                  {changingPassword ? (
+                    <>
+                      <Loader2 className={`w-4 h-4 animate-spin ${language === "ar" ? "ml-2" : "mr-2"}`} />
+                      {language === "en" ? "Changing..." : "جاري التغيير..."}
+                    </>
+                  ) : (
+                    <>
+                      <Lock className={`w-4 h-4 ${language === "ar" ? "ml-2" : "mr-2"}`} />
+                      {language === "en" ? "Change Password" : "تغيير كلمة المرور"}
+                    </>
+                  )}
                 </Button>
               </div>
             </form>

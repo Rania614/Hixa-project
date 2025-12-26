@@ -52,9 +52,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface User {
-  _id: string;
+  _id?: string;
+  id?: string;
   name: string;
   email: string;
   phone?: string;
@@ -67,6 +69,21 @@ interface User {
   verified?: boolean;
 }
 
+// Helper function to get user ID (supports both _id and id)
+const getUserId = (user: User): string => {
+  return user._id || user.id || '';
+};
+
+// Helper function to check if user is active (supports both status string and isActive boolean)
+const isUserActive = (user: User | any): boolean => {
+  if (user.status === 'active') return true;
+  if (user.status === 'inactive' || user.status === 'suspended' || user.status === 'pending') return false;
+  // Fallback to isActive if status doesn't exist
+  if (user.isActive !== undefined) return user.isActive === true;
+  // Default to active if neither exists
+  return true;
+};
+
 const AdminUsers = () => {
   const { language } = useApp();
   const [activeTab, setActiveTab] = useState<'engineers' | 'clients' | 'companies'>('engineers');
@@ -77,10 +94,26 @@ const AdminUsers = () => {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [viewingUser, setViewingUser] = useState<User | null>(null);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [updating, setUpdating] = useState(false);
+  const [loadingUser, setLoadingUser] = useState(false);
   const [userForm, setUserForm] = useState({
     name: '',
     email: '',
     password: '',
+    phone: '',
+    role: 'engineer' as 'engineer' | 'client' | 'company',
+    status: 'active' as 'active' | 'pending' | 'suspended',
+    location: '',
+    companyName: '',
+  });
+  const [editForm, setEditForm] = useState({
+    name: '',
+    email: '',
     phone: '',
     role: 'engineer' as 'engineer' | 'client' | 'company',
     status: 'active' as 'active' | 'pending' | 'suspended',
@@ -118,7 +151,30 @@ const AdminUsers = () => {
       }
 
       const usersData = response.data?.data || response.data?.users || response.data || [];
-      setUsers(Array.isArray(usersData) ? usersData : []);
+      // Normalize user IDs and status - ensure _id and status exist
+      const normalizedUsers = Array.isArray(usersData) 
+        ? usersData.map((user: any) => {
+            // Normalize ID
+            const normalizedId = user._id || user.id;
+            
+            // Normalize status - convert isActive (boolean) to status (string)
+            let normalizedStatus = user.status;
+            if (!normalizedStatus && user.isActive !== undefined) {
+              // If API returns isActive (boolean), convert to status (string)
+              normalizedStatus = user.isActive ? 'active' : 'inactive';
+            } else if (!normalizedStatus) {
+              // Default to active if no status or isActive
+              normalizedStatus = 'active';
+            }
+            
+            return {
+              ...user,
+              _id: normalizedId,
+              status: normalizedStatus,
+            };
+          })
+        : [];
+      setUsers(normalizedUsers);
     } catch (error: any) {
       console.error('Error fetching users:', error);
       // Don't show error for 404 - endpoint might not exist yet
@@ -172,10 +228,129 @@ const AdminUsers = () => {
     }
   };
 
-  // Update user status
-  const updateUserStatus = async (userId: string, newStatus: string) => {
+  // Fetch user details
+  const fetchUserDetails = async (userId: string) => {
     try {
-      await http.put(`/users/${userId}/status`, { status: newStatus });
+      setLoadingUser(true);
+      const response = await http.get(`/users/${userId}`);
+      const userData = response.data?.data || response.data?.user || response.data;
+      return userData;
+    } catch (error: any) {
+      console.error('Error fetching user details:', error);
+      toast.error(
+        language === 'en' 
+          ? 'Failed to load user details' 
+          : 'فشل تحميل تفاصيل المستخدم'
+      );
+      throw error;
+    } finally {
+      setLoadingUser(false);
+    }
+  };
+
+  // View user details
+  const handleViewUser = async (userId: string) => {
+    if (!userId) {
+      toast.error(language === 'en' ? 'Invalid user ID' : 'معرف المستخدم غير صحيح');
+      return;
+    }
+    try {
+      const userData = await fetchUserDetails(userId);
+      // Normalize user ID
+      if (userData && !userData._id && userData.id) {
+        userData._id = userData.id;
+      }
+      setViewingUser(userData);
+      setShowViewModal(true);
+    } catch (error) {
+      // Error already handled in fetchUserDetails
+    }
+  };
+
+  // Open edit modal and load user data
+  const handleEditUser = async (userId: string) => {
+    if (!userId) {
+      toast.error(language === 'en' ? 'Invalid user ID' : 'معرف المستخدم غير صحيح');
+      return;
+    }
+    try {
+      const userData = await fetchUserDetails(userId);
+      // Normalize user ID
+      if (userData && !userData._id && userData.id) {
+        userData._id = userData.id;
+      }
+      setEditingUser(userData);
+      // Map isActive (boolean) to status (string) for form
+      const userStatus = userData.isActive !== undefined 
+        ? (userData.isActive ? 'active' : 'inactive')
+        : (userData.status || 'active');
+      setEditForm({
+        name: userData.name || '',
+        email: userData.email || '',
+        phone: userData.phone || '',
+        role: userData.role || 'engineer',
+        status: userStatus as 'active' | 'pending' | 'suspended',
+        location: userData.location || '',
+        companyName: userData.companyName || '',
+      });
+      setShowEditModal(true);
+    } catch (error) {
+      // Error already handled in fetchUserDetails
+    }
+  };
+
+  // Update user
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+
+    try {
+      setUpdating(true);
+      const updateData: any = {
+        name: editForm.name,
+        email: editForm.email,
+        role: editForm.role,
+        isActive: editForm.status === 'active',
+      };
+
+      if (editForm.phone) updateData.phone = editForm.phone;
+      if (editForm.location) updateData.location = editForm.location;
+      if (editForm.role === 'company' && editForm.companyName) {
+        updateData.companyName = editForm.companyName;
+      }
+
+      const userId = getUserId(editingUser);
+      if (!userId) {
+        toast.error(language === 'en' ? 'Invalid user ID' : 'معرف المستخدم غير صحيح');
+        setUpdating(false);
+        return;
+      }
+      await http.put(`/users/${userId}`, updateData);
+      toast.success(
+        language === 'en' 
+          ? 'User updated successfully' 
+          : 'تم تحديث المستخدم بنجاح'
+      );
+      setShowEditModal(false);
+      setEditingUser(null);
+      fetchUsers();
+      fetchStatistics();
+    } catch (error: any) {
+      console.error('Error updating user:', error);
+      toast.error(
+        language === 'en' 
+          ? error.response?.data?.message || 'Failed to update user' 
+          : error.response?.data?.message || 'فشل تحديث المستخدم'
+      );
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Toggle user activation (using new endpoint)
+  const updateUserStatus = async (userId: string) => {
+    try {
+      await http.patch(`/users/${userId}/toggle-activation`);
       toast.success(
         language === 'en' 
           ? 'User status updated successfully' 
@@ -206,9 +381,67 @@ const AdminUsers = () => {
       toast.success(language === 'en' ? 'User deleted successfully' : 'تم حذف المستخدم بنجاح');
       fetchUsers();
       fetchStatistics();
+      setSelectedUsers(prev => prev.filter(id => id !== userId));
     } catch (error: any) {
       console.error('Error deleting user:', error);
       toast.error(language === 'en' ? 'Failed to delete user' : 'فشل حذف المستخدم');
+    }
+  };
+
+  // Bulk delete users
+  const handleBulkDelete = async () => {
+    if (selectedUsers.length === 0) {
+      toast.error(
+        language === 'en' 
+          ? 'Please select users to delete' 
+          : 'يرجى اختيار المستخدمين للحذف'
+      );
+      return;
+    }
+
+    if (!confirm(
+      language === 'en' 
+        ? `Are you sure you want to delete ${selectedUsers.length} user(s)?` 
+        : `هل أنت متأكد من حذف ${selectedUsers.length} مستخدم؟`
+    )) {
+      return;
+    }
+
+    try {
+      await http.post('/users/bulk-delete', { ids: selectedUsers });
+      toast.success(
+        language === 'en' 
+          ? `${selectedUsers.length} user(s) deleted successfully` 
+          : `تم حذف ${selectedUsers.length} مستخدم بنجاح`
+      );
+      setSelectedUsers([]);
+      fetchUsers();
+      fetchStatistics();
+    } catch (error: any) {
+      console.error('Error deleting users:', error);
+      toast.error(
+        language === 'en' 
+          ? 'Failed to delete users' 
+          : 'فشل حذف المستخدمين'
+      );
+    }
+  };
+
+  // Toggle user selection
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUsers(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
+  // Toggle all users selection
+  const toggleAllUsersSelection = () => {
+    if (selectedUsers.length === filteredUsers.length) {
+      setSelectedUsers([]);
+    } else {
+      setSelectedUsers(filteredUsers.map(u => u._id));
     }
   };
 
@@ -499,6 +732,17 @@ const AdminUsers = () => {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                {selectedUsers.length > 0 && (
+                  <Button 
+                    variant="destructive"
+                    onClick={handleBulkDelete}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {language === 'en' 
+                      ? `Delete (${selectedUsers.length})` 
+                      : `حذف (${selectedUsers.length})`}
+                  </Button>
+                )}
                 <Button 
                   className="bg-cyan hover:bg-cyan-dark"
                   onClick={() => {
@@ -534,6 +778,12 @@ const AdminUsers = () => {
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-border">
+                            <th className="text-left py-3 px-4 font-medium text-muted-foreground w-12">
+                              <Checkbox
+                                checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
+                                onCheckedChange={toggleAllUsersSelection}
+                              />
+                            </th>
                             <th className="text-left py-3 px-4 font-medium text-muted-foreground">
                               {language === 'en' ? 'Engineer' : 'المهندس'}
                             </th>
@@ -554,8 +804,15 @@ const AdminUsers = () => {
                         <tbody>
                           {filteredUsers.map((user, index) => {
                             const RoleIcon = getRoleIcon(user.role);
+                            const userId = getUserId(user);
                             return (
-                              <tr key={user._id || `user-${index}`} className="border-b border-border/50 hover:bg-muted/30">
+                              <tr key={userId || `user-${index}`} className="border-b border-border/50 hover:bg-muted/30">
+                                <td className="py-4 px-4">
+                                  <Checkbox
+                                    checked={selectedUsers.includes(userId)}
+                                    onCheckedChange={() => toggleUserSelection(userId)}
+                                  />
+                                </td>
                                 <td className="py-4 px-4">
                                   <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-cyan flex items-center justify-center text-white font-semibold">
@@ -606,23 +863,29 @@ const AdminUsers = () => {
                                       </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                      <DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => userId && handleViewUser(userId)}>
+                                        <UserCheck className="h-4 w-4 mr-2" />
+                                        {language === 'en' ? 'View Details' : 'عرض التفاصيل'}
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => userId && handleEditUser(userId)}>
                                         <Edit className="h-4 w-4 mr-2" />
                                         {language === 'en' ? 'Edit' : 'تعديل'}
                                       </DropdownMenuItem>
-                                      {user.status === 'active' ? (
-                                        <DropdownMenuItem onClick={() => updateUserStatus(user._id, 'suspended')}>
-                                          <UserX className="h-4 w-4 mr-2" />
-                                          {language === 'en' ? 'Suspend' : 'تعطيل'}
-                                        </DropdownMenuItem>
-                                      ) : (
-                                        <DropdownMenuItem onClick={() => updateUserStatus(user._id, 'active')}>
-                                          <UserCheck className="h-4 w-4 mr-2" />
-                                          {language === 'en' ? 'Activate' : 'تفعيل'}
-                                        </DropdownMenuItem>
-                                      )}
+                                      <DropdownMenuItem onClick={() => userId && updateUserStatus(userId)}>
+                                        {isUserActive(user) ? (
+                                          <>
+                                            <UserX className="h-4 w-4 mr-2" />
+                                            {language === 'en' ? 'Deactivate' : 'تعطيل'}
+                                          </>
+                                        ) : (
+                                          <>
+                                            <UserCheck className="h-4 w-4 mr-2" />
+                                            {language === 'en' ? 'Activate' : 'تفعيل'}
+                                          </>
+                                        )}
+                                      </DropdownMenuItem>
                                       <DropdownMenuItem 
-                                        onClick={() => deleteUser(user._id)}
+                                        onClick={() => userId && deleteUser(userId)}
                                         className="text-destructive"
                                       >
                                         <Trash2 className="h-4 w-4 mr-2" />
@@ -664,6 +927,12 @@ const AdminUsers = () => {
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-border">
+                            <th className="text-left py-3 px-4 font-medium text-muted-foreground w-12">
+                              <Checkbox
+                                checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
+                                onCheckedChange={toggleAllUsersSelection}
+                              />
+                            </th>
                             <th className="text-left py-3 px-4 font-medium text-muted-foreground">
                               {language === 'en' ? 'Client' : 'العميل'}
                             </th>
@@ -684,8 +953,15 @@ const AdminUsers = () => {
                         <tbody>
                           {filteredUsers.map((user, index) => {
                             const RoleIcon = getRoleIcon(user.role);
+                            const userId = getUserId(user);
                             return (
-                              <tr key={user._id || `user-${index}`} className="border-b border-border/50 hover:bg-muted/30">
+                              <tr key={userId || `user-${index}`} className="border-b border-border/50 hover:bg-muted/30">
+                                <td className="py-4 px-4">
+                                  <Checkbox
+                                    checked={selectedUsers.includes(userId)}
+                                    onCheckedChange={() => toggleUserSelection(userId)}
+                                  />
+                                </td>
                                 <td className="py-4 px-4">
                                   <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-cyan flex items-center justify-center text-white font-semibold">
@@ -736,23 +1012,29 @@ const AdminUsers = () => {
                                       </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                      <DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => userId && handleViewUser(userId)}>
+                                        <UserCheck className="h-4 w-4 mr-2" />
+                                        {language === 'en' ? 'View Details' : 'عرض التفاصيل'}
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => userId && handleEditUser(userId)}>
                                         <Edit className="h-4 w-4 mr-2" />
                                         {language === 'en' ? 'Edit' : 'تعديل'}
                                       </DropdownMenuItem>
-                                      {user.status === 'active' ? (
-                                        <DropdownMenuItem onClick={() => updateUserStatus(user._id, 'suspended')}>
-                                          <UserX className="h-4 w-4 mr-2" />
-                                          {language === 'en' ? 'Suspend' : 'تعطيل'}
-                                        </DropdownMenuItem>
-                                      ) : (
-                                        <DropdownMenuItem onClick={() => updateUserStatus(user._id, 'active')}>
-                                          <UserCheck className="h-4 w-4 mr-2" />
-                                          {language === 'en' ? 'Activate' : 'تفعيل'}
-                                        </DropdownMenuItem>
-                                      )}
+                                      <DropdownMenuItem onClick={() => userId && updateUserStatus(userId)}>
+                                        {isUserActive(user) ? (
+                                          <>
+                                            <UserX className="h-4 w-4 mr-2" />
+                                            {language === 'en' ? 'Deactivate' : 'تعطيل'}
+                                          </>
+                                        ) : (
+                                          <>
+                                            <UserCheck className="h-4 w-4 mr-2" />
+                                            {language === 'en' ? 'Activate' : 'تفعيل'}
+                                          </>
+                                        )}
+                                      </DropdownMenuItem>
                                       <DropdownMenuItem 
-                                        onClick={() => deleteUser(user._id)}
+                                        onClick={() => userId && deleteUser(userId)}
                                         className="text-destructive"
                                       >
                                         <Trash2 className="h-4 w-4 mr-2" />
@@ -794,6 +1076,12 @@ const AdminUsers = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-border">
+                      <th className="text-left py-3 px-4 font-medium text-muted-foreground w-12">
+                        <Checkbox
+                          checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
+                          onCheckedChange={toggleAllUsersSelection}
+                        />
+                      </th>
                       <th className="text-left py-3 px-4 font-medium text-muted-foreground">
                               {language === 'en' ? 'Company' : 'الشركة'}
                       </th>
@@ -814,8 +1102,15 @@ const AdminUsers = () => {
                   <tbody>
                           {filteredUsers.map((user, index) => {
                             const RoleIcon = getRoleIcon(user.role);
+                            const userId = getUserId(user);
                             return (
-                              <tr key={user._id || `user-${index}`} className="border-b border-border/50 hover:bg-muted/30">
+                              <tr key={userId || `user-${index}`} className="border-b border-border/50 hover:bg-muted/30">
+                        <td className="py-4 px-4">
+                          <Checkbox
+                            checked={selectedUsers.includes(userId)}
+                            onCheckedChange={() => toggleUserSelection(userId)}
+                          />
+                        </td>
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-cyan flex items-center justify-center text-white font-semibold">
@@ -866,23 +1161,29 @@ const AdminUsers = () => {
                           </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                      <DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => userId && handleViewUser(userId)}>
+                                        <UserCheck className="h-4 w-4 mr-2" />
+                                        {language === 'en' ? 'View Details' : 'عرض التفاصيل'}
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => userId && handleEditUser(userId)}>
                                         <Edit className="h-4 w-4 mr-2" />
                                         {language === 'en' ? 'Edit' : 'تعديل'}
                                       </DropdownMenuItem>
-                                      {user.status === 'active' ? (
-                                        <DropdownMenuItem onClick={() => updateUserStatus(user._id, 'suspended')}>
-                                          <UserX className="h-4 w-4 mr-2" />
-                                          {language === 'en' ? 'Suspend' : 'تعطيل'}
-                                        </DropdownMenuItem>
-                                      ) : (
-                                        <DropdownMenuItem onClick={() => updateUserStatus(user._id, 'active')}>
-                                          <UserCheck className="h-4 w-4 mr-2" />
-                                          {language === 'en' ? 'Activate' : 'تفعيل'}
-                                        </DropdownMenuItem>
-                                      )}
+                                      <DropdownMenuItem onClick={() => userId && updateUserStatus(userId)}>
+                                        {isUserActive(user) ? (
+                                          <>
+                                            <UserX className="h-4 w-4 mr-2" />
+                                            {language === 'en' ? 'Deactivate' : 'تعطيل'}
+                                          </>
+                                        ) : (
+                                          <>
+                                            <UserCheck className="h-4 w-4 mr-2" />
+                                            {language === 'en' ? 'Activate' : 'تفعيل'}
+                                          </>
+                                        )}
+                                      </DropdownMenuItem>
                                       <DropdownMenuItem 
-                                        onClick={() => deleteUser(user._id)}
+                                        onClick={() => userId && deleteUser(userId)}
                                         className="text-destructive"
                                       >
                                         <Trash2 className="h-4 w-4 mr-2" />
@@ -1085,6 +1386,292 @@ const AdminUsers = () => {
                       <>
                         <Plus className="h-4 w-4 mr-2" />
                         {language === 'en' ? 'Add User' : 'إضافة مستخدم'}
+                      </>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* View User Details Modal */}
+          <Dialog open={showViewModal} onOpenChange={setShowViewModal}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {language === 'en' ? 'User Details' : 'تفاصيل المستخدم'}
+                </DialogTitle>
+                <DialogDescription>
+                  {language === 'en' 
+                    ? 'View user information and details'
+                    : 'عرض معلومات وتفاصيل المستخدم'}
+                </DialogDescription>
+              </DialogHeader>
+              
+              {loadingUser ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-cyan" />
+                </div>
+              ) : viewingUser ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4 pb-4 border-b">
+                    <div className="w-16 h-16 rounded-full bg-cyan flex items-center justify-center text-white font-semibold text-xl">
+                      {viewingUser.avatar ? (
+                        <img src={viewingUser.avatar} alt={viewingUser.name} className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        <Users className="h-8 w-8" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-xl font-semibold flex items-center gap-2">
+                        {viewingUser.name}
+                        {viewingUser.verified && (
+                          <UserCheck className="h-5 w-5 text-green-500" />
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground">{viewingUser.email}</div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-muted-foreground">{language === 'en' ? 'Role' : 'الدور'}</Label>
+                      <div className="mt-1 font-medium">{getRoleLabel(viewingUser.role)}</div>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">{language === 'en' ? 'Status' : 'الحالة'}</Label>
+                      <div className="mt-1">{getStatusBadge(viewingUser.status)}</div>
+                    </div>
+                    {viewingUser.phone && (
+                      <div>
+                        <Label className="text-muted-foreground">{language === 'en' ? 'Phone' : 'الهاتف'}</Label>
+                        <div className="mt-1 flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          {viewingUser.phone}
+                        </div>
+                      </div>
+                    )}
+                    {viewingUser.location && (
+                      <div>
+                        <Label className="text-muted-foreground">{language === 'en' ? 'Location' : 'الموقع'}</Label>
+                        <div className="mt-1 flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          {viewingUser.location}
+                        </div>
+                      </div>
+                    )}
+                    {viewingUser.companyName && (
+                      <div className="col-span-2">
+                        <Label className="text-muted-foreground">{language === 'en' ? 'Company Name' : 'اسم الشركة'}</Label>
+                        <div className="mt-1 font-medium">{viewingUser.companyName}</div>
+                      </div>
+                    )}
+                    <div>
+                      <Label className="text-muted-foreground">{language === 'en' ? 'Join Date' : 'تاريخ الانضمام'}</Label>
+                      <div className="mt-1">{new Date(viewingUser.joinDate).toLocaleDateString()}</div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowViewModal(false)}
+                >
+                  {language === 'en' ? 'Close' : 'إغلاق'}
+                </Button>
+                {viewingUser && (
+                  <Button
+                    type="button"
+                    className="bg-cyan hover:bg-cyan-dark"
+                    onClick={() => {
+                      if (viewingUser) {
+                        const userId = getUserId(viewingUser);
+                        if (userId) {
+                          setShowViewModal(false);
+                          handleEditUser(userId);
+                        }
+                      }
+                    }}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    {language === 'en' ? 'Edit User' : 'تعديل المستخدم'}
+                  </Button>
+                )}
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Edit User Modal */}
+          <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {language === 'en' ? 'Edit User' : 'تعديل المستخدم'}
+                </DialogTitle>
+                <DialogDescription>
+                  {language === 'en' 
+                    ? 'Update user information'
+                    : 'تحديث معلومات المستخدم'}
+                </DialogDescription>
+              </DialogHeader>
+              
+              <form onSubmit={handleUpdateUser} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-name">
+                      {language === 'en' ? 'Name' : 'الاسم'} *
+                    </Label>
+                    <Input
+                      id="edit-name"
+                      value={editForm.name}
+                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                      required
+                      placeholder={language === 'en' ? 'Full name' : 'الاسم الكامل'}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-email">
+                      {language === 'en' ? 'Email' : 'البريد الإلكتروني'} *
+                    </Label>
+                    <Input
+                      id="edit-email"
+                      type="email"
+                      value={editForm.email}
+                      onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                      required
+                      placeholder="email@example.com"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-phone">
+                      {language === 'en' ? 'Phone' : 'الهاتف'}
+                    </Label>
+                    <Input
+                      id="edit-phone"
+                      type="tel"
+                      value={editForm.phone}
+                      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                      placeholder={language === 'en' ? 'Phone number' : 'رقم الهاتف'}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-location">
+                      {language === 'en' ? 'Location' : 'الموقع'}
+                    </Label>
+                    <Input
+                      id="edit-location"
+                      value={editForm.location}
+                      onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                      placeholder={language === 'en' ? 'City, Country' : 'المدينة، الدولة'}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-role">
+                      {language === 'en' ? 'Role' : 'الدور'} *
+                    </Label>
+                    <Select
+                      value={editForm.role}
+                      onValueChange={(value: 'engineer' | 'client' | 'company') => 
+                        setEditForm({ ...editForm, role: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="engineer">
+                          {language === 'en' ? 'Engineer' : 'مهندس'}
+                        </SelectItem>
+                        <SelectItem value="client">
+                          {language === 'en' ? 'Client' : 'عميل'}
+                        </SelectItem>
+                        <SelectItem value="company">
+                          {language === 'en' ? 'Company' : 'شركة'}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-status">
+                      {language === 'en' ? 'Status' : 'الحالة'} *
+                    </Label>
+                    <Select
+                      value={editForm.status}
+                      onValueChange={(value: 'active' | 'pending' | 'suspended') => 
+                        setEditForm({ ...editForm, status: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">
+                          {language === 'en' ? 'Active' : 'نشط'}
+                        </SelectItem>
+                        <SelectItem value="pending">
+                          {language === 'en' ? 'Pending' : 'قيد الانتظار'}
+                        </SelectItem>
+                        <SelectItem value="suspended">
+                          {language === 'en' ? 'Suspended' : 'معلق'}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {editForm.role === 'company' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-companyName">
+                      {language === 'en' ? 'Company Name' : 'اسم الشركة'} *
+                    </Label>
+                    <Input
+                      id="edit-companyName"
+                      value={editForm.companyName}
+                      onChange={(e) => setEditForm({ ...editForm, companyName: e.target.value })}
+                      required={editForm.role === 'company'}
+                      placeholder={language === 'en' ? 'Company name' : 'اسم الشركة'}
+                    />
+                  </div>
+                )}
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowEditModal(false);
+                      setEditingUser(null);
+                    }}
+                    disabled={updating}
+                  >
+                    {language === 'en' ? 'Cancel' : 'إلغاء'}
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="bg-cyan hover:bg-cyan-dark"
+                    disabled={updating}
+                  >
+                    {updating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        {language === 'en' ? 'Updating...' : 'جاري التحديث...'}
+                      </>
+                    ) : (
+                      <>
+                        <Edit className="h-4 w-4 mr-2" />
+                        {language === 'en' ? 'Update User' : 'تحديث المستخدم'}
                       </>
                     )}
                   </Button>
