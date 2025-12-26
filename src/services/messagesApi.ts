@@ -116,7 +116,45 @@ export const messagesApi = {
     const response = await http.get(`/messages/room/${chatRoomId}`, {
       params: { page, limit }
     });
-    return response.data?.data || response.data || { messages: [], total: 0, page: 1, totalPages: 1 };
+    
+    console.log('📥 Raw API response:', response.data);
+    
+    // Backend sends: { data: [...], meta: {...} }
+    if (response.data?.data && Array.isArray(response.data.data)) {
+      // Response has { data: [...], meta: {...} }
+      const messages = response.data.data;
+      const meta = response.data.meta || {};
+      console.log('📥 Parsed messages:', messages.length, 'meta:', meta);
+      return {
+        messages,
+        total: meta.total || messages.length,
+        page: meta.page || page,
+        totalPages: meta.pages || meta.totalPages || 1
+      };
+    } else if (response.data?.messages && Array.isArray(response.data.messages)) {
+      // Response has { messages: [...], meta: {...} }
+      const meta = response.data.meta || {};
+      console.log('📥 Parsed messages (alternative structure):', response.data.messages.length);
+      return {
+        messages: response.data.messages,
+        total: meta.total || response.data.messages.length,
+        page: meta.page || page,
+        totalPages: meta.pages || meta.totalPages || 1
+      };
+    } else if (Array.isArray(response.data)) {
+      // Response is directly an array
+      console.log('📥 Parsed messages (direct array):', response.data.length);
+      return {
+        messages: response.data,
+        total: response.data.length,
+        page: page,
+        totalPages: 1
+      };
+    }
+    
+    // Default empty response
+    console.warn('⚠️ Unknown response structure, returning empty');
+    return { messages: [], total: 0, page: 1, totalPages: 1 };
   },
 
   // Send a message
@@ -124,24 +162,46 @@ export const messagesApi = {
     chatRoomId: string,
     content: string,
     type: 'text' | 'file' = 'text',
-    attachments?: File[]
+    attachments?: File[],
+    onProgress?: (progress: number) => void
   ): Promise<Message> => {
     if (attachments && attachments.length > 0) {
       // Use FormData for file uploads
       const formData = new FormData();
-      formData.append('chatRoom', chatRoomId);
-      formData.append('content', content);
+      formData.append('chatRoomId', chatRoomId); // Backend expects 'chatRoomId'
+      formData.append('content', content || ''); // Empty string if no content
       formData.append('type', type);
+      
+      // Append each file with the correct field name 'attachments'
       attachments.forEach((file) => {
-        formData.append('attachments', file);
+        formData.append('attachments', file, file.name);
       });
 
-      const response = await http.post(`/messages`, formData);
+      console.log('📎 Sending FormData with attachments:', {
+        chatRoomId,
+        content,
+        type,
+        attachmentsCount: attachments.length,
+        fileNames: attachments.map(f => f.name)
+      });
+
+      const response = await http.post(`/messages`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total && onProgress) {
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            onProgress(progress);
+          }
+        },
+      });
+      if (onProgress) onProgress(100);
       return response.data?.data || response.data;
     } else {
       // Use JSON for text messages
       const response = await http.post(`/messages`, {
-        chatRoom: chatRoomId,
+        chatRoomId: chatRoomId, // Backend expects 'chatRoomId'
         content,
         type,
       });

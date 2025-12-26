@@ -38,6 +38,7 @@ const AdminMessages = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -51,6 +52,7 @@ const AdminMessages = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const selectedChatRoomRef = useRef<ChatRoom | null>(null);
   const [attachments, setAttachments] = useState<File[]>([]);
 
   // Mock Data
@@ -257,7 +259,9 @@ const AdminMessages = () => {
 
   // Functions
   const scrollToBottom = React.useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 50);
   }, []);
 
   const loadProjectRooms = React.useCallback(async () => {
@@ -337,52 +341,191 @@ const AdminMessages = () => {
 
   const loadMessages = React.useCallback(async (chatRoomId: string, pageNum: number = 1, append: boolean = false) => {
     try {
+      console.log('📥 [Admin] Loading messages for chatRoom:', chatRoomId, 'page:', pageNum);
       setLoadingMessages(true);
-      const response = await messagesApi.getMessages(chatRoomId, pageNum, 50);
-      if (append) {
-        setMessages((prev) => [...prev, ...response.messages]);
-      } else {
-        setMessages(response.messages.reverse());
+      
+      // Add timeout to prevent hanging (10 seconds for admin)
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          console.error('⏱️ [Admin] Request timeout after 10 seconds');
+          reject(new Error('Request timeout'));
+        }, 10000);
+      });
+      
+      console.log('📥 [Admin] Calling messagesApi.getMessages...');
+      const apiCall = messagesApi.getMessages(chatRoomId, pageNum, 50);
+      console.log('📥 [Admin] API call started, waiting for response...');
+      
+      const result = await Promise.race([
+        apiCall,
+        timeoutPromise
+      ]) as { messages: any[]; total: number; page: number; totalPages: number };
+      
+      console.log('📥 [Admin] Raw response from getMessages:', result);
+      console.log('📥 [Admin] Response type:', typeof result);
+      console.log('📥 [Admin] Has messages?', !!result?.messages);
+      console.log('📥 [Admin] Messages is array?', Array.isArray(result?.messages));
+      console.log('📥 [Admin] Messages loaded:', result?.messages?.length || 0, 'messages');
+      
+      if (!result) {
+        console.error('❌ [Admin] No result returned from API');
+        setMessages([]);
+        setHasMore(false);
+        setPage(pageNum);
+        return;
       }
-      setHasMore(response.page < response.totalPages);
-      setPage(pageNum);
+      
+      if (!result.messages || !Array.isArray(result.messages)) {
+        console.error('❌ [Admin] Invalid response structure:', {
+          result,
+          hasMessages: !!result.messages,
+          isArray: Array.isArray(result.messages),
+          type: typeof result.messages
+        });
+        setMessages([]);
+        setHasMore(false);
+        setPage(pageNum);
+        return;
+      }
+      
+      console.log('✅ [Admin] Valid response, processing', result.messages.length, 'messages');
+      
+      if (append) {
+        // When appending (loading older messages), add them to the beginning
+        setMessages((prev) => {
+          const updated = [...result.messages, ...prev];
+          console.log('📥 [Admin] Messages after append:', updated.length);
+          return updated;
+        });
+      } else {
+        // Messages come from backend oldest first, we want newest at bottom
+        // So we keep them as is (oldest first = top to bottom, newest at bottom)
+        console.log('📥 [Admin] Setting messages:', result.messages.length);
+        console.log('📥 [Admin] First message (oldest):', result.messages[0]);
+        console.log('📥 [Admin] Last message (newest):', result.messages[result.messages.length - 1]);
+        setMessages(result.messages);
+      }
+      setHasMore(result.page < result.totalPages);
+      setPage(result.page);
       if (!append) {
-        setTimeout(() => scrollToBottom(), 100);
+        // Scroll to bottom after messages are rendered
+        setTimeout(() => {
+          scrollToBottom();
+        }, 200);
       }
     } catch (error: any) {
-      if (error.response?.status === 404 || error.code === 'ERR_NETWORK') {
-        const mockMessages = getMockMessages(chatRoomId);
-        setMessages(mockMessages.reverse());
+      console.error('❌ [Admin] Error loading messages:', error);
+      console.error('❌ [Admin] Error details:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      // If timeout or network error, keep existing messages (from Socket.io)
+      if (error.message === 'Request timeout' || error.code === 'ERR_NETWORK') {
+        console.warn('⚠️ [Admin] Request timeout or network error, keeping existing messages');
+        // Don't clear messages, just stop loading
+        setHasMore(false);
+      } else if (error.response?.status === 404) {
+        console.log('⚠️ [Admin] No messages found (404), setting empty array');
+        setMessages([]);
         setHasMore(false);
         setPage(1);
         setTimeout(() => scrollToBottom(), 100);
       } else {
         toast.error(language === 'en' ? 'Failed to load messages' : 'فشل تحميل الرسائل');
+        // Only clear if we have no messages from Socket.io
+        if (messages.length === 0) {
+          setMessages([]);
+        }
+        setHasMore(false);
       }
     } finally {
+      console.log('✅ [Admin] Finished loading messages, setting loadingMessages to false');
       setLoadingMessages(false);
     }
-  }, [scrollToBottom, language]);
+  }, [scrollToBottom, language]); // Remove messages.length to prevent infinite loops
 
   const handleSendMessage = async () => {
     if (!selectedChatRoom || (!message.trim() && attachments.length === 0)) return;
+    
+    // Validate attachments before sending
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    const invalidFiles = attachments.filter(file => file.size > maxSize);
+    
+    if (invalidFiles.length > 0) {
+      toast.error(
+        language === 'en' 
+          ? `Cannot send files larger than 50MB: ${invalidFiles.map(f => f.name).join(', ')}`
+          : `لا يمكن إرسال ملفات أكبر من 50 ميجابايت: ${invalidFiles.map(f => f.name).join(', ')}`
+      );
+      return;
+    }
+    
     try {
       setSending(true);
       const messageType = attachments.length > 0 ? 'file' : 'text';
-      await messagesApi.sendMessage(
+      const messageContent = message.trim() || (attachments.length > 0 
+        ? (language === 'en' ? `Sent ${attachments.length} file(s)` : `تم إرسال ${attachments.length} ملف(ات)`)
+        : '');
+      
+      console.log('📤 Sending message:', {
+        chatRoomId: selectedChatRoom._id,
+        content: messageContent,
+        type: messageType,
+        attachmentsCount: attachments.length,
+        fileNames: attachments.map(f => f.name)
+      });
+      
+      const sentMessage = await messagesApi.sendMessage(
         selectedChatRoom._id,
-        message.trim() || (language === 'en' ? 'Sent file(s)' : 'تم إرسال ملف(ات)'),
+        messageContent,
         messageType,
         attachments.length > 0 ? attachments : undefined
       );
+      
+      console.log('✅ Message sent successfully:', sentMessage);
+      
+      // Clear input immediately for better UX
       setMessage("");
       setAttachments([]);
+      setUploadProgress(0);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+      
+      // Don't add message manually - wait for Socket.io event
+      // But if Socket.io fails, add it optimistically after 1 second
+      setTimeout(() => {
+        setMessages((prev) => {
+          const exists = prev.some(m => m._id === sentMessage._id);
+          if (!exists) {
+            console.log('⚠️ Socket.io event not received, adding message optimistically');
+            return [...prev, sentMessage].sort(
+              (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            );
+          }
+          return prev;
+        });
+      }, 1000);
+      
+      toast.success(
+        language === 'en' 
+          ? attachments.length > 0 
+            ? `Sent ${attachments.length} file(s) successfully`
+            : 'Message sent successfully'
+          : attachments.length > 0
+            ? `تم إرسال ${attachments.length} ملف(ات) بنجاح`
+            : 'تم إرسال الرسالة بنجاح'
+      );
     } catch (error: any) {
-      console.error('Error sending message:', error);
-      toast.error(language === 'en' ? 'Failed to send message' : 'فشل إرسال الرسالة');
+      console.error('❌ Error sending message:', error);
+      const errorMessage = error.response?.data?.message || error.message || 
+        (language === 'en' ? 'Failed to send message' : 'فشل إرسال الرسالة');
+      toast.error(errorMessage);
+      setUploadProgress(0);
     } finally {
       setSending(false);
     }
@@ -390,7 +533,31 @@ const AdminMessages = () => {
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setAttachments((prev) => [...prev, ...files]);
+    
+    // Validate file size (50MB max per file)
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    const invalidFiles = files.filter(file => file.size > maxSize);
+    
+    if (invalidFiles.length > 0) {
+      toast.error(
+        language === 'en' 
+          ? `File size exceeds 50MB: ${invalidFiles.map(f => f.name).join(', ')}`
+          : `حجم الملف يتجاوز 50 ميجابايت: ${invalidFiles.map(f => f.name).join(', ')}`
+      );
+      // Only add valid files
+      const validFiles = files.filter(file => file.size <= maxSize);
+      if (validFiles.length > 0) {
+        setAttachments((prev) => [...prev, ...validFiles]);
+      }
+    } else {
+      // All files are valid
+      setAttachments((prev) => [...prev, ...files]);
+    }
+    
+    // Reset input to allow selecting the same file again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const removeAttachment = (index: number) => {
@@ -468,11 +635,25 @@ const AdminMessages = () => {
   const getChatRoomTitle = (chatRoom: ChatRoom): string => {
     if (chatRoom.type === 'admin-client') {
       const clientParticipant = chatRoom.participants.find((p) => p.role === 'client');
-      return clientParticipant?.user || (language === 'en' ? 'Client' : 'العميل');
+      const user = clientParticipant?.user;
+      // Handle both string and object (populated) user
+      if (typeof user === 'string') {
+        return user;
+      } else if (user && typeof user === 'object' && 'name' in user) {
+        return (user as any).name || (language === 'en' ? 'Client' : 'العميل');
+      }
+      return language === 'en' ? 'Client' : 'العميل';
     }
     if (chatRoom.type === 'admin-engineer') {
       const engineerParticipant = chatRoom.participants.find((p) => p.role === 'engineer');
-      return engineerParticipant?.user || (language === 'en' ? 'Engineer' : 'المهندس');
+      const user = engineerParticipant?.user;
+      // Handle both string and object (populated) user
+      if (typeof user === 'string') {
+        return user;
+      } else if (user && typeof user === 'object' && 'name' in user) {
+        return (user as any).name || (language === 'en' ? 'Engineer' : 'المهندس');
+      }
+      return language === 'en' ? 'Engineer' : 'المهندس';
     }
     return language === 'en' ? 'Chat' : 'محادثة';
   };
@@ -531,18 +712,44 @@ const AdminMessages = () => {
     }
   };
 
+  // Update ref when selectedChatRoom changes
+  useEffect(() => {
+    selectedChatRoomRef.current = selectedChatRoom;
+  }, [selectedChatRoom]);
+
   // Effects
   useEffect(() => {
     loadProjectRooms();
     socketService.connect();
     const handleNewMessage = (data: SocketMessageEvent) => {
+      console.log('📨 New message received:', data);
+      const currentChatRoomId = selectedChatRoomRef.current?._id;
+      console.log('📨 Current selectedChatRoom?._id:', currentChatRoomId);
+      console.log('📨 Message chatRoomId:', data.chatRoomId);
       setMessages((prev) => {
-        if (data.chatRoomId === selectedChatRoom?._id) {
-          return [data.message, ...prev];
+        console.log('📨 Current messages count:', prev.length);
+        // Check if message already exists (avoid duplicates)
+        const exists = prev.some(m => m._id === data.message._id);
+        if (exists) {
+          console.log('⚠️ Message already exists, skipping');
+          return prev;
         }
+        
+        if (data.chatRoomId === currentChatRoomId) {
+          console.log('✅ Adding message to current chat room');
+          // Add new message and sort by createdAt (oldest first)
+          const updated = [...prev, data.message];
+          const sorted = updated.sort(
+            (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+          console.log('✅ Messages after adding:', sorted.length);
+          console.log('✅ New message in array:', sorted.find(m => m._id === data.message._id));
+          return sorted;
+        }
+        console.log('ℹ️ Message for different chat room, not adding');
         return prev;
       });
-      if (data.chatRoomId === selectedChatRoom?._id) {
+      if (data.chatRoomId === currentChatRoomId) {
         setTimeout(() => scrollToBottom(), 100);
       }
       setChatRooms((prev) =>
@@ -560,9 +767,9 @@ const AdminMessages = () => {
         )
       );
     };
-    socketService.on('newMessage', handleNewMessage);
+    socketService.on('new_message', handleNewMessage);
     return () => {
-      socketService.off('newMessage', handleNewMessage);
+      socketService.off('new_message', handleNewMessage);
     };
   }, [selectedChatRoom?._id, scrollToBottom, loadProjectRooms]);
 
@@ -572,25 +779,41 @@ const AdminMessages = () => {
     }
   }, [selectedProjectRoom?._id, loadChatRooms]);
 
+  // Use ref to prevent multiple loads for the same chat room
+  const loadAttemptedRef = React.useRef<string | null>(null);
+  
   useEffect(() => {
     if (selectedChatRoom) {
-      setPage(1);
-      setHasMore(true);
-      loadMessages(selectedChatRoom._id, 1);
-      socketService.joinChatRoom(selectedChatRoom._id);
-      messagesApi.markChatRoomAsRead(selectedChatRoom._id).catch(console.error);
-    }
-    return () => {
-      if (selectedChatRoom) {
-        socketService.leaveChatRoom(selectedChatRoom._id);
+      const chatRoomId = selectedChatRoom._id;
+      
+      // Only load if we haven't loaded for this chat room yet
+      if (loadAttemptedRef.current !== chatRoomId) {
+        console.log('🔄 ChatRoom selected, loading messages:', chatRoomId);
+        loadAttemptedRef.current = chatRoomId;
+        setPage(1);
+        setHasMore(true);
+        setMessages([]); // Clear previous messages
+        loadMessages(chatRoomId, 1);
+        socketService.joinChatRoom(chatRoomId);
+        messagesApi.markChatRoomAsRead(chatRoomId).catch(console.error);
+      } else {
+        console.log('⏭️ [Admin] Skipping load - already loaded for chat room:', chatRoomId);
       }
-    };
-  }, [selectedChatRoom?._id, loadMessages]);
+      
+      return () => {
+        socketService.leaveChatRoom(chatRoomId);
+      };
+    } else {
+      // Reset ref when no chat room is selected
+      loadAttemptedRef.current = null;
+    }
+  }, [selectedChatRoom?._id]); // Remove loadMessages from dependencies
 
   const filteredChatRooms = chatRooms.filter((room) => {
     if (room.type === 'group') return false;
-    const title = getChatRoomTitle(room).toLowerCase();
-    return title.includes(searchTerm.toLowerCase());
+    const title = getChatRoomTitle(room);
+    if (!title || typeof title !== 'string') return true; // Include if title is invalid
+    return title.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
   return (
@@ -777,7 +1000,7 @@ const AdminMessages = () => {
                 </Card>
 
               {/* Messages Area */}
-              <Card className="flex-1 flex flex-col overflow-hidden glass-card h-full min-h-0">
+              <Card className="flex-1 flex flex-col overflow-hidden glass-card min-h-0">
                 {selectedChatRoom ? (
                   <>
                      {/* Chat Header */}
@@ -833,115 +1056,214 @@ const AdminMessages = () => {
                      </CardHeader>
 
                      {/* Messages */}
-                     <CardContent className="flex-1 overflow-hidden p-0 min-h-0">
+                     <CardContent className="flex-1 overflow-hidden p-0 min-h-0 flex flex-col">
                        <ScrollArea
-                         className="h-full px-3 py-2"
+                         className="flex-1 min-h-0"
                          ref={messagesContainerRef}
-                         onScroll={(e) => {
-                           const target = e.target as HTMLElement;
-                           if (target.scrollTop === 0 && hasMore) {
-                             loadMoreMessages();
-                           }
-                         }}
                        >
-                      {loadingMessages && page === 1 ? (
-                        <div className="flex items-center justify-center py-12">
-                          <Loader2 className="h-5 w-5 animate-spin text-yellow-400/70" />
-                        </div>
-                      ) : (
-                         <div className="space-y-1">
-                           {messages.map((msg, idx) => {
-                             const isAdmin = msg.senderRole === 'admin' || msg.type === 'system';
-                             const isSystem = msg.type === 'system';
-                             const isNewThread = idx === 0 || messages[idx - 1].sender !== msg.sender;
-                             
-                             return (
-                               <div key={msg._id}>
-                                 {isNewThread && idx > 0 && (
-                                   <div className="my-1 border-t border-border/20"></div>
-                                 )}
-                                 <div className={`flex ${isAdmin ? "justify-end" : "justify-start"} ${isNewThread ? 'mt-1' : 'mt-0.5'}`}>
-                                   <div
-                                     className={`max-w-[75%] rounded-lg px-2 py-1 ${
-                                       isAdmin
-                                         ? "bg-yellow-400/10 text-foreground border border-yellow-400/20"
-                                         : isSystem
-                                         ? "bg-muted/30 text-muted-foreground text-center mx-auto"
-                                         : "bg-muted/40 text-foreground border border-border/30"
-                                     }`}
-                                   >
-                                     {!isSystem && (
-                                       <p className="text-xs text-muted-foreground/70 mb-0.5 font-medium">
-                                         {msg.senderName || msg.senderRole}
-                                       </p>
-                                     )}
-                                     <p
-                                       className={`text-sm leading-relaxed ${
-                                         isAdmin
-                                           ? "text-foreground"
-                                           : isSystem
-                                           ? "text-muted-foreground italic"
-                                           : "text-foreground/90"
-                                       }`}
-                                     >
-                                       {msg.content}
-                                     </p>
-                                     {msg.attachments && msg.attachments.length > 0 && (
-                                       <div className="mt-1 space-y-0.5">
-                                         {msg.attachments.map((att, attIdx) => (
-                                           <a
-                                             key={attIdx}
-                                             href={att.url}
-                                             target="_blank"
-                                             rel="noopener noreferrer"
-                                             className="block text-xs text-yellow-400/80 hover:text-yellow-400/90 hover:underline"
-                                           >
-                                             📎 {att.filename}
-                                           </a>
-                                         ))}
-                                       </div>
-                                     )}
-                                     <p className={`text-[10px] mt-0.5 ${
-                                       isAdmin ? 'text-muted-foreground/50' : 'text-muted-foreground/50'
-                                     }`}>
-                                       {formatTime(msg.createdAt)}
-                                  </p>
-                                </div>
+                         <div className="px-3 py-2">
+                           {loadingMessages && page === 1 ? (
+                             <div className="flex items-center justify-center py-12">
+                               <Loader2 className="h-5 w-5 animate-spin text-yellow-400/70" />
+                             </div>
+                           ) : (
+                             <div className="space-y-2 pb-6">
+                               {messages.length === 0 ? (
+                                 <div className="flex items-center justify-center py-12 text-muted-foreground">
+                                   {language === 'en' ? 'No messages yet' : 'لا توجد رسائل بعد'}
                                  </div>
-                               </div>
-                             );
-                           })}
-                          <div ref={messagesEndRef} />
-                        </div>
-                      )}
-                      </ScrollArea>
-                    </CardContent>
+                               ) : (
+                                 messages.map((msg, idx) => {
+                               // Determine if message is from admin
+                               const senderObj = typeof msg.sender === 'object' ? msg.sender : null;
+                               const senderRole = msg.senderRole || senderObj?.role || (senderObj as any)?.role;
+                               // Check if sender is admin - also check if sender name contains admin or if it's a system message
+                               const isAdmin = senderRole === 'admin' || 
+                                             (senderObj as any)?.role === 'admin' ||
+                                             msg.type === 'system' ||
+                                             (msg.senderName && typeof msg.senderName === 'string' && msg.senderName.toLowerCase().includes('admin'));
+                               const isSystem = msg.type === 'system';
+                               
+                               // Handle sender comparison (can be string or object)
+                               const prevSender = idx > 0 ? (typeof messages[idx - 1].sender === 'object' 
+                                 ? (messages[idx - 1].sender as any)?._id 
+                                 : messages[idx - 1].sender) : null;
+                               const currentSender = typeof msg.sender === 'object' 
+                                 ? (msg.sender as any)?._id 
+                                 : msg.sender;
+                               const isSameSender = prevSender === currentSender;
+                               const senderName = msg.senderName || (typeof msg.sender === 'object' ? msg.sender?.name : msg.sender) || senderRole || 'Unknown';
+                               const senderAvatar = typeof senderName === 'string' ? senderName.charAt(0) : 'U';
+                               const showAvatar = !isAdmin && !isSystem && !isSameSender;
+                               const showSenderName = !isSystem && !isSameSender;
+                             
+                               return (
+                                 <div key={msg._id} className={`${isSameSender ? 'mt-0.5' : 'mt-4'}`}>
+                                   <div className={`flex items-end gap-2.5 ${isAdmin ? "justify-end flex-row-reverse" : "justify-start"}`}>
+                                     {/* Avatar for received messages (left side) */}
+                                     {!isAdmin && !isSystem && (
+                                       <Avatar className={`w-9 h-9 flex-shrink-0 transition-opacity ${showAvatar ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                                         <AvatarFallback className="bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-semibold">
+                                           {senderAvatar.toUpperCase()}
+                                         </AvatarFallback>
+                                       </Avatar>
+                                     )}
+                                     
+                                     {/* Avatar for sent messages (right side) - Admin */}
+                                     {isAdmin && !isSystem && (
+                                       <Avatar className={`w-9 h-9 flex-shrink-0 transition-opacity ${!isSameSender ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                                         <AvatarFallback className="bg-yellow-400/30 text-yellow-900 border border-yellow-400/40 text-xs font-semibold">
+                                           A
+                                         </AvatarFallback>
+                                       </Avatar>
+                                     )}
+                                     
+                                     <div className={`flex flex-col ${isAdmin ? "items-end" : "items-start"} max-w-[75%] md:max-w-[70%]`}>
+                                       {/* Sender name */}
+                                       {showSenderName && (
+                                         <p className="text-xs font-medium text-blue-300/80 mb-1 px-2">
+                                           {senderName}
+                                         </p>
+                                       )}
+                                       
+                                       {/* Message bubble */}
+                                       <div
+                                         className={`rounded-2xl px-4 py-2.5 transition-all ${
+                                           isAdmin
+                                             ? "bg-yellow-400 text-black rounded-br-sm shadow-md"
+                                             : isSystem
+                                             ? "bg-muted/30 text-muted-foreground text-center mx-auto rounded-lg"
+                                             : "bg-slate-700/50 border border-slate-600/50 text-slate-100 rounded-bl-sm shadow-sm backdrop-blur-sm"
+                                         }`}
+                                       >
+                                         {msg.content && (
+                                           <p
+                                             className={`text-sm leading-relaxed whitespace-pre-wrap break-words ${
+                                               isAdmin
+                                                 ? "text-black font-medium"
+                                                 : isSystem
+                                                 ? "text-muted-foreground italic"
+                                                 : "text-slate-100"
+                                             }`}
+                                           >
+                                             {msg.content}
+                                           </p>
+                                         )}
+                                         
+                                         {msg.attachments && msg.attachments.length > 0 && (
+                                           <div className="space-y-1.5 mb-2 mt-2">
+                                             {msg.attachments.map((att, attIdx) => {
+                                               const isImage = att.type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(att.filename || '');
+                                               const isPDF = /\.pdf$/i.test(att.filename || '');
+                                               const isDocument = /\.(doc|docx|xls|xlsx|ppt|pptx)$/i.test(att.filename || '');
+                                               const fileSize = att.size ? (att.size > 1024 * 1024 
+                                                 ? `${(att.size / (1024 * 1024)).toFixed(2)} MB`
+                                                 : `${(att.size / 1024).toFixed(2)} KB`) : '';
+                                               
+                                               return (
+                                                 <a
+                                                   key={attIdx}
+                                                   href={att.url}
+                                                   target="_blank"
+                                                   rel="noopener noreferrer"
+                                                   className={`flex items-center gap-2 p-2.5 rounded-lg hover:opacity-80 transition-all group ${
+                                                     isAdmin 
+                                                       ? "bg-yellow-300/30 border border-yellow-400/40" 
+                                                       : "bg-slate-600/30 border border-slate-500/40"
+                                                   }`}
+                                                 >
+                                                   {isImage && <span className="text-lg">🖼️</span>}
+                                                   {isPDF && <span className="text-lg">📄</span>}
+                                                   {isDocument && <span className="text-lg">📝</span>}
+                                                   {!isImage && !isPDF && !isDocument && <span className="text-lg">📎</span>}
+                                                   <div className="flex-1 min-w-0">
+                                                     <p className={`text-xs font-medium truncate ${
+                                                       isAdmin ? "text-black/90" : "text-slate-200"
+                                                     }`}>
+                                                       {att.filename || 'File'}
+                                                     </p>
+                                                     {fileSize && (
+                                                       <p className={`text-[10px] opacity-70 ${
+                                                         isAdmin ? "text-black/70" : "text-slate-300/70"
+                                                       }`}>{fileSize}</p>
+                                                     )}
+                                                   </div>
+                                                   <span className={`text-xs opacity-60 ${
+                                                     isAdmin ? "text-black/70" : "text-slate-300"
+                                                   }`}>⬇️</span>
+                                                 </a>
+                                               );
+                                             })}
+                                           </div>
+                                         )}
+                                         
+                                         {/* Timestamp */}
+                                         <p className={`text-[10px] mt-1.5 opacity-60 ${
+                                           isAdmin 
+                                             ? "text-black/70" 
+                                             : "text-slate-400/70"
+                                         }`}>
+                                           {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
+                                         </p>
+                                       </div>
+                                     </div>
+                                   </div>
+                                 </div>
+                                 );
+                               }))}
+                               <div ref={messagesEndRef} className="h-1" />
+                             </div>
+                           )}
+                         </div>
+                       </ScrollArea>
+                     </CardContent>
 
                      {/* Message Input */}
                      <div className="px-3 py-2 border-t border-border/30 bg-muted/20 flex-shrink-0">
                        {attachments.length > 0 && (
-                         <div className="mb-1.5 flex flex-wrap gap-1">
-                           {attachments.map((file, idx) => (
-                             <div
-                               key={idx}
-                               className="flex items-center gap-1 bg-background border border-border/30 px-1.5 py-0.5 rounded-md text-[9px]"
-                             >
-                               <span className="text-foreground/80">{file.name}</span>
-                               <button
-                                 onClick={() => removeAttachment(idx)}
-                                 className="text-muted-foreground/60 hover:text-destructive text-xs leading-none"
+                         <div className="mb-2 flex flex-wrap gap-1.5">
+                           {attachments.map((file, idx) => {
+                             const fileSize = file.size > 1024 * 1024 
+                               ? `${(file.size / (1024 * 1024)).toFixed(2)} MB`
+                               : `${(file.size / 1024).toFixed(2)} KB`;
+                             const fileType = file.type || 'application/octet-stream';
+                             const isImage = fileType.startsWith('image/');
+                             const isPDF = fileType === 'application/pdf';
+                             const isDocument = fileType.includes('word') || fileType.includes('excel') || fileType.includes('powerpoint');
+                             
+                             return (
+                               <div
+                                 key={idx}
+                                 className="flex items-center gap-1.5 bg-background border border-yellow-400/30 px-2 py-1.5 rounded-md text-xs shadow-sm"
                                >
-                                 ×
-                               </button>
-                              </div>
-                            ))}
-                          </div>
+                                 {isImage && <span className="text-yellow-400">🖼️</span>}
+                                 {isPDF && <span className="text-red-400">📄</span>}
+                                 {isDocument && <span className="text-blue-400">📝</span>}
+                                 {!isImage && !isPDF && !isDocument && <span className="text-muted-foreground">📎</span>}
+                                 <div className="flex flex-col min-w-0 flex-1">
+                                   <span className="text-foreground/90 font-medium truncate max-w-[150px]" title={file.name}>
+                                     {file.name}
+                                   </span>
+                                   <span className="text-[10px] text-muted-foreground/70">{fileSize}</span>
+                                 </div>
+                                 <button
+                                   onClick={() => removeAttachment(idx)}
+                                   className="text-muted-foreground/60 hover:text-destructive text-sm leading-none p-0.5 rounded hover:bg-destructive/10 transition-colors"
+                                   title={language === 'en' ? 'Remove file' : 'إزالة الملف'}
+                                 >
+                                   ×
+                                 </button>
+                               </div>
+                             );
+                           })}
+                         </div>
                        )}
-                           <div className="flex gap-1">
+                           <div className="flex gap-1.5 items-center">
                          <input
                            ref={fileInputRef}
                            type="file"
                            multiple
+                           accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar"
                            className="hidden"
                            onChange={handleFileSelect}
                          />
@@ -949,15 +1271,16 @@ const AdminMessages = () => {
                            variant="ghost"
                            size="sm"
                            onClick={() => fileInputRef.current?.click()}
-                           className="h-7 w-7 p-0 border border-border/30 hover:bg-muted/50"
+                           className="h-8 w-8 p-0 border border-border/30 hover:bg-muted/50 hover:border-yellow-400/40 transition-colors"
+                           title={language === 'en' ? 'Attach file' : 'إرفاق ملف'}
                          >
-                           <Paperclip className="h-3 w-3" />
+                           <Paperclip className="h-4 w-4" />
                          </Button>
                             <Input
                               value={message}
                               onChange={(e) => setMessage(e.target.value)}
                               placeholder={language === "en" ? "Type a message..." : "اكتب رسالة..."}
-                           className="flex-1 h-7 bg-background border-border/30 focus:border-yellow-400/40 text-xs"
+                           className="flex-1 h-8 bg-background border-border/30 focus:border-yellow-400/40 text-sm"
                               onKeyPress={(e) => {
                              if (e.key === "Enter" && !e.shiftKey) {
                                e.preventDefault();
@@ -969,16 +1292,16 @@ const AdminMessages = () => {
                             <Button
                            onClick={handleSendMessage}
                            disabled={sending || (!message.trim() && attachments.length === 0)}
-                           className="bg-yellow-400/80 hover:bg-yellow-400/90 text-foreground h-7 px-3 text-[10px]"
+                           className="bg-yellow-400/80 hover:bg-yellow-400/90 text-foreground h-8 px-4 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                          >
                            {sending ? (
-                             <Loader2 className="w-3 h-3 animate-spin" />
+                             <Loader2 className="w-4 h-4 animate-spin" />
                            ) : (
-                               <Send className="w-3 h-3" />
+                               <Send className="w-4 h-4" />
                            )}
-                            </Button>
-                          </div>
-                        </div>
+                         </Button>
+                       </div>
+                     </div>
                       </>
                 ) : (
                   <div className="flex items-center justify-center h-full">

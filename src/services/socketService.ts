@@ -104,8 +104,8 @@ class SocketService {
     if (!this.socket) return;
 
     // Listen for new messages
-    this.socket.on('newMessage', (data: SocketMessageEvent) => {
-      this.emit('newMessage', data);
+    this.socket.on('new_message', (data: SocketMessageEvent) => {
+      this.emit('new_message', data);
     });
 
     // Listen for message updates (edit, delete, reaction)
@@ -143,7 +143,7 @@ class SocketService {
   // Join a chat room
   joinChatRoom(chatRoomId: string) {
     if (this.socket?.connected) {
-      this.socket.emit('joinChatRoom', chatRoomId);
+      this.socket.emit('join_room', chatRoomId);
       console.log('Joined chat room:', chatRoomId);
     }
   }
@@ -151,7 +151,7 @@ class SocketService {
   // Leave a chat room
   leaveChatRoom(chatRoomId: string) {
     if (this.socket?.connected) {
-      this.socket.emit('leaveChatRoom', chatRoomId);
+      this.socket.emit('leave_room', chatRoomId);
       console.log('Left chat room:', chatRoomId);
     }
   }
@@ -167,9 +167,9 @@ class SocketService {
   }
 
   // Emit typing indicator
-  emitTyping(roomId: string, isTyping: boolean) {
+  emitTyping(chatRoomId: string, isTyping: boolean) {
     if (this.socket?.connected) {
-      this.socket.emit('typing', { roomId, isTyping });
+      this.socket.emit('typing', { chatRoomId, isTyping });
     }
   }
 
