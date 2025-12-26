@@ -30,6 +30,8 @@ const SubmitProposal = () => {
   const [proposalId, setProposalId] = useState<string | null>(null);
   const [canEdit, setCanEdit] = useState(false);
   const [project, setProject] = useState<any>(null);
+  const [user, setUser] = useState<any>(null);
+  const [authChecking, setAuthChecking] = useState(true);
   const [formData, setFormData] = useState({
     description: "",
     estimatedTimeline: "",
@@ -40,10 +42,91 @@ const SubmitProposal = () => {
     },
   });
 
-  // Fetch project data
+  // ✅ التحقق من Authentication وRole عند تحميل الصفحة
+  useEffect(() => {
+    const checkAuthAndRole = async () => {
+      const token = localStorage.getItem("token");
+      const userDataStr = localStorage.getItem("user");
+      
+      if (!token) {
+        toast.error(
+          language === "en" 
+            ? "You must be logged in to submit a proposal" 
+            : "يجب تسجيل الدخول لتقديم عرض"
+        );
+        navigate("/engineer/login");
+        return;
+      }
+
+      try {
+        // محاولة جلب بيانات المستخدم من localStorage أو من API
+        let userData = null;
+        if (userDataStr) {
+          try {
+            userData = JSON.parse(userDataStr);
+          } catch (e) {
+            console.error("Error parsing user data:", e);
+          }
+        }
+
+        // إذا لم يكن userData موجوداً، جلب البيانات من API
+        if (!userData) {
+          try {
+            const response = await http.get("/auth/me");
+            userData = response.data?.user || response.data?.data || response.data;
+            if (userData) {
+              localStorage.setItem("user", JSON.stringify(userData));
+            }
+          } catch (error: any) {
+            // إذا فشل جلب البيانات، نستخدم بيانات الـ token
+            console.warn("Could not fetch user data:", error);
+          }
+        }
+
+        // ✅ التحقق من Role
+        const userRole = userData?.role || "";
+        if (userRole !== "engineer" && userRole !== "partner") {
+          toast.error(
+            language === "en" 
+              ? "This page is for engineers only" 
+              : "هذه الصفحة للمهندسين فقط"
+          );
+          navigate("/");
+          return;
+        }
+
+        // ✅ التحقق من حالة الحساب (isActive)
+        if (userData?.isActive === false || userData?.status === "inactive") {
+          toast.error(
+            language === "en" 
+              ? "Your account is not activated. Please contact the administration." 
+              : "حسابك غير مفعّل. يرجى التواصل مع الإدارة."
+          );
+          navigate("/engineer/dashboard");
+          return;
+        }
+
+        setUser(userData);
+      } catch (error: any) {
+        console.error("Error checking authentication:", error);
+        if (error.response?.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          navigate("/engineer/login");
+        }
+      } finally {
+        setAuthChecking(false);
+      }
+    };
+
+    checkAuthAndRole();
+  }, [navigate, language]);
+
+  // Fetch project data with status validation
   useEffect(() => {
     const fetchProject = async () => {
-      if (!id) return;
+      if (!id || authChecking) return;
+      
       try {
         setProjectLoading(true);
         const response = await http.get(`/projects/${id}`);
@@ -58,35 +141,67 @@ const SubmitProposal = () => {
           }
         }
         
+        // ✅ التحقق من حالة المشروع قبل السماح بالإرسال
+        const projectStatus = projectData.status?.toLowerCase() || "";
+        const isWaitingForEngineers = 
+          projectStatus === "waiting for engineers" || 
+          projectStatus === "waiting_for_engineers" ||
+          projectStatus === "waitingforengineers" ||
+          projectStatus === "published";
+        
+        const adminApprovalStatus = projectData.adminApproval?.status?.toLowerCase() || 
+          projectData.adminApproval?.toLowerCase() || "";
+        const isApproved = adminApprovalStatus === "approved" || adminApprovalStatus === "accept";
+        
+        // إذا لم يكن المشروع في الحالة المناسبة، عرض تحذير وإعادة التوجيه
+        if (!isWaitingForEngineers) {
+          toast.error(
+            language === "en" 
+              ? "This project is not accepting proposals. The project must be in 'Waiting for Engineers' status." 
+              : "هذا المشروع لا يقبل العروض. يجب أن يكون المشروع في حالة 'في انتظار المهندسين'."
+          );
+          navigate("/engineer/projects");
+          return;
+        }
+
+        if (!isApproved) {
+          toast.error(
+            language === "en" 
+              ? "This project is not approved by the administration yet." 
+              : "هذا المشروع غير موافق عليه من الإدارة بعد."
+          );
+          navigate("/engineer/projects");
+          return;
+        }
+        
         setProject({
           id: projectData._id || projectData.id || id,
           title: projectData.title || projectData.name || "Unknown Project",
           category: projectData.category || projectData.projectType || "N/A",
           location: projectData.location || "N/A",
+          status: projectData.status,
+          adminApproval: projectData.adminApproval,
         });
       } catch (error: any) {
         console.error("Error fetching project:", error);
         toast.error(
           language === "en" ? "Failed to load project details" : "فشل تحميل تفاصيل المشروع"
         );
-        // Fallback to basic data
-        setProject({
-          id: id,
-          title: "Unknown Project",
-          category: "N/A",
-          location: "N/A",
-        });
+        navigate("/engineer/projects");
       } finally {
         setProjectLoading(false);
       }
     };
-    fetchProject();
-  }, [id, language]);
+    
+    if (!authChecking) {
+      fetchProject();
+    }
+  }, [id, language, navigate, authChecking]);
 
   // Check if proposal already exists for this project
   useEffect(() => {
     const checkExistingProposal = async () => {
-      if (!id) return;
+      if (!id || authChecking) return;
       try {
         // Use GET /api/proposals/project/:projectId to get engineer's proposal for this project
         const response = await http.get(`/proposals/project/${id}`);
@@ -142,8 +257,10 @@ const SubmitProposal = () => {
         }
       }
     };
-    checkExistingProposal();
-  }, [id]);
+    if (!authChecking) {
+      checkExistingProposal();
+    }
+  }, [id, authChecking]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -167,7 +284,7 @@ const SubmitProposal = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      // Check if token exists
+      // ✅ التحقق النهائي قبل الإرسال
       const token = localStorage.getItem("token");
       if (!token) {
         toast.error(
@@ -176,6 +293,39 @@ const SubmitProposal = () => {
             : "يجب تسجيل الدخول لتقديم عرض"
         );
         navigate("/engineer/login");
+        setLoading(false);
+        return;
+      }
+
+      // ✅ التحقق من Role
+      if (!user || (user.role !== "engineer" && user.role !== "partner")) {
+        toast.error(
+          language === "en" 
+            ? "This action is for engineers only. Please ensure you are logged in as an engineer." 
+            : "هذه العملية للمهندسين فقط. يرجى التأكد من تسجيل الدخول كمهندس."
+        );
+        setLoading(false);
+        return;
+      }
+
+      // ✅ التحقق من حالة الحساب
+      if (user.isActive === false || user.status === "inactive") {
+        toast.error(
+          language === "en" 
+            ? "Your account is not activated. Please contact the administration." 
+            : "حسابك غير مفعّل. يرجى التواصل مع الإدارة."
+        );
+        setLoading(false);
+        return;
+      }
+
+      // ✅ التحقق من حالة المشروع
+      if (!project || !id) {
+        toast.error(
+          language === "en" 
+            ? "Project information is not available. Please refresh the page." 
+            : "معلومات المشروع غير متوفرة. يرجى تحديث الصفحة."
+        );
         setLoading(false);
         return;
       }
@@ -194,10 +344,12 @@ const SubmitProposal = () => {
         projectId: id,
         isEditMode,
         proposalId,
-        endpoint: isEditMode ? `PUT /proposals/${proposalId}` : `POST /proposals (with projectId in body)`,
+        endpoint: isEditMode ? `PUT /proposals/${proposalId}` : `POST /proposals/project/${id}`,
         hasToken: !!token,
         tokenLength: token?.length,
-        proposalData: isEditMode ? proposalData : { ...proposalData, project: id, projectId: id },
+        userRole: user?.role,
+        isActive: user?.isActive,
+        proposalData,
       });
 
       if (isEditMode && proposalId) {
@@ -231,10 +383,9 @@ const SubmitProposal = () => {
         message: error.message,
         url: error.config?.url,
         method: error.config?.method,
-        headers: error.config?.headers,
       });
 
-      // Handle different error types with specific messages
+      // ✅ Handle different error types with specific messages
       let errorMessage = "";
       
       if (error.response?.status === 401) {
@@ -243,13 +394,42 @@ const SubmitProposal = () => {
           ? "Your session has expired. Please log in again." 
           : "انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.";
         localStorage.removeItem("token");
+        localStorage.removeItem("user");
         setTimeout(() => navigate("/engineer/login"), 2000);
       } else if (error.response?.status === 403) {
-        // Forbidden - user doesn't have permission
+        // ✅ Forbidden - user doesn't have permission - معالجة مفصلة
+        const backendMessage = error.response?.data?.message || "";
+        
+        if (backendMessage.toLowerCase().includes("engineer") || backendMessage.toLowerCase().includes("مهندسين")) {
+          errorMessage = language === "en" 
+            ? "This action is for engineers only. Please ensure you are logged in as an engineer." 
+            : "هذه العملية للمهندسين فقط. يرجى التأكد من تسجيل الدخول كمهندس.";
+          setTimeout(() => navigate("/engineer/login"), 2000);
+        } else if (backendMessage.toLowerCase().includes("active") || backendMessage.toLowerCase().includes("مفعّل")) {
+          errorMessage = language === "en" 
+            ? "Your account is not activated. Please contact the administration." 
+            : "حسابك غير مفعّل. يرجى التواصل مع الإدارة.";
+        } else if (backendMessage.toLowerCase().includes("status") || backendMessage.toLowerCase().includes("حالة")) {
+          errorMessage = language === "en" 
+            ? "This project is not accepting proposals at this time. Please check the project status." 
+            : "هذا المشروع لا يقبل العروض في الوقت الحالي. يرجى التحقق من حالة المشروع.";
+        } else if (backendMessage.toLowerCase().includes("duplicate") || backendMessage.toLowerCase().includes("موجود")) {
+          errorMessage = language === "en" 
+            ? "You have already submitted a proposal for this project." 
+            : "لقد قمت بتقديم عرض لهذا المشروع بالفعل.";
+        } else {
+          errorMessage = backendMessage || 
+            (language === "en" 
+              ? "You are not authorized to perform this action. Please check your account status and role." 
+              : "غير مصرح لك بتنفيذ هذا الإجراء. يرجى التحقق من حالة حسابك ودورك.");
+        }
+      } else if (error.response?.status === 400) {
+        // Bad Request - usually validation error or project status issue
         errorMessage = error.response?.data?.message || 
+          error.response?.data?.error ||
           (language === "en" 
-            ? "You are not authorized to perform this action" 
-            : "غير مصرح لك بتنفيذ هذا الإجراء");
+            ? "Invalid request. Please check the project status and your proposal data." 
+            : "طلب غير صحيح. يرجى التحقق من حالة المشروع وبيانات العرض.");
       } else if (error.response?.status === 404) {
         errorMessage = language === "en" 
           ? "Project not found. Please check the project ID." 
@@ -272,11 +452,23 @@ const SubmitProposal = () => {
     }
   };
 
+  // Show loading while checking authentication
+  if (authChecking) {
+    return (
+      <DashboardLayout userType="engineer">
+        <div className="text-center py-12 text-hexa-text-light">
+          {language === "en" ? "Checking authentication..." : "جاري التحقق من المصادقة..."}
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Show loading while fetching project
   if (projectLoading || !project) {
     return (
       <DashboardLayout userType="engineer">
         <div className="text-center py-12 text-hexa-text-light">
-          {language === "en" ? "Loading..." : "جاري التحميل..."}
+          {language === "en" ? "Loading project details..." : "جاري تحميل تفاصيل المشروع..."}
         </div>
       </DashboardLayout>
     );
