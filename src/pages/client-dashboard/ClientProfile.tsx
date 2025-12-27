@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import React, { useState, useEffect, useRef } from "react";
+import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { useApp } from "@/context/AppContext";
@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, Mail, Phone, MapPin, Save, Lock, Loader2 } from "lucide-react";
 import { CountryPhoneInput } from "@/components/shared/CountryPhoneInput";
 import {
@@ -26,33 +26,234 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { http } from "@/services/http";
+import { profileApi } from "@/services/profileApi";
 import { toast } from "@/components/ui/sonner";
+
+// Helper function to get full image URL
+const getImageUrl = (url: string): string => {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
+  const base = import.meta.env.VITE_API_BASE_URL || "/api";
+  const trimmedBase = base.replace(/\/+$/, "");
+  const trimmedPath = url.startsWith("/") ? url : `/${url}`;
+  return `${trimmedBase}${trimmedPath}`;
+};
+
+// Helper function to get country from phone
+const getCountryFromPhone = (phone: string): string | null => {
+  if (!phone || !phone.startsWith("+")) return null;
+  const countryOptions = [
+    { code: "EG", dialCode: "+20" },
+    { code: "SA", dialCode: "+966" },
+    { code: "AE", dialCode: "+971" },
+    { code: "KW", dialCode: "+965" },
+    { code: "QA", dialCode: "+974" },
+  ];
+  for (const option of countryOptions) {
+    if (phone.startsWith(option.dialCode)) {
+      return option.code;
+    }
+  }
+  return null;
+};
 
 const ClientProfile = () => {
   const { language } = useApp();
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
   
-  const { control, handleSubmit, formState: { errors } } = useForm({
+  const { control, handleSubmit, setValue, formState: { errors } } = useForm({
     defaultValues: {
-      name: "Ahmed Al-Saud",
-      email: "ahmed@example.com",
+      name: "",
+      email: "",
       countryCode: "SA",
-      phone: "+966501234567",
-      location: "Riyadh, Saudi Arabia",
-      bio: "Experienced project manager with a passion for innovative engineering solutions.",
+      phone: "",
+      location: "",
+      bio: "",
     },
   });
-  
-  const onSubmit = (data: any) => {
-    console.log("Form data:", data);
-    // TODO: Implement API call to update profile
+
+  // Fetch profile data on component mount
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      console.log("📤 Fetching profile from GET /users/me");
+      const profile = await profileApi.getProfile();
+      
+      console.log("📥 Profile data:", profile);
+      
+      // Handle avatar
+      let avatarUrl = "";
+      if (profile.avatar) {
+        if (typeof profile.avatar === 'string') {
+          avatarUrl = profile.avatar;
+        } else if (typeof profile.avatar === 'object' && profile.avatar.url) {
+          avatarUrl = profile.avatar.url;
+        }
+      }
+      
+      // Convert to full URL if needed
+      if (avatarUrl) {
+        avatarUrl = getImageUrl(avatarUrl);
+        setImagePreview(avatarUrl);
+      }
+      
+      // Extract country code from phone if available
+      let countryCode = "SA";
+      let phoneNumber = profile.phone || "";
+      
+      if (phoneNumber && phoneNumber.startsWith("+")) {
+        const detectedCountry = getCountryFromPhone(phoneNumber);
+        if (detectedCountry) {
+          countryCode = detectedCountry;
+        }
+      }
+      
+      // Update form values
+      setValue("name", profile.name || "");
+      setValue("email", profile.email || "");
+      setValue("countryCode", countryCode);
+      setValue("phone", phoneNumber);
+      setValue("location", profile.location || "");
+      setValue("bio", profile.bio || "");
+      
+      console.log("✅ Profile data loaded successfully");
+    } catch (error: any) {
+      console.error("Error fetching profile:", error);
+      
+      // Don't show error toast for 401 - the interceptor will handle redirect
+      if (error.response?.status === 401) {
+        setLoading(false);
+        return;
+      }
+      
+      if (error.response?.status !== 404) {
+        const errorMessage = error.response?.data?.message || error.message || "";
+        toast.error(
+          language === "en"
+            ? `Failed to load profile data${errorMessage ? ": " + errorMessage : ""}`
+            : `فشل تحميل بيانات الملف الشخصي${errorMessage ? ": " + errorMessage : ""}`
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file size (max 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error(
+          language === "en"
+            ? "Image size must be less than 2MB"
+            : "يجب أن يكون حجم الصورة أقل من 2MB"
+        );
+        return;
+      }
+      
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        toast.error(
+          language === "en"
+            ? "Please select an image file"
+            : "يرجى اختيار ملف صورة"
+        );
+        return;
+      }
+      
+      setSelectedImage(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const onSubmit = async (data: any) => {
+    try {
+      setSaving(true);
+      
+      // Prepare update data
+      const updateData: any = {
+        name: data.name,
+        email: data.email,
+      };
+      
+      // Only add optional fields if they have values
+      if (data.phone) {
+        updateData.phone = data.phone;
+      }
+      if (data.location) {
+        updateData.location = data.location;
+      }
+      if (data.bio) {
+        updateData.bio = data.bio;
+      }
+      
+      console.log("📤 Updating profile:", updateData);
+      console.log("📤 Selected image:", selectedImage);
+      
+      // Update profile with or without avatar
+      const updatedProfile = await profileApi.updateProfile(
+        updateData,
+        selectedImage || undefined
+      );
+      
+      console.log("✅ Profile updated successfully:", updatedProfile);
+      
+      toast.success(
+        language === "en"
+          ? "Profile updated successfully"
+          : "تم تحديث الملف الشخصي بنجاح"
+      );
+      
+      // Reset selected image after successful upload
+      if (selectedImage) {
+        setSelectedImage(null);
+        if (updatedProfile.avatar?.url) {
+          const avatarUrl = getImageUrl(updatedProfile.avatar.url);
+          setImagePreview(avatarUrl);
+        }
+      }
+      
+      // Refresh profile data
+      await fetchProfile();
+    } catch (error: any) {
+      console.error("Error updating profile:", error);
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          "";
+      toast.error(
+        language === "en"
+          ? `Failed to update profile${errorMessage ? ": " + errorMessage : ""}`
+          : `فشل تحديث الملف الشخصي${errorMessage ? ": " + errorMessage : ""}`
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Handle password change
@@ -88,10 +289,10 @@ const ClientProfile = () => {
 
     try {
       setChangingPassword(true);
-      await http.put("/users/me/change-password", {
+      await profileApi.changePassword({
         currentPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword,
-        confirmNewPassword: passwordForm.confirmPassword,
+        confirmPassword: passwordForm.confirmPassword,
       });
 
       toast.success(
@@ -166,29 +367,45 @@ const ClientProfile = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8 px-6 md:px-8 pb-8">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-              <div className="flex items-start gap-6 pb-6 border-b border-hexa-border">
-                <Avatar className="w-24 h-24 flex-shrink-0">
-                  <AvatarFallback className="bg-hexa-secondary text-black text-2xl">
-                    <User className="w-12 h-12" />
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-hexa-text-dark mb-3">
-                    {language === "en" ? "Profile Picture" : "صورة الملف الشخصي"}
-                  </h3>
-                  <Button 
-                    type="button"
-                    variant="outline"
-                    className="border-hexa-border bg-hexa-bg text-hexa-text-light hover:bg-hexa-secondary hover:text-black hover:border-hexa-secondary mb-2"
-                  >
-                    {language === "en" ? "Change Photo" : "تغيير الصورة"}
-                  </Button>
-                  <p className="text-sm text-hexa-text-light">
-                    {language === "en" ? "JPG, PNG or GIF. Max size 2MB" : "JPG أو PNG أو GIF. الحد الأقصى للحجم 2MB"}
-                  </p>
-                </div>
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-hexa-secondary" />
               </div>
+            ) : (
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+                <div className="flex items-start gap-6 pb-6 border-b border-hexa-border">
+                  <Avatar className="w-24 h-24 flex-shrink-0">
+                    {imagePreview ? (
+                      <AvatarImage src={imagePreview} alt="Profile" />
+                    ) : null}
+                    <AvatarFallback className="bg-hexa-secondary text-black text-2xl">
+                      <User className="w-12 h-12" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-hexa-text-dark mb-3">
+                      {language === "en" ? "Profile Picture" : "صورة الملف الشخصي"}
+                    </h3>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                    <Button 
+                      type="button"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="border-hexa-border bg-hexa-bg text-hexa-text-light hover:bg-hexa-secondary hover:text-black hover:border-hexa-secondary mb-2"
+                    >
+                      {language === "en" ? "Change Photo" : "تغيير الصورة"}
+                    </Button>
+                    <p className="text-sm text-hexa-text-light">
+                      {language === "en" ? "JPG, PNG or GIF. Max size 2MB" : "JPG أو PNG أو GIF. الحد الأقصى للحجم 2MB"}
+                    </p>
+                  </div>
+                </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2.5">
@@ -237,12 +454,26 @@ const ClientProfile = () => {
                 >
                   {language === "en" ? "Cancel" : "إلغاء"}
                 </Button>
-                <Button type="submit" className="bg-hexa-secondary hover:bg-hexa-secondary/90 text-black font-semibold h-11 px-6">
-                  <Save className={`w-4 h-4 ${language === "ar" ? "ml-2" : "mr-2"}`} />
-                  {language === "en" ? "Save Changes" : "حفظ التغييرات"}
+                <Button 
+                  type="submit" 
+                  disabled={saving}
+                  className="bg-hexa-secondary hover:bg-hexa-secondary/90 text-black font-semibold h-11 px-6"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className={`w-4 h-4 animate-spin ${language === "ar" ? "ml-2" : "mr-2"}`} />
+                      {language === "en" ? "Saving..." : "جاري الحفظ..."}
+                    </>
+                  ) : (
+                    <>
+                      <Save className={`w-4 h-4 ${language === "ar" ? "ml-2" : "mr-2"}`} />
+                      {language === "en" ? "Save Changes" : "حفظ التغييرات"}
+                    </>
+                  )}
                 </Button>
               </div>
             </form>
+            )}
           </CardContent>
         </Card>
 
