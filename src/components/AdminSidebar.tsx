@@ -13,7 +13,8 @@ import {
   ChevronsLeft,
   ChevronsRight,
   PanelLeftClose,
-  PanelRightClose
+  PanelRightClose,
+  Bell
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useApp } from '@/context/AppContext';
@@ -80,6 +81,11 @@ export const AdminSidebar = () => {
       to: "/admin/messages",
       icon: MessageSquare,
       label: language === 'en' ? 'Messages' : 'الرسائل'
+    },
+    {
+      to: "/admin/notifications",
+      icon: Bell,
+      label: language === 'en' ? 'Notifications' : 'الإشعارات'
     },
     
     // {

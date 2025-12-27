@@ -1,5 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 import { Message } from './messagesApi';
+import type { Notification as NotificationType } from './notificationsApi';
 
 let socket: Socket | null = null;
 
@@ -11,6 +12,10 @@ export interface SocketMessageEvent {
 export interface SocketUnreadUpdateEvent {
   chatRoomId: string;
   unreadCount: number;
+}
+
+export interface SocketNotificationEvent {
+  notification: NotificationType;
 }
 
 class SocketService {
@@ -119,6 +124,11 @@ class SocketService {
     // Listen for unread count updates
     this.socket.on('unreadUpdate', (data: SocketUnreadUpdateEvent) => {
       this.emit('unreadUpdate', data);
+    });
+
+    // Listen for new notifications
+    this.socket.on('new_notification', (data: SocketNotificationEvent) => {
+      this.emit('new_notification', data);
     });
   }
 

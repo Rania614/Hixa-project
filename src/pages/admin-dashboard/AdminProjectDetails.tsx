@@ -950,7 +950,8 @@ const AdminProjectDetails = () => {
                 {/* Target Roles Control & Client Info */}
                 <div className="space-y-6">
                   {/* Target Roles Control - Prominent Card */}
-                  <Card className="glass-card border-cyan/30 bg-cyan/5">
+                  {/* TODO: Temporarily hidden - uncomment when needed */}
+                  {/* <Card className="glass-card border-cyan/30 bg-cyan/5">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Users className="h-5 w-5 text-cyan" />
@@ -1046,7 +1047,7 @@ const AdminProjectDetails = () => {
                         {language === 'en' ? 'Save Target Roles' : 'حفظ الأدوار المستهدفة'}
                       </Button>
                     </CardContent>
-                  </Card>
+                  </Card> */}
 
                   {/* Client Info */}
                   <Card className="glass-card">

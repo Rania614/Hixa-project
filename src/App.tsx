@@ -18,6 +18,7 @@ import AdminProjects from "./pages/admin-dashboard/AdminProjects";
 import AdminProjectDetails from "./pages/admin-dashboard/AdminProjectDetails";
 import AdminProjectProposals from "./pages/admin-dashboard/AdminProjectProposals";
 import AdminSettings from "./pages/admin-dashboard/AdminSettings";
+import AdminNotifications from "./pages/admin-dashboard/AdminNotifications";
 import NotFound from "./pages/NotFound";
 import CompanyLanding from "./pages/CompanyLanding";
 import AuthPage from "./pages/AuthPage";
@@ -257,6 +258,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <AdminMessages />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/notifications"
+        element={
+          <ProtectedRoute>
+            <AdminNotifications />
           </ProtectedRoute>
         }
       />

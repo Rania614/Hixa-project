@@ -13,6 +13,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
+import { useUnreadNotificationsCount } from "@/hooks/useUnreadNotificationsCount";
+import { useNotificationWebSocket } from "@/hooks/useNotificationWebSocket";
 
 interface DashboardTopBarProps {
   userType: "client" | "engineer";
@@ -20,6 +23,17 @@ interface DashboardTopBarProps {
 
 export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({ userType }) => {
   const { language, setLanguage } = useApp();
+  const navigate = useNavigate();
+  const { unreadCount, refetch: refetchCount } = useUnreadNotificationsCount({ autoRefresh: true });
+
+  // WebSocket integration for real-time notifications
+  useNotificationWebSocket({
+    enabled: true,
+    onNewNotification: () => {
+      // Refresh unread count when a new notification arrives
+      refetchCount();
+    },
+  });
 
   const toggleLanguage = () => {
     const newLang = language === "en" ? "ar" : "en";
@@ -54,12 +68,19 @@ export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({ userType }) =>
 
         {/* Notifications */}
         <div className="relative">
-          <Button variant="ghost" size="icon" className="hover:bg-hexa-secondary/20 text-hexa-text-light hover:text-hexa-secondary">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="hover:bg-hexa-secondary/20 text-hexa-text-light hover:text-hexa-secondary"
+            onClick={() => navigate(userType === "client" ? "/client/notifications" : "/engineer/notifications")}
+          >
             <Bell className="w-5 h-5" />
           </Button>
-          <Badge className={`absolute -top-1 rounded-full h-6 min-w-[24px] px-1.5 flex items-center justify-center bg-hexa-secondary text-black text-xs font-bold shadow-lg border-2 border-hexa-card z-10 ${language === "ar" ? "left-0" : "right-0"}`}>
-            5
-          </Badge>
+          {unreadCount > 0 && (
+            <Badge className={`absolute -top-1 rounded-full h-6 min-w-[24px] px-1.5 flex items-center justify-center bg-hexa-secondary text-black text-xs font-bold shadow-lg border-2 border-hexa-card z-10 ${language === "ar" ? "left-0" : "right-0"}`}>
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </Badge>
+          )}
         </div>
 
         {/* Profile Menu */}
