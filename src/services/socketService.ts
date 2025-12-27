@@ -24,12 +24,25 @@ class SocketService {
 
     const token = localStorage.getItem('token');
     if (!token) {
-      console.warn('No token found, cannot connect to socket');
+      // Don't log warning if there's no token - user might not be logged in
       return null;
     }
 
     const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
-    const socketURL = baseURL.replace('/api', ''); // Remove /api from base URL for socket
+    // Extract base URL for socket (remove /api if present)
+    let socketURL = baseURL.replace(/\/api\/?$/, '');
+    
+    // If baseURL is a full URL (like https://hixa.onrender.com/api), use it directly
+    // If it's relative (like /api), use window.location.origin
+    if (socketURL.startsWith('http')) {
+      // Already a full URL
+    } else if (socketURL.startsWith('/')) {
+      // Relative path - use current origin
+      socketURL = window.location.origin;
+    } else {
+      // Fallback to current origin
+      socketURL = window.location.origin;
+    }
 
     this.socket = io(socketURL, {
       auth: {
@@ -38,31 +51,42 @@ class SocketService {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 2000,
-      reconnectionAttempts: 3,
-      timeout: 5000,
-      autoConnect: true
+      reconnectionAttempts: 5,
+      reconnectionDelayMax: 10000,
+      timeout: 10000,
+      autoConnect: true,
+      forceNew: false
     });
 
     this.socket.on('connect', () => {
       console.log('✅ Socket connected:', this.socket?.id);
     });
 
-    this.socket.on('disconnect', () => {
-      // Only log if it was a manual disconnect
-      if (this.socket?.disconnected) {
-        console.log('❌ Socket disconnected');
+    this.socket.on('disconnect', (reason) => {
+      // Only log if it was a manual disconnect or server error
+      if (reason === 'io server disconnect' || reason === 'io client disconnect') {
+        console.log('❌ Socket disconnected:', reason);
       }
+      // Don't log for transport errors (they're expected during reconnection)
     });
 
     let lastErrorTime = 0;
+    let errorCount = 0;
     this.socket.on('connect_error', (error) => {
-      // Only log errors if they're not too frequent (max once per 10 seconds)
+      errorCount++;
       const now = Date.now();
-      if (now - lastErrorTime > 10000) {
-        console.warn('Socket connection error (will retry silently)');
+      
+      // Only log errors if they're not too frequent (max once per 30 seconds)
+      // And only log first few errors to avoid spam
+      if (now - lastErrorTime > 30000 && errorCount <= 3) {
+        console.warn('Socket connection error (will retry silently):', error.message);
         lastErrorTime = now;
       }
-      // Don't spam console with repeated errors
+      
+      // Reset error count after successful connection
+      this.socket?.once('connect', () => {
+        errorCount = 0;
+      });
     });
 
     // Set up global listeners
@@ -77,6 +101,19 @@ class SocketService {
     // Listen for new messages
     this.socket.on('newMessage', (data: SocketMessageEvent) => {
       this.emit('newMessage', data);
+    });
+
+    // Listen for message updates (edit, delete, reaction)
+    this.socket.on('message_updated', (data: { message: Message; chatRoomId: string }) => {
+      this.emit('message_updated', data);
+    });
+
+    this.socket.on('message_deleted', (data: { messageId: string; chatRoomId: string }) => {
+      this.emit('message_deleted', data);
+    });
+
+    this.socket.on('reaction_updated', (data: { message: Message; chatRoomId: string }) => {
+      this.emit('reaction_updated', data);
     });
 
     // Listen for unread count updates
@@ -106,6 +143,23 @@ class SocketService {
     if (this.socket?.connected) {
       this.socket.emit('leaveChatRoom', chatRoomId);
       console.log('Left chat room:', chatRoomId);
+    }
+  }
+
+  // Join a room (alias for joinChatRoom for backward compatibility)
+  joinRoom(roomId: string) {
+    this.joinChatRoom(roomId);
+  }
+
+  // Leave a room (alias for leaveChatRoom for backward compatibility)
+  leaveRoom(roomId: string) {
+    this.leaveChatRoom(roomId);
+  }
+
+  // Emit typing indicator
+  emitTyping(roomId: string, isTyping: boolean) {
+    if (this.socket?.connected) {
+      this.socket.emit('typing', { roomId, isTyping });
     }
   }
 

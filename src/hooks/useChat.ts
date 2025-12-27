@@ -239,9 +239,35 @@ export const useChat = ({ chatRoomId, enabled = true }: UseChatOptions) => {
       setError('Failed to connect to chat room');
     }
 
+    // Handle message updates
+    const handleMessageUpdated = useCallback((data: { message: Message; chatRoomId: string }) => {
+      if (data.chatRoomId === chatRoomId) {
+        setMessages((prev) =>
+          prev.map((msg) => (msg._id === data.message._id ? data.message : msg))
+        );
+      }
+    }, [chatRoomId]);
+
+    const handleMessageDeleted = useCallback((data: { messageId: string; chatRoomId: string }) => {
+      if (data.chatRoomId === chatRoomId) {
+        setMessages((prev) => prev.filter((msg) => msg._id !== data.messageId));
+      }
+    }, [chatRoomId]);
+
+    const handleReactionUpdated = useCallback((data: { message: Message; chatRoomId: string }) => {
+      if (data.chatRoomId === chatRoomId) {
+        setMessages((prev) =>
+          prev.map((msg) => (msg._id === data.message._id ? data.message : msg))
+        );
+      }
+    }, [chatRoomId]);
+
     // Set up event listeners
     socketService.on('new_message', handleNewMessage);
     socketService.on('user_typing', handleUserTyping);
+    socketService.on('message_updated', handleMessageUpdated);
+    socketService.on('message_deleted', handleMessageDeleted);
+    socketService.on('reaction_updated', handleReactionUpdated);
 
     // Fetch initial messages
     fetchMessages(undefined, true);
@@ -251,6 +277,9 @@ export const useChat = ({ chatRoomId, enabled = true }: UseChatOptions) => {
       // Remove event listeners
       socketService.off('new_message', handleNewMessage);
       socketService.off('user_typing', handleUserTyping);
+      socketService.off('message_updated', handleMessageUpdated);
+      socketService.off('message_deleted', handleMessageDeleted);
+      socketService.off('reaction_updated', handleReactionUpdated);
 
       // Leave room
       if (currentRoomRef.current) {
@@ -263,7 +292,7 @@ export const useChat = ({ chatRoomId, enabled = true }: UseChatOptions) => {
       typingTimeoutRef.current.clear();
       setTypingUsers(new Map());
     };
-  }, [chatRoomId, enabled, handleNewMessage, handleUserTyping, fetchMessages]);
+  }, [chatRoomId, enabled, handleNewMessage, handleUserTyping, handleMessageUpdated, handleMessageDeleted, handleReactionUpdated, fetchMessages]);
 
   return {
     messages,

@@ -47,17 +47,36 @@ export interface MessageReadBy {
   readAt: string;
 }
 
+export interface MessageReaction {
+  user: {
+    _id: string;
+    name: string;
+    avatar?: { url: string };
+  };
+  emoji: string;
+}
+
 export interface Message {
   _id: string;
   chatRoom: string;
-  sender: string;
+  sender: string | {
+    _id: string;
+    name: string;
+    email?: string;
+    role?: string;
+    avatar?: { url: string };
+  };
   senderName?: string;
   senderRole?: string;
   content: string;
   type: 'text' | 'file' | 'system';
   attachments?: MessageAttachment[];
   readBy: MessageReadBy[];
+  isEdited?: boolean;
+  isDeleted?: boolean;
+  reactions?: MessageReaction[];
   createdAt: string;
+  updatedAt?: string;
 }
 
 // API Functions
@@ -72,12 +91,18 @@ export const messagesApi = {
   getChatRooms: async (projectRoomId: string): Promise<ChatRoom[]> => {
     try {
       const response = await http.get(`/project-rooms/${projectRoomId}/chat-rooms`);
-      return response.data?.data || response.data || [];
-    } catch (error: any) {
-      // Silently handle 404 - endpoint might not exist yet
-      if (error.response?.status === 404) {
+      // http.js interceptor handles 404 and returns { data: null }
+      if (!response || !response.data) {
         return [];
       }
+      return response.data?.data || response.data || [];
+    } catch (error: any) {
+      // Additional safety check - if http.js didn't handle it
+      if (error.response?.status === 404) {
+        // 404 is expected when chat rooms don't exist yet
+        return [];
+      }
+      // Re-throw other errors
       throw error;
     }
   },
@@ -157,6 +182,56 @@ export const messagesApi = {
         console.warn('Failed to mark chat room as read:', err);
       }
     }
-  }
+  },
+
+  // Get unread messages count
+  getUnreadMessagesCount: async (): Promise<{
+    total: number;
+    unreadCounts: Array<{
+      chatRoom: string;
+      count: number;
+    }>;
+  }> => {
+    const response = await http.get('/messages/unread/count');
+    return response.data?.data || { total: 0, unreadCounts: [] };
+  },
+
+  // Update a message
+  updateMessage: async (messageId: string, content: string): Promise<Message> => {
+    const response = await http.put(`/messages/${messageId}`, { content });
+    return response.data?.data || response.data;
+  },
+
+  // Delete a message
+  deleteMessage: async (messageId: string): Promise<void> => {
+    await http.delete(`/messages/${messageId}`);
+  },
+
+  // Toggle reaction on a message
+  toggleReaction: async (messageId: string, emoji: string): Promise<Message> => {
+    const response = await http.post(`/messages/${messageId}/reaction`, { emoji });
+    return response.data?.data || response.data;
+  },
+
+  // Search messages in a chat room
+  searchMessages: async (
+    roomId: string,
+    query: string,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<{
+    data: Message[];
+    meta: {
+      total: number;
+      page: number;
+      limit: number;
+      pages: number;
+    };
+  }> => {
+    const response = await http.get('/messages/search', {
+      params: { roomId, query, page, limit },
+    });
+    return response.data || { data: [], meta: { total: 0, page: 1, limit: 20, pages: 1 } };
+  },
 };
 

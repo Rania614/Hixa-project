@@ -65,7 +65,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 
 interface Project {
@@ -1643,17 +1643,15 @@ const AdminProjectDetails = () => {
                             >
                               <div className="flex items-start justify-between mb-2">
                                 <div className="flex items-center gap-3">
-                                  {note.createdBy?.avatar?.url ? (
-                                    <Avatar className="h-8 w-8">
-                                      <img src={note.createdBy.avatar.url} alt={note.createdBy.name} />
-                                    </Avatar>
-                                  ) : (
-                                    <Avatar className="h-8 w-8">
-                                      <AvatarFallback>
-                                        {note.createdBy?.name?.charAt(0) || 'U'}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                  )}
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarImage 
+                                      src={note.createdBy?.avatar?.url} 
+                                      alt={note.createdBy?.name} 
+                                    />
+                                    <AvatarFallback>
+                                      {note.createdBy?.name?.charAt(0) || 'U'}
+                                    </AvatarFallback>
+                                  </Avatar>
                                   <div>
                                     <div className="flex items-center gap-2">
                                       <span className="font-medium text-sm">

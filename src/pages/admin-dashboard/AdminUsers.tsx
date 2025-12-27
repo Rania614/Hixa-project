@@ -817,7 +817,7 @@ const AdminUsers = () => {
                                   <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-cyan flex items-center justify-center text-white font-semibold">
                                       {user.avatar ? (
-                                        <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover" />
+                                        <img src={typeof user.avatar === 'string' ? user.avatar : user.avatar?.url} alt={user.name} className="w-full h-full rounded-full object-cover" />
                                       ) : (
                                         <RoleIcon className="h-5 w-5" />
                                       )}
@@ -966,7 +966,7 @@ const AdminUsers = () => {
                                   <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-cyan flex items-center justify-center text-white font-semibold">
                                       {user.avatar ? (
-                                        <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover" />
+                                        <img src={typeof user.avatar === 'string' ? user.avatar : user.avatar?.url} alt={user.name} className="w-full h-full rounded-full object-cover" />
                                       ) : (
                                         <RoleIcon className="h-5 w-5" />
                                       )}
@@ -1115,7 +1115,7 @@ const AdminUsers = () => {
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-cyan flex items-center justify-center text-white font-semibold">
                                       {user.avatar ? (
-                                        <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover" />
+                                        <img src={typeof user.avatar === 'string' ? user.avatar : user.avatar?.url} alt={user.name} className="w-full h-full rounded-full object-cover" />
                                       ) : (
                                         <Building2 className="h-5 w-5" />
                                       )}
@@ -1417,7 +1417,7 @@ const AdminUsers = () => {
                   <div className="flex items-center gap-4 pb-4 border-b">
                     <div className="w-16 h-16 rounded-full bg-cyan flex items-center justify-center text-white font-semibold text-xl">
                       {viewingUser.avatar ? (
-                        <img src={viewingUser.avatar} alt={viewingUser.name} className="w-full h-full rounded-full object-cover" />
+                        <img src={typeof viewingUser.avatar === 'string' ? viewingUser.avatar : viewingUser.avatar?.url} alt={viewingUser.name} className="w-full h-full rounded-full object-cover" />
                       ) : (
                         <Users className="h-8 w-8" />
                       )}

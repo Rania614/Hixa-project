@@ -34,9 +34,20 @@ export const ProjectRoomView = ({ projectRoom, onBack, onSelectChatRoom }: Proje
         setError(null);
         const rooms = await messagesApi.getChatRooms(projectRoom._id);
         setChatRooms(rooms);
+        
+        // 404 is expected when chat rooms don't exist yet - not an error
+        if (rooms.length === 0) {
+          // Silently handle empty result - this is normal for new projects
+        }
       } catch (err: any) {
-        setError(err.response?.data?.message || err.message || 'Failed to fetch chat rooms');
-        console.error('Error fetching chat rooms:', err);
+        // Only show error for non-404 errors
+        if (err.response?.status !== 404) {
+          setError(err.response?.data?.message || err.message || 'Failed to fetch chat rooms');
+          console.error('Error fetching chat rooms:', err);
+        } else {
+          // 404 is expected - set empty array
+          setChatRooms([]);
+        }
       } finally {
         setLoading(false);
       }

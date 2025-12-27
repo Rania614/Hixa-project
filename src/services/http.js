@@ -85,9 +85,71 @@ http.interceptors.response.use(
       }
     }
 
+    // Handle 403 Forbidden
+    if (error.response?.status === 403) {
+      const backendMessage = error.response?.data?.message || "";
+      const pathname = window.location.pathname;
+      
+      // Log with context
+      console.warn("🚫 403 Forbidden:", {
+        url: error.config?.url,
+        message: backendMessage,
+        pathname: pathname
+      });
+
+      // For certain endpoints, 403 might mean user needs to re-authenticate
+      // or doesn't have the right role
+      const requiresReauth = [
+        '/proposals/my',
+        '/users/me',
+        '/projects/my'
+      ];
+      
+      const needsReauth = requiresReauth.some(endpoint => 
+        error.config?.url?.includes(endpoint)
+      );
+
+      if (needsReauth) {
+        // Check if it's a role issue
+        if (backendMessage.toLowerCase().includes('engineer') || 
+            backendMessage.toLowerCase().includes('مهندسين') ||
+            backendMessage.toLowerCase().includes('role')) {
+          // User might be logged in with wrong role
+          if (pathname.startsWith('/engineer')) {
+            console.warn("User may not have engineer role, redirecting to login");
+            setTimeout(() => {
+              localStorage.removeItem("token");
+              window.location.href = '/engineer/login';
+            }, 2000);
+          }
+        } else if (backendMessage.toLowerCase().includes('active') || 
+                   backendMessage.toLowerCase().includes('مفعّل')) {
+          // Account not activated - don't redirect, just show error
+          console.warn("Account not activated");
+        }
+      }
+
+      // Don't reject immediately - let the component handle it
+      // This allows components to show custom error messages
+    }
+
     // Handle optional 404 errors
+    // Some endpoints may return 404 which is expected (e.g., chat-rooms that don't exist yet)
     if (error.response?.status === 404) {
-      console.warn("⚠️ 404 Not Found (optional endpoint):", error.config.url);
+      // Only log if it's not a known optional endpoint
+      const optionalEndpoints = [
+        '/project-rooms/',
+        '/chat-rooms/',
+        '/messages/unread/count'
+      ];
+      const isOptionalEndpoint = optionalEndpoints.some(endpoint => 
+        error.config?.url?.includes(endpoint)
+      );
+      
+      if (!isOptionalEndpoint) {
+        console.warn("⚠️ 404 Not Found:", error.config?.url);
+      }
+      // Return null data instead of rejecting to allow graceful handling
       return Promise.resolve({ data: null });
     }
 

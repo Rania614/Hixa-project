@@ -455,7 +455,7 @@ const AdminProjectProposals = () => {
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-4">
                               <Avatar className="h-12 w-12">
-                                <AvatarImage src={engineer?.avatar} />
+                                <AvatarImage src={engineer?.avatar?.url} alt={engineer?.name} />
                                 <AvatarFallback>
                                   {engineer?.name?.charAt(0)?.toUpperCase() || 'E'}
                                 </AvatarFallback>

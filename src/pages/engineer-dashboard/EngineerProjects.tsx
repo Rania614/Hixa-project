@@ -61,11 +61,52 @@ const EngineerProjects = () => {
         setProposals(proposalsData);
       } catch (error: any) {
         console.error("Error fetching proposals:", error);
+        
+        // Handle 403 Forbidden
+        if (error.response?.status === 403) {
+          const backendMessage = error.response?.data?.message || "";
+          
+          // Check the reason for 403
+          if (backendMessage.toLowerCase().includes('engineer') || 
+              backendMessage.toLowerCase().includes('مهندسين') ||
+              backendMessage.toLowerCase().includes('role')) {
+            toast.error(
+              language === "en" 
+                ? "Access denied. Engineer account required." 
+                : "تم الرفض. يلزم حساب مهندس."
+            );
+            // Redirect to login after delay
+            setTimeout(() => {
+              localStorage.removeItem("token");
+              window.location.href = '/engineer/login';
+            }, 2000);
+          } else if (backendMessage.toLowerCase().includes('active') || 
+                     backendMessage.toLowerCase().includes('مفعّل')) {
+            toast.error(
+              language === "en" 
+                ? "Your account is not activated. Please contact the administration." 
+                : "حسابك غير مفعّل. يرجى التواصل مع الإدارة."
+            );
+          } else {
+            toast.error(
+              language === "en" 
+                ? "Access denied. You don't have permission to view proposals." 
+                : "تم الرفض. ليس لديك صلاحية لعرض العروض."
+            );
+          }
+          // Set empty array to show empty state
+          setProposals([]);
+        } 
         // Don't show error toast for 404, as user might not have proposals yet
-        if (error.response?.status !== 404) {
+        else if (error.response?.status !== 404) {
           toast.error(
             language === "en" ? "Failed to load proposals" : "فشل تحميل العروض"
           );
+          // Set empty array on error
+          setProposals([]);
+        } else {
+          // 404 is expected - user might not have proposals yet
+          setProposals([]);
         }
         setProposals([]);
       } finally {

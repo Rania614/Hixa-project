@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, MapPin, FileText, Star } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { http } from "@/services/http";
 import { toast } from "@/components/ui/sonner";
 import { getProjectProposals } from "@/services/proposal.service";
@@ -329,7 +329,9 @@ const ProjectDetails = () => {
               proposals.map((proposal) => {
                 const engineer = proposal.engineer || {};
                 const engineerName = engineer.name || engineer.email || "Unknown Engineer";
-                const engineerAvatar = engineer.avatar || engineerName.charAt(0);
+                const engineerAvatarUrl = typeof engineer.avatar === 'string' 
+                  ? engineer.avatar 
+                  : engineer.avatar?.url;
                 
                 return (
                   <Card key={proposal._id || proposal.id} className="bg-hexa-card border-hexa-border">
@@ -337,8 +339,12 @@ const ProjectDetails = () => {
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
                           <Avatar>
+                            <AvatarImage 
+                              src={engineerAvatarUrl} 
+                              alt={engineerName} 
+                            />
                             <AvatarFallback className="bg-hexa-secondary text-black">
-                              {typeof engineerAvatar === 'string' ? engineerAvatar.charAt(0) : engineerAvatar}
+                              {engineerName.charAt(0).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                           <div>
