@@ -292,7 +292,7 @@ const ClientProfile = () => {
       await profileApi.changePassword({
         currentPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword,
-        confirmPassword: passwordForm.confirmPassword,
+        confirmNewPassword: passwordForm.confirmPassword,
       });
 
       toast.success(
