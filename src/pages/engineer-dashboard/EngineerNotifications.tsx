@@ -68,23 +68,31 @@ const EngineerNotifications = () => {
     const actionUrl = notification.actionUrl;
     if (!actionUrl) return null;
 
-    // If it already starts with /engineer/, return as is
-    if (actionUrl.startsWith('/engineer/')) {
-      return actionUrl;
+    let normalizedUrl = actionUrl;
+
+    // Fix /proposals to /proposal (singular) - the route uses singular form
+    // This should be checked before other transformations
+    if (normalizedUrl.includes('/proposals')) {
+      normalizedUrl = normalizedUrl.replace('/proposals', '/proposal');
+    }
+
+    // If it already starts with /engineer/, return the fixed URL
+    if (normalizedUrl.startsWith('/engineer/')) {
+      return normalizedUrl;
     }
 
     // Convert /projects/:id to /engineer/projects/:id
-    if (actionUrl.startsWith('/projects/')) {
-      return actionUrl.replace('/projects/', '/engineer/projects/');
+    if (normalizedUrl.startsWith('/projects/')) {
+      return normalizedUrl.replace('/projects/', '/engineer/projects/');
     }
 
     // Convert /chat/:id to /engineer/messages
-    if (actionUrl.startsWith('/chat/')) {
+    if (normalizedUrl.startsWith('/chat/')) {
       return '/engineer/messages';
     }
 
-    // Convert /proposals/:id - try to get projectId from notification.data
-    if (actionUrl.startsWith('/proposals/')) {
+    // Convert /proposal/:id - try to get projectId from notification.data
+    if (normalizedUrl.startsWith('/proposal/')) {
       if (notification.data?.projectId) {
         return `/engineer/projects/${notification.data.projectId}`;
       }
@@ -92,11 +100,11 @@ const EngineerNotifications = () => {
     }
 
     // For any other URLs starting with /, prepend /engineer
-    if (actionUrl.startsWith('/')) {
-      return `/engineer${actionUrl}`;
+    if (normalizedUrl.startsWith('/')) {
+      return `/engineer${normalizedUrl}`;
     }
 
-    return actionUrl;
+    return normalizedUrl;
   };
 
   const handleNotificationClick = async (notification: Notification) => {

@@ -67,6 +67,11 @@ export const AdminSidebar = () => {
       icon: Mail,
       label: language === 'en' ? 'Subscribers' : 'المشتركون'
     },
+    // {
+    //   to: "/admin/notifications",
+    //   icon: Bell,
+    //   label: language === 'en' ? 'Notifications' : 'الإشعارات'
+    // },
     {
       to: "/admin/users",
       icon: Users,
@@ -82,11 +87,7 @@ export const AdminSidebar = () => {
       icon: MessageSquare,
       label: language === 'en' ? 'Messages' : 'الرسائل'
     },
-    {
-      to: "/admin/notifications",
-      icon: Bell,
-      label: language === 'en' ? 'Notifications' : 'الإشعارات'
-    },
+    
     
     // {
     //   to: "/admin/settings",
