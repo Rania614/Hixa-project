@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AppProvider, useApp } from "./context/AppContext";
 import { useMemo, useState, useEffect } from "react";
+import { http } from "./services/http";
 
 import Landing from "./pages/PlatformLanding";
 import AdminLogin from "./pages/admin-dashboard/AdminLogin";
@@ -148,6 +149,138 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       ? '/engineer/login'
       : '/admin/login';
     return <Navigate to={loginPath} replace state={{ from: location }} />;
+  }
+  
+  return <>{children}</>;
+};
+
+// EngineerProtectedRoute component - checks authentication AND verifies user is engineer
+// Redirects to engineer login if not authenticated or not an engineer
+const EngineerProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, language } = useApp();
+  const location = useLocation();
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
+  const [isChecking, setIsChecking] = useState(true);
+  const [isEngineer, setIsEngineer] = useState(false);
+  
+  // Update token when localStorage changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setToken(localStorage.getItem("token"));
+    };
+    
+    handleStorageChange();
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [isAuthenticated]);
+  
+  // Verify token and engineer role
+  useEffect(() => {
+    const verifyEngineerAuth = async () => {
+      const currentToken = localStorage.getItem("token");
+      
+      // If no token, not authorized - redirect immediately
+      if (!currentToken) {
+        setIsChecking(false);
+        setIsEngineer(false);
+        return;
+      }
+      
+      // Update token state
+      setToken(currentToken);
+      
+      // Must have both token AND isAuthenticated
+      if (!isAuthenticated) {
+        localStorage.removeItem("token");
+        setToken(null);
+        setIsChecking(false);
+        setIsEngineer(false);
+        return;
+      }
+      
+      // Check if user is engineer by verifying role from localStorage or API
+      try {
+        const userDataStr = localStorage.getItem("user");
+        let userData = null;
+        
+        if (userDataStr) {
+          try {
+            userData = JSON.parse(userDataStr);
+          } catch (e) {
+            console.error("Error parsing user data:", e);
+          }
+        }
+        
+        // If no user data in localStorage, try to fetch from API
+        if (!userData) {
+          try {
+            const response = await http.get("/auth/me");
+            userData = response.data?.user || response.data?.data || response.data;
+            if (userData) {
+              localStorage.setItem("user", JSON.stringify(userData));
+            }
+          } catch (error: any) {
+            console.warn("Could not fetch user data:", error);
+            // If API call fails but token exists, allow access (backend will verify)
+            setIsChecking(false);
+            setIsEngineer(true);
+            return;
+          }
+        }
+        
+        // Verify user is engineer
+        if (userData) {
+          const userRole = userData.role || "";
+          const userIsEngineer = userRole === "engineer" || 
+                                userRole === "partner" ||
+                                userData.isEngineer === true;
+          setIsEngineer(userIsEngineer);
+        } else {
+          // If no user data but token exists, allow access (backend will verify)
+          setIsEngineer(true);
+        }
+      } catch (error) {
+        console.error("Error verifying engineer role:", error);
+        // On error, allow access (backend will verify)
+        setIsEngineer(true);
+      } finally {
+        setIsChecking(false);
+      }
+    };
+    
+    verifyEngineerAuth();
+  }, [isAuthenticated, location.pathname]);
+  
+  // Check authorization
+  const isAuthorized = useMemo(() => {
+    return isAuthenticated && !!token && isEngineer;
+  }, [isAuthenticated, token, isEngineer]);
+  
+  // Show loading while checking
+  if (isChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-xl font-semibold text-muted-foreground">
+            {language === "en" ? "Checking authentication..." : "جارٍ التحقق من المصادقة..."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Redirect to engineer login if not authorized
+  if (!isAuthorized) {
+    // If not engineer, clear token and redirect
+    if (token && isAuthenticated && !isEngineer) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+    }
+    return <Navigate to="/engineer/login" replace state={{ from: location }} />;
   }
   
   return <>{children}</>;
@@ -411,18 +544,102 @@ const AppRoutes = () => {
           </PublicRoute>
         } 
       />
-      <Route path="/engineer/dashboard" element={<EngineerDashboard />} />
-      <Route path="/engineer/available-projects" element={<AvailableProjects />} />
-      <Route path="/engineer/projects" element={<EngineerProjects />} />
-      <Route path="/engineer/projects/:id" element={<EngineerProjectDetails />} />
-      <Route path="/engineer/projects/:id/proposal" element={<SubmitProposal />} />
-      <Route path="/engineer/messages" element={<EngineerMessages />} />
-      <Route path="/engineer/notifications" element={<EngineerNotifications />} />
-      <Route path="/engineer/portfolio" element={<EngineerPortfolio />} />
-      <Route path="/engineer/portfolio/add" element={<AddWork />} />
-      <Route path="/engineer/portfolio/:id/edit" element={<AddWork />} />
-      <Route path="/engineer/portfolio/:id" element={<WorkDetails />} />
-      <Route path="/engineer/profile" element={<EngineerProfile />} />
+      <Route 
+        path="/engineer/dashboard" 
+        element={
+          <EngineerProtectedRoute>
+            <EngineerDashboard />
+          </EngineerProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/engineer/available-projects" 
+        element={
+          <EngineerProtectedRoute>
+            <AvailableProjects />
+          </EngineerProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/engineer/projects" 
+        element={
+          <EngineerProtectedRoute>
+            <EngineerProjects />
+          </EngineerProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/engineer/projects/:id" 
+        element={
+          <EngineerProtectedRoute>
+            <EngineerProjectDetails />
+          </EngineerProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/engineer/projects/:id/proposal" 
+        element={
+          <EngineerProtectedRoute>
+            <SubmitProposal />
+          </EngineerProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/engineer/messages" 
+        element={
+          <EngineerProtectedRoute>
+            <EngineerMessages />
+          </EngineerProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/engineer/notifications" 
+        element={
+          <EngineerProtectedRoute>
+            <EngineerNotifications />
+          </EngineerProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/engineer/portfolio" 
+        element={
+          <EngineerProtectedRoute>
+            <EngineerPortfolio />
+          </EngineerProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/engineer/portfolio/add" 
+        element={
+          <EngineerProtectedRoute>
+            <AddWork />
+          </EngineerProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/engineer/portfolio/:id/edit" 
+        element={
+          <EngineerProtectedRoute>
+            <AddWork />
+          </EngineerProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/engineer/portfolio/:id" 
+        element={
+          <EngineerProtectedRoute>
+            <WorkDetails />
+          </EngineerProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/engineer/profile" 
+        element={
+          <EngineerProtectedRoute>
+            <EngineerProfile />
+          </EngineerProtectedRoute>
+        } 
+      />
       
       {/* Company Dashboard Routes */}
       <Route 

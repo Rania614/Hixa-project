@@ -349,8 +349,37 @@ const SubmitProposal = () => {
         tokenLength: token?.length,
         userRole: user?.role,
         isActive: user?.isActive,
+        userId: user?._id || user?.id,
+        userEmail: user?.email,
         proposalData,
       });
+      
+      // Double-check user role before submitting
+      if (user?.role !== "engineer" && user?.role !== "partner") {
+        toast.error(
+          language === "en" 
+            ? "Only engineers can submit proposals. Please log in as an engineer." 
+            : "فقط المهندسين يمكنهم تقديم العروض. يرجى تسجيل الدخول كمهندس."
+        );
+        setLoading(false);
+        setTimeout(() => {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          navigate("/engineer/login");
+        }, 2000);
+        return;
+      }
+      
+      // Check if account is active
+      if (user?.isActive === false || user?.status === "inactive") {
+        toast.error(
+          language === "en" 
+            ? "Your account is not activated. Please contact the administration." 
+            : "حسابك غير مفعّل. يرجى التواصل مع الإدارة."
+        );
+        setLoading(false);
+        return;
+      }
 
       if (isEditMode && proposalId) {
         // Check if still within 1 hour (client-side validation)
@@ -400,28 +429,68 @@ const SubmitProposal = () => {
         // ✅ Forbidden - user doesn't have permission - معالجة مفصلة
         const backendMessage = error.response?.data?.message || "";
         
-        if (backendMessage.toLowerCase().includes("engineer") || backendMessage.toLowerCase().includes("مهندسين")) {
+        // Log detailed error for debugging
+        console.error("🔍 403 Error Details:", {
+          backendMessage,
+          userRole: user?.role,
+          isActive: user?.isActive,
+          userId: user?._id || user?.id,
+          projectId: id,
+        });
+        
+        if (backendMessage.toLowerCase().includes("engineer") || 
+            backendMessage.toLowerCase().includes("مهندسين") ||
+            backendMessage.toLowerCase().includes("role") ||
+            backendMessage.toLowerCase().includes("دور")) {
           errorMessage = language === "en" 
             ? "This action is for engineers only. Please ensure you are logged in as an engineer." 
             : "هذه العملية للمهندسين فقط. يرجى التأكد من تسجيل الدخول كمهندس.";
-          setTimeout(() => navigate("/engineer/login"), 2000);
-        } else if (backendMessage.toLowerCase().includes("active") || backendMessage.toLowerCase().includes("مفعّل")) {
+          toast.error(errorMessage);
+          setTimeout(() => {
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            navigate("/engineer/login");
+          }, 2000);
+        } else if (backendMessage.toLowerCase().includes("active") || 
+                   backendMessage.toLowerCase().includes("مفعّل") ||
+                   backendMessage.toLowerCase().includes("activated")) {
           errorMessage = language === "en" 
             ? "Your account is not activated. Please contact the administration." 
             : "حسابك غير مفعّل. يرجى التواصل مع الإدارة.";
-        } else if (backendMessage.toLowerCase().includes("status") || backendMessage.toLowerCase().includes("حالة")) {
+        } else if (backendMessage.toLowerCase().includes("status") || 
+                   backendMessage.toLowerCase().includes("حالة")) {
           errorMessage = language === "en" 
             ? "This project is not accepting proposals at this time. Please check the project status." 
             : "هذا المشروع لا يقبل العروض في الوقت الحالي. يرجى التحقق من حالة المشروع.";
-        } else if (backendMessage.toLowerCase().includes("duplicate") || backendMessage.toLowerCase().includes("موجود")) {
+        } else if (backendMessage.toLowerCase().includes("duplicate") || 
+                   backendMessage.toLowerCase().includes("موجود") ||
+                   backendMessage.toLowerCase().includes("already")) {
           errorMessage = language === "en" 
             ? "You have already submitted a proposal for this project." 
             : "لقد قمت بتقديم عرض لهذا المشروع بالفعل.";
         } else {
+          // Use backend message if available, otherwise show generic message
           errorMessage = backendMessage || 
             (language === "en" 
               ? "You are not authorized to perform this action. Please check your account status and role." 
               : "غير مصرح لك بتنفيذ هذا الإجراء. يرجى التحقق من حالة حسابك ودورك.");
+          
+          // If user is company, suggest using company dashboard
+          if (user?.role === "company") {
+            errorMessage = language === "en"
+              ? "Companies cannot submit proposals. Please use the company dashboard to manage your projects."
+              : "الشركات لا يمكنها تقديم عروض. يرجى استخدام لوحة تحكم الشركة لإدارة مشاريعك.";
+            setTimeout(() => navigate("/company/dashboard"), 3000);
+          } else if (!user?.role || (user?.role !== "engineer" && user?.role !== "partner")) {
+            errorMessage = language === "en"
+              ? "Only engineers can submit proposals. Please log in as an engineer."
+              : "فقط المهندسين يمكنهم تقديم العروض. يرجى تسجيل الدخول كمهندس.";
+            setTimeout(() => {
+              localStorage.removeItem("token");
+              localStorage.removeItem("user");
+              navigate("/engineer/login");
+            }, 2000);
+          }
         }
       } else if (error.response?.status === 400) {
         // Bad Request - usually validation error or project status issue

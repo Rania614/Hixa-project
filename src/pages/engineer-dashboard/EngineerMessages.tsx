@@ -632,143 +632,100 @@ const EngineerMessages = () => {
                       </div>
                     </div>
                   </div>
-                  <ScrollArea className="flex-1 min-h-0" ref={messagesContainerRef}>
-                    <div className="p-4 pb-6">
-                      {loadingMessages && messages.length === 0 ? (
-                        <div className="flex items-center justify-center py-12">
-                          <Loader2 className="w-6 h-6 animate-spin text-hexa-secondary" />
-                        </div>
-                      ) : messages.length === 0 ? (
-                        <div className="flex items-center justify-center py-12">
-                          <p className="text-sm text-hexa-text-light">
-                            {language === 'en' ? 'No messages yet' : 'لا توجد رسائل بعد'}
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {messages.map((msg, idx) => {
-                            const senderId = typeof msg.sender === 'string' ? msg.sender : msg.sender?._id;
-                            const senderName = typeof msg.sender === 'object' ? msg.sender?.name : 'Unknown';
-                            const senderAvatar = typeof msg.sender === 'object' ? msg.sender?.name?.charAt(0) : 'U';
-                            const senderRole = msg.senderRole || (typeof msg.sender === 'object' ? msg.sender?.role : null);
-                            
-                            // Determine if message is from engineer (me) or from admin/system
-                            const isMe = senderId === user?._id || senderId === user?.id;
-                            const isSystem = msg.type === 'system';
-                            const isAdmin = senderRole === 'admin' || (typeof msg.sender === 'object' && msg.sender?.role === 'admin');
-                            const isFromAdminOrSystem = isAdmin || isSystem;
-                            
-                            // Check if previous message is from same sender (for grouping)
-                            const prevMsg = idx > 0 ? messages[idx - 1] : null;
-                            const prevSenderId = prevMsg ? (typeof prevMsg.sender === 'string' ? prevMsg.sender : prevMsg.sender?._id) : null;
-                            const isSameSender = prevSenderId === senderId;
-                            const showAvatar = !isMe && !isSameSender;
-                            const showSenderName = !isMe && !isSameSender;
-                            
-                            return (
+                  <ScrollArea className="flex-1 p-4" ref={messagesContainerRef}>
+                    {loadingMessages && messages.length === 0 ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-6 h-6 animate-spin text-hexa-secondary" />
+                      </div>
+                    ) : messages.length === 0 ? (
+                      <div className="flex items-center justify-center py-8">
+                        <p className="text-sm text-hexa-text-light">
+                          {language === 'en' ? 'No messages yet' : 'لا توجد رسائل بعد'}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {messages.map((msg) => {
+                          const senderId = typeof msg.sender === 'string' ? msg.sender : msg.sender?._id;
+                          const senderName = typeof msg.sender === 'object' ? msg.sender?.name : 'Unknown';
+                          const isMe = senderId === user?._id || senderId === user?.id;
+                          
+                          return (
+                            <div
+                              key={msg._id}
+                              className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+                            >
                               <div
-                                key={msg._id}
-                                className={`flex items-end gap-2.5 ${isMe ? "justify-end" : "justify-start"} ${isSameSender ? 'mt-1' : 'mt-4'}`}
+                                className={`max-w-[75%] md:max-w-[70%] rounded-xl p-3 ${
+                                  isMe
+                                    ? "bg-hexa-secondary/40 text-hexa-text-dark font-semibold shadow-lg shadow-hexa-secondary/15 border border-hexa-secondary/30"
+                                    : "bg-hexa-bg border border-hexa-border/50 text-hexa-text-dark shadow-md"
+                                }`}
                               >
-                                {/* Avatar for received messages (left side) - Admin/System */}
                                 {!isMe && (
-                                  <Avatar className={`w-8 h-8 flex-shrink-0 ${showAvatar ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                                    <AvatarFallback className={isFromAdminOrSystem ? "bg-blue-600 text-white text-xs font-semibold" : "bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-semibold"}>
-                                      {senderAvatar.toUpperCase()}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                )}
-                                
-                                <div className={`flex flex-col gap-1 ${isMe ? "items-end" : "items-start"} max-w-[75%] md:max-w-[70%]`}>
-                                  {/* Message bubble */}
-                                  <div
-                                    className={`rounded-2xl px-4 py-2.5 ${
-                                      isMe
-                                        ? "bg-blue-600/80 text-white rounded-br-sm"
-                                        : isFromAdminOrSystem
-                                        ? "bg-blue-600/80 text-white rounded-bl-sm"
-                                        : "bg-slate-700/50 border border-slate-600/50 text-slate-100 rounded-bl-sm"
-                                    }`}
-                                  >
-                                    {msg.attachments && msg.attachments.length > 0 && (
-                                      <div className="space-y-1.5 mb-2">
-                                        {msg.attachments.map((att, attIdx) => {
-                                          const isImage = att.type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(att.filename || att.name || '');
-                                          const isPDF = /\.pdf$/i.test(att.filename || att.name || '');
-                                          const isDocument = /\.(doc|docx|xls|xlsx|ppt|pptx)$/i.test(att.filename || att.name || '');
-                                          const fileSize = att.size ? (att.size > 1024 * 1024 
-                                            ? `${(att.size / (1024 * 1024)).toFixed(2)} MB`
-                                            : `${(att.size / 1024).toFixed(2)} KB`) : '';
-                                          
-                                          return (
-                                            <a
-                                              key={attIdx}
-                                              href={att.url}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className={`flex items-center gap-2 p-2.5 rounded-lg hover:opacity-80 transition-all group ${
-                                                isMe || isFromAdminOrSystem
-                                                  ? "bg-blue-500/20 border border-blue-400/30" 
-                                                  : "bg-slate-600/30 border border-slate-500/40"
-                                              }`}
-                                            >
-                                              {isImage && <span className="text-lg">🖼️</span>}
-                                              {isPDF && <span className="text-lg">📄</span>}
-                                              {isDocument && <span className="text-lg">📝</span>}
-                                              {!isImage && !isPDF && !isDocument && <span className="text-lg">📎</span>}
-                                              <div className="flex-1 min-w-0">
-                                                <p className={`text-xs font-medium truncate ${
-                                                  isMe || isFromAdminOrSystem ? "text-blue-100" : "text-slate-200"
-                                                }`}>
-                                                  {att.filename || att.name || 'File'}
-                                                </p>
-                                                {fileSize && (
-                                                  <p className={`text-[10px] opacity-70 ${
-                                                    isMe || isFromAdminOrSystem ? "text-blue-200/70" : "text-slate-300/70"
-                                                  }`}>{fileSize}</p>
-                                                )}
-                                              </div>
-                                              <span className={`text-xs opacity-60 ${
-                                                isMe || isFromAdminOrSystem ? "text-blue-200" : "text-slate-300"
-                                              }`}>⬇️</span>
-                                            </a>
-                                          );
-                                        })}
-                                      </div>
-                                    )}
-                                    
-                                    {msg.content && (
-                                      <p className={`leading-relaxed text-sm whitespace-pre-wrap break-words text-white ${
-                                        isMe || isFromAdminOrSystem ? "font-medium" : ""
-                                      }`}>
-                                        {msg.content}
-                                      </p>
-                                    )}
-                                  </div>
-                                  
-                                  {/* Timestamp - below message */}
-                                  <p className={`text-[10px] text-gray-400/70 px-1 ${
-                                    isMe ? "text-right" : "text-left"
-                                  }`}>
-                                    {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
+                                  <p className="text-xs font-semibold text-hexa-text-light mb-1">
+                                    {senderName}
                                   </p>
-                                </div>
-                                
-                                {/* Avatar for sent messages (right side) - Engineer */}
-                                {isMe && (
-                                  <Avatar className={`w-8 h-8 flex-shrink-0 ml-2 ${!isSameSender ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                                    <AvatarFallback className="bg-blue-600 text-white text-xs font-semibold">
-                                      {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                                    </AvatarFallback>
-                                  </Avatar>
                                 )}
+                                {msg.attachments && msg.attachments.length > 0 && (
+                                  <div className="mt-2 space-y-1.5">
+                                    {msg.attachments.map((att, attIdx) => {
+                                      const isImage = att.type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(att.filename || att.name || '');
+                                      const isPDF = /\.pdf$/i.test(att.filename || att.name || '');
+                                      const isDocument = /\.(doc|docx|xls|xlsx|ppt|pptx)$/i.test(att.filename || att.name || '');
+                                      const fileSize = att.size ? (att.size > 1024 * 1024 
+                                        ? `${(att.size / (1024 * 1024)).toFixed(2)} MB`
+                                        : `${(att.size / 1024).toFixed(2)} KB`) : '';
+                                      
+                                      return (
+                                        <a
+                                          key={attIdx}
+                                          href={att.url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="flex items-center gap-2 p-2 bg-hexa-bg border border-hexa-border rounded-md hover:border-hexa-secondary/50 hover:bg-hexa-bg/70 transition-all group"
+                                        >
+                                          {isImage && <span className="text-lg">🖼️</span>}
+                                          {isPDF && <span className="text-lg">📄</span>}
+                                          {isDocument && <span className="text-lg">📝</span>}
+                                          {!isImage && !isPDF && !isDocument && <span className="text-lg">📎</span>}
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-medium text-hexa-text-dark truncate group-hover:text-hexa-secondary transition-colors">
+                                              {att.filename || att.name || 'File'}
+                                            </p>
+                                            {fileSize && (
+                                              <p className="text-[10px] text-hexa-text-light">{fileSize}</p>
+                                            )}
+                                          </div>
+                                          <span className="text-xs text-hexa-text-light group-hover:text-hexa-secondary/80">⬇️</span>
+                                        </a>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                                {msg.content && (
+                                  <p className={`leading-relaxed text-sm ${
+                                    isMe 
+                                      ? "text-hexa-text-dark font-semibold" 
+                                      : "text-hexa-text-dark font-normal"
+                                  }`}>
+                                    {msg.content}
+                                  </p>
+                                )}
+                                <p className={`text-xs mt-2 ${
+                                  isMe 
+                                    ? "text-hexa-text-light font-semibold" 
+                                    : "text-hexa-text-light font-normal"
+                                }`}>
+                                  {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
+                                </p>
                               </div>
-                            );
-                          })}
-                          <div ref={messagesEndRef} className="h-1" />
-                        </div>
-                      )}
-                    </div>
+                            </div>
+                          );
+                        })}
+                        <div ref={messagesEndRef} />
+                      </div>
+                    )}
                   </ScrollArea>
                   <div className="p-4 border-t border-hexa-border flex-shrink-0">
                     {attachments.length > 0 && (

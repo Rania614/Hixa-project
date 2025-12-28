@@ -35,12 +35,11 @@ http.interceptors.request.use((config) => {
     delete config.headers['Content-Type'];
   }
 
-  // Remove leading slash to avoid double slashes in URL
-  if (config.url && config.url.startsWith('/')) {
-    config.url = config.url.substring(1);
+  // Normalize URL to avoid double slashes
+  if (config.url) {
+    config.url = config.url.replace(/^\/+/, ''); // remove leading slash
   }
 
-  // Log request for debugging
   const fullURL = config.baseURL && config.url
     ? `${config.baseURL}/${config.url}`
     : `${config.baseURL}${config.url}`;
@@ -62,7 +61,6 @@ http.interceptors.request.use((config) => {
 // -------------------------------
 http.interceptors.response.use(
   (response) => {
-    // Log successful response (optional)
     console.log(`✅ HTTP Response: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
       status: response.status,
       data: response.data,
@@ -70,51 +68,26 @@ http.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Handle 401 Unauthorized
     if (error.response?.status === 401) {
       console.warn("🔒 401 Unauthorized - Token invalid or expired");
       localStorage.removeItem("token");
 
       const pathname = window.location.pathname;
-      if (pathname.startsWith('/admin')) {
-        window.location.href = '/admin/login';
-      } else if (pathname.startsWith('/engineer')) {
-        window.location.href = '/engineer/login';
-      } else if (pathname.startsWith('/client')) {
-        window.location.href = '/client/login';
-      }
+      if (pathname.startsWith('/admin')) window.location.href = '/admin/login';
+      else if (pathname.startsWith('/engineer')) window.location.href = '/engineer/login';
+      else if (pathname.startsWith('/client')) window.location.href = '/client/login';
     }
 
-    // Handle 403 Forbidden
     if (error.response?.status === 403) {
       const backendMessage = error.response?.data?.message || "";
       const pathname = window.location.pathname;
-      
-      // Log with context
-      console.warn("🚫 403 Forbidden:", {
-        url: error.config?.url,
-        message: backendMessage,
-        pathname: pathname
-      });
+      console.warn("🚫 403 Forbidden:", { url: error.config?.url, message: backendMessage, pathname });
 
-      // For certain endpoints, 403 might mean user needs to re-authenticate
-      // or doesn't have the right role
-      const requiresReauth = [
-        '/proposals/my',
-        '/users/me',
-        '/projects/my'
-      ];
-      
-      const needsReauth = requiresReauth.some(endpoint => 
-        error.config?.url?.includes(endpoint)
-      );
+      const requiresReauth = ['/proposals/my','/users/me','/projects/my'];
+      const needsReauth = requiresReauth.some(endpoint => error.config?.url?.includes(endpoint));
 
       if (needsReauth) {
-        // Check if it's a role issue
-        if (backendMessage.toLowerCase().includes('engineer') || 
-            backendMessage.toLowerCase().includes('مهندسين') ||
-            backendMessage.toLowerCase().includes('role')) {
-          // User might be logged in with wrong role
+        if (backendMessage.toLowerCase().includes('engineer') || backendMessage.toLowerCase().includes('مهندسين') || backendMessage.toLowerCase().includes('role')) {
           if (pathname.startsWith('/engineer')) {
             console.warn("User may not have engineer role, redirecting to login");
             setTimeout(() => {
@@ -122,34 +95,16 @@ http.interceptors.response.use(
               window.location.href = '/engineer/login';
             }, 2000);
           }
-        } else if (backendMessage.toLowerCase().includes('active') || 
-                   backendMessage.toLowerCase().includes('مفعّل')) {
-          // Account not activated - don't redirect, just show error
+        } else if (backendMessage.toLowerCase().includes('active') || backendMessage.toLowerCase().includes('مفعّل')) {
           console.warn("Account not activated");
         }
       }
-
-      // Don't reject immediately - let the component handle it
-      // This allows components to show custom error messages
     }
 
-    // Handle optional 404 errors
-    // Some endpoints may return 404 which is expected (e.g., chat-rooms that don't exist yet)
     if (error.response?.status === 404) {
-      // Only log if it's not a known optional endpoint
-      const optionalEndpoints = [
-        '/project-rooms/',
-        '/chat-rooms/',
-        '/messages/unread/count'
-      ];
-      const isOptionalEndpoint = optionalEndpoints.some(endpoint => 
-        error.config?.url?.includes(endpoint)
-      );
-      
-      if (!isOptionalEndpoint) {
-        console.warn("⚠️ 404 Not Found:", error.config?.url);
-      }
-      // Return null data instead of rejecting to allow graceful handling
+      const optionalEndpoints = ['/project-rooms/','/chat-rooms/','/messages/unread/count'];
+      const isOptionalEndpoint = optionalEndpoints.some(endpoint => error.config?.url?.includes(endpoint));
+      if (!isOptionalEndpoint) console.warn("⚠️ 404 Not Found:", error.config?.url);
       return Promise.resolve({ data: null });
     }
 
