@@ -19,7 +19,7 @@ import { useNotificationWebSocket } from "@/hooks/useNotificationWebSocket";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 
 interface DashboardTopBarProps {
-  userType: "client" | "engineer";
+  userType: "client" | "engineer" | "company";
 }
 
 export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({ userType }) => {
@@ -64,7 +64,11 @@ export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({ userType }) =>
             variant="ghost" 
             size="icon" 
             className="hover:bg-hexa-secondary/20 text-hexa-text-light hover:text-hexa-secondary"
-            onClick={() => navigate(userType === "client" ? "/client/messages" : "/engineer/messages")}
+            onClick={() => {
+              if (userType === "client") navigate("/client/messages");
+              else if (userType === "company") navigate("/company/messages");
+              else navigate("/engineer/messages");
+            }}
           >
             <MessageSquare className="w-5 h-5" />
           </Button>
@@ -81,7 +85,11 @@ export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({ userType }) =>
             variant="ghost" 
             size="icon" 
             className="hover:bg-hexa-secondary/20 text-hexa-text-light hover:text-hexa-secondary"
-            onClick={() => navigate(userType === "client" ? "/client/notifications" : "/engineer/notifications")}
+            onClick={() => {
+              if (userType === "client") navigate("/client/notifications");
+              else if (userType === "company") navigate("/company/notifications");
+              else navigate("/engineer/notifications");
+            }}
           >
             <Bell className="w-5 h-5" />
           </Button>
@@ -98,11 +106,11 @@ export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({ userType }) =>
             <Button variant="ghost" className="flex items-center gap-2 hover:bg-hexa-secondary/20 text-hexa-text-light hover:text-hexa-secondary">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-hexa-secondary text-black">
-                  {userType === "client" ? "C" : "E"}
+                  {userType === "client" ? "C" : userType === "company" ? "Co" : "E"}
                 </AvatarFallback>
               </Avatar>
               <span className="hidden md:block font-medium">
-                {userType === "client" ? "Client" : "Engineer"}
+                {userType === "client" ? "Client" : userType === "company" ? "Company" : "Engineer"}
               </span>
             </Button>
           </DropdownMenuTrigger>

@@ -5,7 +5,7 @@ import { DashboardTopBar } from "./DashboardTopBar";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
-  userType: "client" | "engineer";
+  userType: "client" | "engineer" | "company";
 }
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userType }) => {

@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 interface DashboardSidebarProps {
-  userType: "client" | "engineer";
+  userType: "client" | "engineer" | "company";
 }
 
 export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ userType }) => {
@@ -28,6 +28,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ userType }) 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const isClient = userType === "client";
+  const isCompany = userType === "company";
 
   const clientMenuItems = [
     { icon: LayoutDashboard, label: getDashboardText("dashboard", language), path: "/client/dashboard" },
@@ -47,7 +48,17 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ userType }) 
     { icon: User, label: getDashboardText("profilePage", language), path: "/engineer/profile" },
   ];
 
-  const menuItems = isClient ? clientMenuItems : engineerMenuItems;
+  const companyMenuItems = [
+    { icon: LayoutDashboard, label: getDashboardText("dashboard", language), path: "/company/dashboard" },
+    { icon: Briefcase, label: getDashboardText("browseProjects", language), path: "/company/available-projects" },
+    { icon: FolderKanban, label: getDashboardText("myProjects", language), path: "/company/projects" },
+    { icon: MessageSquare, label: getDashboardText("messages", language), path: "/company/messages" },
+    { icon: Bell, label: getDashboardText("notifications", language), path: "/company/notifications" },
+    { icon: Image, label: getDashboardText("portfolio", language), path: "/company/portfolio" },
+    { icon: User, label: getDashboardText("profilePage", language), path: "/company/profile" },
+  ];
+
+  const menuItems = isClient ? clientMenuItems : isCompany ? companyMenuItems : engineerMenuItems;
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -68,7 +79,11 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ userType }) 
           <div>
             <h1 className="font-bold text-lg text-hexa-secondary">Hexa</h1>
             <p className="text-xs text-hexa-text-light">
-              {isClient ? getDashboardText("clientDashboard", language) : getDashboardText("engineerDashboard", language)}
+              {isClient 
+                ? getDashboardText("clientDashboard", language) 
+                : isCompany 
+                  ? getDashboardText("companyDashboard", language) 
+                  : getDashboardText("engineerDashboard", language)}
             </p>
           </div>
         </div>

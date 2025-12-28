@@ -90,7 +90,8 @@ export const messagesApi = {
   // Get chat rooms for a specific project room
   getChatRooms: async (projectRoomId: string): Promise<ChatRoom[]> => {
     try {
-      const response = await http.get(`/project-rooms/${projectRoomId}/chat-rooms`);
+      // ✅ Correct endpoint: GET /api/chat-rooms/project-room/:roomId
+      const response = await http.get(`/chat-rooms/project-room/${projectRoomId}`);
       // http.js interceptor handles 404 and returns { data: null }
       if (!response || !response.data) {
         return [];

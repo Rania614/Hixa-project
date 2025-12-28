@@ -817,13 +817,13 @@ const AdminMessages = () => {
   });
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex h-screen bg-background overflow-hidden">
       <AdminSidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden h-full">
         <AdminTopBar />
-          <main className="flex-1 overflow-hidden flex flex-col p-4">
+          <main className="flex-1 overflow-hidden flex flex-col p-4 min-h-0">
            {/* Header */}
-            <div className="mb-4">
+            <div className="mb-4 flex-shrink-0">
              <h2 className="text-2xl font-bold mb-1">
                 {language === "en" ? "Messages" : "الرسائل"}
               </h2>
@@ -1000,76 +1000,89 @@ const AdminMessages = () => {
                 </Card>
 
               {/* Messages Area */}
-              <Card className="flex-1 flex flex-col overflow-hidden glass-card min-h-0">
+              <Card className="flex-1 flex flex-col overflow-hidden bg-black border-gray-800 h-full">
                 {selectedChatRoom ? (
                   <>
                      {/* Chat Header */}
-                     <CardHeader className="flex-shrink-0 relative pb-2 px-3 pt-3">
-                       {selectedChatRoom.type === 'admin-engineer' && (
-                         <div className="absolute top-2 left-2 flex gap-2 z-10">
-                           <Button
-                             onClick={() => setShowAssignModal(true)}
-                             className="bg-yellow-400/80 hover:bg-yellow-400/90 text-foreground h-6 px-2 text-[10px] flex-shrink-0"
-                             size="sm"
-                           >
-                             <UserCheck className="h-3 w-3 mr-1" />
-                             {language === 'en' ? 'Assign' : 'تعيين'}
-                           </Button>
-                           <Button
-                             onClick={() => setShowRejectModal(true)}
-                             className="bg-red-500/80 hover:bg-red-500/90 text-white h-6 px-2 text-[10px] flex-shrink-0"
-                             size="sm"
-                           >
-                             <X className="h-3 w-3 mr-1" />
-                             {language === 'en' ? 'Reject' : 'رفض'}
-                           </Button>
-                         </div>
-                       )}
-                           <div className="flex items-center gap-2">
-                         <div className={`w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 ${
-                           selectedChatRoom.type === 'admin-client' ? 'bg-muted/50' :
-                           'bg-yellow-400/20'
-                         }`}>
-                           {React.createElement(getChatRoomIcon(selectedChatRoom), {
-                             className: `h-4 w-4 ${
-                               selectedChatRoom.type === 'admin-client' ? 'text-foreground/60' :
-                               'text-yellow-400/80'
-                             }`
-                           })}
-                            </div>
-                         <div className="flex-1 min-w-0">
-                           <div className="flex items-center gap-1.5 mb-0.5">
-                             <CardTitle className="text-sm font-semibold truncate">
-                               {getChatRoomTitle(selectedChatRoom)}
-                             </CardTitle>
-                             {getChatRoomTypeBadge(selectedChatRoom) && (
-                               <Badge className={getChatRoomTypeBadge(selectedChatRoom)!.className}>
-                                 {getChatRoomTypeBadge(selectedChatRoom)!.label}
-                            </Badge>
-                             )}
+                     <div className="flex-shrink-0 border-b border-gray-800 bg-gray-900/50 px-4 py-3">
+                       <div className="flex items-center justify-between">
+                         {/* Left Side - Action Buttons */}
+                         {selectedChatRoom.type === 'admin-engineer' && (
+                           <div className="flex gap-2">
+                             <Button
+                               onClick={() => setShowRejectModal(true)}
+                               className="bg-red-500 hover:bg-red-600 text-white h-7 px-3 text-xs font-medium rounded"
+                               size="sm"
+                             >
+                               <X className="h-3.5 w-3.5 mr-1.5" />
+                               {language === 'en' ? 'Reject' : 'رفض'}
+                             </Button>
+                             <Button
+                               onClick={() => setShowAssignModal(true)}
+                               className="bg-yellow-400 hover:bg-yellow-500 text-black h-7 px-3 text-xs font-medium rounded"
+                               size="sm"
+                             >
+                               <UserCheck className="h-3.5 w-3.5 mr-1.5" />
+                               {language === 'en' ? 'Assign' : 'تعيين'}
+                             </Button>
                            </div>
-                           <p className="text-xs text-muted-foreground truncate">
-                             {getChatRoomSubtitle(selectedChatRoom)} • {selectedProjectRoom?.projectTitle}
-                           </p>
-                          </div>
-                        </div>
-                     </CardHeader>
+                         )}
+                         {selectedChatRoom.type !== 'admin-engineer' && <div />}
+                         
+                         {/* Right Side - Participant Info */}
+                         <div className="flex items-center gap-3">
+                           {selectedChatRoom.type === 'admin-engineer' && (
+                             <>
+                               <Badge className="bg-yellow-400/20 text-yellow-400 border-0 text-xs px-2.5 py-1 h-6">
+                                 {language === 'en' ? 'Engineer' : 'مهندس'}
+                               </Badge>
+                               <div className="flex flex-col items-end">
+                                 <span className="text-sm font-semibold text-white">
+                                   {getChatRoomTitle(selectedChatRoom)}
+                                 </span>
+                                 <span className="text-xs text-gray-400">
+                                   {getChatRoomSubtitle(selectedChatRoom)} • {selectedProjectRoom?.projectTitle}
+                                 </span>
+                               </div>
+                               <div className="w-8 h-8 rounded-md bg-yellow-400/20 flex items-center justify-center">
+                                 <Briefcase className="h-4 w-4 text-yellow-400/80" />
+                               </div>
+                             </>
+                           )}
+                           {selectedChatRoom.type === 'admin-client' && (
+                             <>
+                               <div className="flex flex-col items-end">
+                                 <span className="text-sm font-semibold text-white">
+                                   {getChatRoomTitle(selectedChatRoom)}
+                                 </span>
+                                 <span className="text-xs text-gray-400">
+                                   {getChatRoomSubtitle(selectedChatRoom)} • {selectedProjectRoom?.projectTitle}
+                                 </span>
+                               </div>
+                               <div className="w-8 h-8 rounded-md bg-gray-700 flex items-center justify-center">
+                                 <User className="h-4 w-4 text-gray-300" />
+                               </div>
+                             </>
+                           )}
+                         </div>
+                       </div>
+                     </div>
 
                      {/* Messages */}
-                     <CardContent className="flex-1 overflow-hidden p-0 min-h-0 flex flex-col">
+                     <div className="flex-1 overflow-hidden flex flex-col bg-black min-h-0">
                        <ScrollArea
                          className="flex-1 min-h-0"
                          ref={messagesContainerRef}
                        >
-                         <div className="px-3 py-2">
+                         <div className="px-4 py-4">
                            {loadingMessages && page === 1 ? (
                              <div className="flex items-center justify-center py-12">
-                               <Loader2 className="h-5 w-5 animate-spin text-yellow-400/70" />
+                               <Loader2 className="h-5 w-5 animate-spin text-yellow-400" />
                              </div>
                            ) : (
                              <div className="space-y-2 pb-6">
                                {messages.length === 0 ? (
-                                 <div className="flex items-center justify-center py-12 text-muted-foreground">
+                                 <div className="flex items-center justify-center py-12 text-gray-400">
                                    {language === 'en' ? 'No messages yet' : 'لا توجد رسائل بعد'}
                                  </div>
                                ) : (
@@ -1098,12 +1111,12 @@ const AdminMessages = () => {
                                const showSenderName = !isSystem && !isSameSender;
                              
                                return (
-                                 <div key={msg._id} className={`${isSameSender ? 'mt-0.5' : 'mt-4'}`}>
-                                   <div className={`flex items-end gap-2.5 ${isAdmin ? "justify-end flex-row-reverse" : "justify-start"}`}>
+                                 <div key={msg._id} className={`${isSameSender ? 'mt-1' : 'mt-4'}`}>
+                                   <div className={`flex items-end gap-2.5 ${isAdmin ? "justify-end" : "justify-start"}`}>
                                      {/* Avatar for received messages (left side) */}
                                      {!isAdmin && !isSystem && (
-                                       <Avatar className={`w-9 h-9 flex-shrink-0 transition-opacity ${showAvatar ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                                         <AvatarFallback className="bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-semibold">
+                                       <Avatar className={`w-8 h-8 flex-shrink-0 ${showAvatar ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                                         <AvatarFallback className="bg-blue-600 text-white text-xs font-semibold">
                                            {senderAvatar.toUpperCase()}
                                          </AvatarFallback>
                                        </Avatar>
@@ -1111,29 +1124,22 @@ const AdminMessages = () => {
                                      
                                      {/* Avatar for sent messages (right side) - Admin */}
                                      {isAdmin && !isSystem && (
-                                       <Avatar className={`w-9 h-9 flex-shrink-0 transition-opacity ${!isSameSender ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                                         <AvatarFallback className="bg-yellow-400/30 text-yellow-900 border border-yellow-400/40 text-xs font-semibold">
-                                           A
+                                       <Avatar className={`w-8 h-8 flex-shrink-0 ${!isSameSender ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                                         <AvatarFallback className="bg-amber-700 text-white text-xs font-semibold">
+                                           {typeof msg.senderName === 'string' ? msg.senderName.charAt(0).toUpperCase() : 'A'}
                                          </AvatarFallback>
                                        </Avatar>
                                      )}
                                      
-                                     <div className={`flex flex-col ${isAdmin ? "items-end" : "items-start"} max-w-[75%] md:max-w-[70%]`}>
-                                       {/* Sender name */}
-                                       {showSenderName && (
-                                         <p className="text-xs font-medium text-blue-300/80 mb-1 px-2">
-                                           {senderName}
-                                         </p>
-                                       )}
-                                       
+                                     <div className={`flex flex-col gap-1 ${isAdmin ? "items-end" : "items-start"} max-w-[75%] md:max-w-[70%]`}>
                                        {/* Message bubble */}
                                        <div
-                                         className={`rounded-2xl px-4 py-2.5 transition-all ${
+                                         className={`rounded-2xl px-4 py-2.5 ${
                                            isAdmin
-                                             ? "bg-yellow-400 text-black rounded-br-sm shadow-md"
+                                             ? "bg-yellow-400 text-black rounded-br-sm"
                                              : isSystem
-                                             ? "bg-muted/30 text-muted-foreground text-center mx-auto rounded-lg"
-                                             : "bg-slate-700/50 border border-slate-600/50 text-slate-100 rounded-bl-sm shadow-sm backdrop-blur-sm"
+                                             ? "bg-gray-800/50 text-gray-300 text-center mx-auto rounded-lg"
+                                             : "bg-gray-800/80 text-gray-100 rounded-bl-sm"
                                          }`}
                                        >
                                          {msg.content && (
@@ -1142,8 +1148,8 @@ const AdminMessages = () => {
                                                isAdmin
                                                  ? "text-black font-medium"
                                                  : isSystem
-                                                 ? "text-muted-foreground italic"
-                                                 : "text-slate-100"
+                                                 ? "text-gray-300 italic"
+                                                 : "text-gray-100"
                                              }`}
                                            >
                                              {msg.content}
@@ -1169,7 +1175,7 @@ const AdminMessages = () => {
                                                    className={`flex items-center gap-2 p-2.5 rounded-lg hover:opacity-80 transition-all group ${
                                                      isAdmin 
                                                        ? "bg-yellow-300/30 border border-yellow-400/40" 
-                                                       : "bg-slate-600/30 border border-slate-500/40"
+                                                       : "bg-gray-700/50 border border-gray-600/50"
                                                    }`}
                                                  >
                                                    {isImage && <span className="text-lg">🖼️</span>}
@@ -1178,34 +1184,32 @@ const AdminMessages = () => {
                                                    {!isImage && !isPDF && !isDocument && <span className="text-lg">📎</span>}
                                                    <div className="flex-1 min-w-0">
                                                      <p className={`text-xs font-medium truncate ${
-                                                       isAdmin ? "text-black/90" : "text-slate-200"
+                                                       isAdmin ? "text-black/90" : "text-gray-200"
                                                      }`}>
                                                        {att.filename || 'File'}
                                                      </p>
                                                      {fileSize && (
                                                        <p className={`text-[10px] opacity-70 ${
-                                                         isAdmin ? "text-black/70" : "text-slate-300/70"
+                                                         isAdmin ? "text-black/70" : "text-gray-300/70"
                                                        }`}>{fileSize}</p>
                                                      )}
                                                    </div>
                                                    <span className={`text-xs opacity-60 ${
-                                                     isAdmin ? "text-black/70" : "text-slate-300"
+                                                     isAdmin ? "text-black/70" : "text-gray-300"
                                                    }`}>⬇️</span>
                                                  </a>
                                                );
                                              })}
                                            </div>
                                          )}
-                                         
-                                         {/* Timestamp */}
-                                         <p className={`text-[10px] mt-1.5 opacity-60 ${
-                                           isAdmin 
-                                             ? "text-black/70" 
-                                             : "text-slate-400/70"
-                                         }`}>
-                                           {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
-                                         </p>
                                        </div>
+                                       
+                                       {/* Timestamp - below message */}
+                                       <p className={`text-[10px] text-gray-400/70 px-1 ${
+                                         isAdmin ? "text-right" : "text-left"
+                                       }`}>
+                                         {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
+                                       </p>
                                      </div>
                                    </div>
                                  </div>
@@ -1216,10 +1220,10 @@ const AdminMessages = () => {
                            )}
                          </div>
                        </ScrollArea>
-                     </CardContent>
+                     </div>
 
                      {/* Message Input */}
-                     <div className="px-3 py-2 border-t border-border/30 bg-muted/20 flex-shrink-0">
+                     <div className="flex-shrink-0 px-4 py-3 border-t border-gray-800 bg-gray-900/50">
                        {attachments.length > 0 && (
                          <div className="mb-2 flex flex-wrap gap-1.5">
                            {attachments.map((file, idx) => {
@@ -1234,21 +1238,21 @@ const AdminMessages = () => {
                              return (
                                <div
                                  key={idx}
-                                 className="flex items-center gap-1.5 bg-background border border-yellow-400/30 px-2 py-1.5 rounded-md text-xs shadow-sm"
+                                 className="flex items-center gap-1.5 bg-gray-800 border border-gray-700 px-2 py-1.5 rounded-md text-xs shadow-sm"
                                >
                                  {isImage && <span className="text-yellow-400">🖼️</span>}
                                  {isPDF && <span className="text-red-400">📄</span>}
                                  {isDocument && <span className="text-blue-400">📝</span>}
-                                 {!isImage && !isPDF && !isDocument && <span className="text-muted-foreground">📎</span>}
+                                 {!isImage && !isPDF && !isDocument && <span className="text-gray-400">📎</span>}
                                  <div className="flex flex-col min-w-0 flex-1">
-                                   <span className="text-foreground/90 font-medium truncate max-w-[150px]" title={file.name}>
+                                   <span className="text-gray-200 font-medium truncate max-w-[150px]" title={file.name}>
                                      {file.name}
                                    </span>
-                                   <span className="text-[10px] text-muted-foreground/70">{fileSize}</span>
+                                   <span className="text-[10px] text-gray-400">{fileSize}</span>
                                  </div>
                                  <button
                                    onClick={() => removeAttachment(idx)}
-                                   className="text-muted-foreground/60 hover:text-destructive text-sm leading-none p-0.5 rounded hover:bg-destructive/10 transition-colors"
+                                   className="text-gray-400 hover:text-red-400 text-sm leading-none p-0.5 rounded hover:bg-red-500/10 transition-colors"
                                    title={language === 'en' ? 'Remove file' : 'إزالة الملف'}
                                  >
                                    ×
@@ -1271,7 +1275,7 @@ const AdminMessages = () => {
                            variant="ghost"
                            size="sm"
                            onClick={() => fileInputRef.current?.click()}
-                           className="h-8 w-8 p-0 border border-border/30 hover:bg-muted/50 hover:border-yellow-400/40 transition-colors"
+                           className="h-8 w-8 p-0 border border-gray-700 hover:bg-gray-800 hover:border-gray-600 text-gray-400 transition-colors"
                            title={language === 'en' ? 'Attach file' : 'إرفاق ملف'}
                          >
                            <Paperclip className="h-4 w-4" />
@@ -1280,7 +1284,7 @@ const AdminMessages = () => {
                               value={message}
                               onChange={(e) => setMessage(e.target.value)}
                               placeholder={language === "en" ? "Type a message..." : "اكتب رسالة..."}
-                           className="flex-1 h-8 bg-background border-border/30 focus:border-yellow-400/40 text-sm"
+                           className="flex-1 h-8 bg-gray-800 border-gray-700 text-gray-100 placeholder:text-gray-500 focus:border-yellow-400/50 text-sm"
                               onKeyPress={(e) => {
                              if (e.key === "Enter" && !e.shiftKey) {
                                e.preventDefault();
@@ -1292,7 +1296,7 @@ const AdminMessages = () => {
                             <Button
                            onClick={handleSendMessage}
                            disabled={sending || (!message.trim() && attachments.length === 0)}
-                           className="bg-yellow-400/80 hover:bg-yellow-400/90 text-foreground h-8 px-4 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                           className="bg-yellow-400 hover:bg-yellow-500 text-black h-8 px-4 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                          >
                            {sending ? (
                              <Loader2 className="w-4 h-4 animate-spin" />

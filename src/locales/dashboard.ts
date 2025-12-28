@@ -56,6 +56,9 @@ export const dashboardTranslations = {
     workImage: "Image",
     workDate: "Date",
     noWorks: "No works added yet",
+    
+    // Company Dashboard
+    companyDashboard: "Company Dashboard",
   },
   ar: {
     // Common
@@ -114,6 +117,9 @@ export const dashboardTranslations = {
     workImage: "الصورة",
     workDate: "التاريخ",
     noWorks: "لم يتم إضافة أعمال بعد",
+    
+    // Company Dashboard
+    companyDashboard: "لوحة تحكم الشركة",
   },
 };
 

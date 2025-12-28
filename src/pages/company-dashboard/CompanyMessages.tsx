@@ -24,7 +24,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 
-const EngineerMessages = () => {
+const CompanyMessages = () => {
   const { language } = useApp();
   const navigate = useNavigate();
   
@@ -474,17 +474,17 @@ const EngineerMessages = () => {
   });
 
   return (
-    <DashboardLayout userType="engineer">
+    <DashboardLayout userType="company">
       <div className="space-y-4 mb-4">
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
               <BreadcrumbLink
-                href="/engineer/dashboard"
+                href="/company/dashboard"
                 className="text-hexa-text-light hover:text-hexa-secondary transition-colors"
                 onClick={(e) => {
                   e.preventDefault();
-                  navigate("/engineer/dashboard");
+                  navigate("/company/dashboard");
                 }}
               >
                 {getDashboardText("dashboard", language)}
@@ -845,6 +845,6 @@ const EngineerMessages = () => {
   );
 };
 
-export default EngineerMessages;
+export default CompanyMessages;
 
 
