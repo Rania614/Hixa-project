@@ -6,6 +6,8 @@ import axios from "axios";
 // -------------------------------
 let baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
 baseURL = baseURL.trim();
+// Keep /api/api if it exists (don't remove double /api/api)
+// Only remove trailing slashes
 baseURL = baseURL.replace(/\/+$/, ''); // remove trailing slashes
 
 console.log("🌐 HTTP Service initialized with baseURL:", baseURL);
@@ -35,12 +37,14 @@ http.interceptors.request.use((config) => {
     delete config.headers['Content-Type'];
   }
 
-  // Remove leading slash to avoid double slashes in URL
+  // Handle URL construction - preserve /api/api if baseURL has it
+  // Remove leading slash from url to avoid triple slashes, but keep baseURL as is
   if (config.url && config.url.startsWith('/')) {
     config.url = config.url.substring(1);
   }
 
   // Log request for debugging
+  // Build full URL: baseURL already includes /api/api if needed
   const fullURL = config.baseURL && config.url
     ? `${config.baseURL}/${config.url}`
     : `${config.baseURL}${config.url}`;

@@ -10,10 +10,10 @@ import axios from 'axios';
 
 // ---------- AXIOS INSTANCE WITH INTERCEPTOR ----------
 let baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
-// Normalize baseURL - fix double /api/api and remove trailing slashes
+// Normalize baseURL - keep /api/api if it exists, only remove trailing slashes
 baseURL = baseURL.trim();
-baseURL = baseURL.replace(/\/api\/api(\/|$)/g, '/api$1');
-baseURL = baseURL.replace(/\/+$/, '');
+// Keep /api/api if it exists (don't remove double /api/api)
+baseURL = baseURL.replace(/\/+$/, ''); // remove trailing slashes only
 
 console.log("🔐 AdminLogin API baseURL:", baseURL);
 
