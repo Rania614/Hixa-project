@@ -35,12 +35,13 @@ class SocketService {
 
     const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
     // Extract base URL for socket (remove /api if present)
-    let socketURL = baseURL.replace(/\/api\/?$/, '');
+    let socketURL = baseURL.trim().replace(/\/api\/?$/, '');
     
     // If baseURL is a full URL (like https://hixa.onrender.com/api), use it directly
     // If it's relative (like /api), use window.location.origin
-    if (socketURL.startsWith('http')) {
-      // Already a full URL
+    if (socketURL.startsWith('http://') || socketURL.startsWith('https://')) {
+      // Already a full URL - use as is
+      socketURL = socketURL.replace(/\/+$/, ''); // Remove trailing slashes
     } else if (socketURL.startsWith('/')) {
       // Relative path - use current origin
       socketURL = window.location.origin;
@@ -48,6 +49,8 @@ class SocketService {
       // Fallback to current origin
       socketURL = window.location.origin;
     }
+    
+    console.log('🔌 Socket connecting to:', socketURL);
 
     this.socket = io(socketURL, {
       auth: {
