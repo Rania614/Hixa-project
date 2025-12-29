@@ -59,6 +59,8 @@ import CompanyNotifications from "./pages/company-dashboard/CompanyNotifications
 import CompanyProfile from "./pages/company-dashboard/CompanyProfile";
 import CompanyPortfolio from "./pages/company-dashboard/CompanyPortfolio";
 import CompanyAvailableProjects from "./pages/company-dashboard/CompanyAvailableProjects";
+import CompanyProjectDetails from "./pages/company-dashboard/CompanyProjectDetails";
+import CompanySubmitProposal from "./pages/company-dashboard/CompanySubmitProposal";
 
 const queryClient = new QueryClient();
 
@@ -147,6 +149,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       ? '/client/login' 
       : location.pathname.startsWith('/engineer/')
       ? '/engineer/login'
+      : location.pathname.startsWith('/company/')
+      ? '/company/login'
       : '/admin/login';
     return <Navigate to={loginPath} replace state={{ from: location }} />;
   }
@@ -321,11 +325,61 @@ const PublicRoute = ({ children, allowWhenAuthenticated = false }: { children: R
   // For login/auth pages, redirect to dashboard if already authenticated
   if (isAuthorized) {
     // Redirect to appropriate dashboard based on login page
-    const dashboardPath = location.pathname.includes('/client/login')
-      ? '/client/dashboard'
-      : location.pathname.includes('/engineer/login')
-      ? '/engineer/dashboard'
-      : '/admin/dashboard';
+    // Check user data to determine correct dashboard
+    const userDataStr = localStorage.getItem('user');
+    let userData = null;
+    if (userDataStr) {
+      try {
+        userData = JSON.parse(userDataStr);
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+    
+    const userRole = userData?.role || '';
+    const bio = userData?.bio || '';
+    const hasCompanyName = userData?.companyName !== undefined && userData?.companyName !== null;
+    const hasContactPersonInBio = bio && bio.includes('Contact Person:');
+    const savedPartnerType = localStorage.getItem('partnerType');
+    
+    const isCompany = savedPartnerType === 'company' ||
+                      userRole === 'company' || 
+                      userRole === 'Company' ||
+                      userData?.isCompany === true ||
+                      hasCompanyName ||
+                      hasContactPersonInBio;
+    
+    const isEngineer = savedPartnerType === 'engineer' ||
+                       userRole === 'engineer' || 
+                       userRole === 'Engineer' ||
+                       userRole === 'partner' ||
+                       userData?.isEngineer === true;
+    
+    const isAdmin = userRole === 'admin' || userData?.isAdmin === true;
+    
+    let dashboardPath = '/admin/dashboard'; // Default
+    
+    if (location.pathname.includes('/company/login')) {
+      dashboardPath = '/company/dashboard';
+    } else if (location.pathname.includes('/client/login')) {
+      dashboardPath = '/client/dashboard';
+    } else if (location.pathname.includes('/engineer/login')) {
+      dashboardPath = '/engineer/dashboard';
+    } else if (location.pathname.includes('/admin/login')) {
+      dashboardPath = '/admin/dashboard';
+    } else {
+      // If on generic auth page, determine dashboard from user data
+      if (isAdmin) {
+        dashboardPath = '/admin/dashboard';
+      } else if (isCompany) {
+        dashboardPath = '/company/dashboard';
+      } else if (isEngineer) {
+        dashboardPath = '/engineer/dashboard';
+      } else if (userRole === 'client' || userRole === 'Client') {
+        dashboardPath = '/client/dashboard';
+      }
+    }
+    
     return <Navigate to={dashboardPath} replace />;
   }
   
@@ -653,6 +707,8 @@ const AppRoutes = () => {
       <Route path="/company/dashboard" element={<CompanyDashboard />} />
       <Route path="/company/available-projects" element={<CompanyAvailableProjects />} />
       <Route path="/company/projects" element={<CompanyProjects />} />
+      <Route path="/company/projects/:id" element={<CompanyProjectDetails />} />
+      <Route path="/company/projects/:id/proposal" element={<CompanySubmitProposal />} />
       <Route path="/company/messages" element={<CompanyMessages />} />
       <Route path="/company/notifications" element={<CompanyNotifications />} />
       <Route path="/company/portfolio" element={<CompanyPortfolio />} />

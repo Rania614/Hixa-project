@@ -37,11 +37,19 @@ const CompanyLogin = () => {
       // Check if response has token
       if (res.data && res.data.token) {
         // Verify user is company (check role)
+        // Note: Companies are registered as role: "client" in database, so we check for companyName or bio field
         const userRole = res.data.user?.role || res.data.role;
+        const userData = res.data.user || {};
+        const bio = userData.bio || '';
+        const hasCompanyName = userData.companyName !== undefined && userData.companyName !== null;
+        const hasContactPersonInBio = bio && bio.includes('Contact Person:');
+        
         const isCompany = userRole === 'company' || 
                           userRole === 'Company' ||
-                          res.data.user?.isCompany === true ||
-                          res.data.isCompany === true;
+                          userData.isCompany === true ||
+                          res.data.isCompany === true ||
+                          hasCompanyName ||
+                          hasContactPersonInBio;
 
         // Reject admin users
         const isAdmin = userRole === 'admin' || 

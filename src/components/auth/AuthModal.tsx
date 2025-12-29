@@ -10,7 +10,7 @@ import { toast } from '@/components/ui/sonner';
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAuthSuccess: () => void;
+  onAuthSuccess: (partnerType?: 'engineer' | 'company') => void;
   role: 'client' | 'partner' | null;
   initialMode?: 'login' | 'register';
 }
@@ -65,11 +65,24 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
           // Save token
           localStorage.setItem('token', response.data.token);
           
+          // Save user data if available
+          if (response.data.user) {
+            localStorage.setItem('user', JSON.stringify(response.data.user));
+          }
+          
           // Set authenticated
           setIsAuthenticated(true);
           
           // Call onAuthSuccess which will navigate to appropriate dashboard
-          onAuthSuccess();
+          // For login, check user role from response
+          const userRole = response.data.user?.role;
+          if (userRole === 'company' || userRole === 'Company') {
+            onAuthSuccess('company');
+          } else if (userRole === 'engineer' || userRole === 'Engineer') {
+            onAuthSuccess('engineer');
+          } else {
+            onAuthSuccess();
+          }
         } else {
           setError('Invalid response from server');
         }
@@ -180,11 +193,22 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
           // Save token
           localStorage.setItem('token', response.data.token);
           
+          // Save user data if available
+          if (response.data.user) {
+            localStorage.setItem('user', JSON.stringify(response.data.user));
+          }
+          
+          // Save partnerType in localStorage if it's a partner registration
+          if (role === 'partner' && partnerType) {
+            localStorage.setItem('partnerType', partnerType);
+          }
+          
           // Set authenticated
           setIsAuthenticated(true);
           
           // Call onAuthSuccess which will navigate to appropriate dashboard
-          onAuthSuccess();
+          // Pass partnerType to help with routing
+          onAuthSuccess(partnerType);
         } else {
           setError('Registration successful but no token received');
         }

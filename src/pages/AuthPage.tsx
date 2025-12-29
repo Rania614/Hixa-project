@@ -17,14 +17,49 @@ const AuthPage = () => {
   const mode = searchParams.get('mode');
   const initialMode = mode === 'register' ? 'register' : 'login';
 
-  const handleAuthSuccess = () => {
+  const handleAuthSuccess = (partnerType?: 'engineer' | 'company') => {
     // Authentication successful - redirect to appropriate dashboard based on role
     setIsAuthenticated(true);
+    
+    // Check user data from localStorage to determine actual role
+    const userDataStr = localStorage.getItem('user');
+    let userData = null;
+    if (userDataStr) {
+      try {
+        userData = JSON.parse(userDataStr);
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+    
+    const userRole = userData?.role || '';
+    // Check if user is company by checking partnerType from localStorage or user data
+    // Note: Companies are registered as role: "client" in database, so we check for companyName or bio field
+    const savedPartnerType = localStorage.getItem('partnerType');
+    const bio = userData?.bio || '';
+    const hasCompanyName = userData?.companyName !== undefined && userData?.companyName !== null;
+    const hasContactPersonInBio = bio && bio.includes('Contact Person:');
+    
+    const isCompany = partnerType === 'company' || 
+                      savedPartnerType === 'company' ||
+                      userRole === 'company' || 
+                      userRole === 'Company' ||
+                      userData?.isCompany === true ||
+                      hasCompanyName ||
+                      hasContactPersonInBio;
     
     if (role === 'client') {
       navigate('/client/dashboard');
     } else if (role === 'partner') {
-      navigate('/engineer/dashboard');
+      // Check if it's a company first
+      if (isCompany) {
+        navigate('/company/dashboard');
+      } else if (partnerType === 'engineer' || userRole === 'engineer' || userRole === 'Engineer') {
+        navigate('/engineer/dashboard');
+      } else {
+        // Default to engineer dashboard for partner role
+        navigate('/engineer/dashboard');
+      }
     } else {
       // Default to admin dashboard if role is not specified
       navigate('/admin/dashboard');
