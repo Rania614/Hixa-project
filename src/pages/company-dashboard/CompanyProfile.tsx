@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, Mail, Phone, MapPin, Save, Star, Award, Loader2, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { http } from "@/services/http";
+import { profileApi } from "@/services/profileApi";
 import { toast } from "@/components/ui/sonner";
 import { CountryPhoneInput } from "@/components/shared/CountryPhoneInput";
 import {
@@ -352,7 +352,7 @@ const CompanyProfile = () => {
     try {
       setSaving(true);
       
-      // Always update profile data first using JSON (without image)
+      // Prepare update data
       const updateData: any = {
         name: data.name,
         email: data.email,
@@ -379,102 +379,34 @@ const CompanyProfile = () => {
         updateData.certifications = certifications;
       }
       
-      console.log("📤 Sending profile update to PUT /users/me");
-      console.log("📤 Update data:", updateData);
+      console.log("📤 Updating profile:", updateData);
+      console.log("📤 Selected image:", selectedImage);
       
-      // Update profile data using PUT /api/users/me (JSON)
-      let response = await http.put("/users/me", updateData);
+      // Update profile with or without avatar using profileApi
+      const updatedProfile = await profileApi.updateProfile(
+        updateData,
+        selectedImage || undefined
+      );
       
-      console.log("✅ Profile update response:", response.data);
-      
-      // If there's an image, upload it separately using FormData
-      if (selectedImage) {
-        console.log("📤 Uploading avatar image separately...");
-        const avatarFormData = new FormData();
-        avatarFormData.append("avatar", selectedImage);
-        
-        // Try different endpoints for avatar upload
-        let avatarUploaded = false;
-        
-        // Try 1: /users/me/avatar endpoint
-        try {
-          console.log("🔄 Trying PUT /users/me/avatar");
-          const avatarResponse = await http.put("/users/me/avatar", avatarFormData);
-          console.log("✅ Avatar uploaded successfully via /users/me/avatar:", avatarResponse.data);
-          // Merge avatar response with profile response
-          response.data = { ...response.data, ...avatarResponse.data };
-          avatarUploaded = true;
-        } catch (avatarError1: any) {
-          console.warn("⚠️ Failed to upload via /users/me/avatar:", avatarError1.response?.status, avatarError1.response?.data);
-          
-          // Try 2: POST /users/me/avatar endpoint (some APIs use POST for file uploads)
-          try {
-            console.log("🔄 Trying POST /users/me/avatar");
-            const avatarResponse2 = await http.post("/users/me/avatar", avatarFormData);
-            console.log("✅ Avatar uploaded successfully via POST /users/me/avatar:", avatarResponse2.data);
-            response.data = { ...response.data, ...avatarResponse2.data };
-            avatarUploaded = true;
-          } catch (avatarError2: any) {
-            console.warn("⚠️ Failed to upload via POST /users/me/avatar:", avatarError2.response?.status, avatarError2.response?.data);
-            
-            // Try 3: /upload/avatar endpoint
-            try {
-              console.log("🔄 Trying POST /upload/avatar");
-              const avatarResponse3 = await http.post("/upload/avatar", avatarFormData);
-              console.log("✅ Avatar uploaded successfully via /upload/avatar:", avatarResponse3.data);
-              response.data = { ...response.data, ...avatarResponse3.data };
-              avatarUploaded = true;
-            } catch (avatarError3: any) {
-              console.error("❌ All avatar upload methods failed:", {
-                method1: avatarError1.response?.status,
-                method2: avatarError2.response?.status,
-                method3: avatarError3.response?.status,
-              });
-              
-              // Show error but don't fail the whole update
-              toast.error(
-                language === "en"
-                  ? "Profile updated but avatar upload failed. The image may not be supported or the upload endpoint is not available."
-                  : "تم تحديث الملف الشخصي لكن فشل رفع الصورة. قد لا تكون الصورة مدعومة أو endpoint الرفع غير متاح."
-              );
-            }
-          }
-        }
-        
-        if (!avatarUploaded) {
-          console.warn("⚠️ Avatar was not uploaded, but profile was updated successfully");
-        }
-      }
-      
-      // Handle different response structures
-      let updatedData = response.data;
-      if (updatedData && typeof updatedData === 'object' && !Array.isArray(updatedData)) {
-        if (updatedData.data && typeof updatedData.data === 'object') {
-          updatedData = updatedData.data;
-        } else if (updatedData.user && typeof updatedData.user === 'object') {
-          updatedData = updatedData.user;
-        }
-      }
-      
-      console.log("📥 Processed updated data:", updatedData);
+      console.log("✅ Profile updated successfully:", updatedProfile);
       
       // Handle avatar from response - it's an object with url property
       let avatarUrl = "";
-      if (updatedData.avatar) {
-        if (typeof updatedData.avatar === 'string') {
-          avatarUrl = updatedData.avatar;
-        } else if (typeof updatedData.avatar === 'object') {
-          avatarUrl = updatedData.avatar.url || 
-                     updatedData.avatar.path || 
-                     updatedData.avatar.filename ||
-                     updatedData.avatar.src ||
+      if (updatedProfile.avatar) {
+        if (typeof updatedProfile.avatar === 'string') {
+          avatarUrl = updatedProfile.avatar;
+        } else if (typeof updatedProfile.avatar === 'object') {
+          avatarUrl = updatedProfile.avatar.url || 
+                     updatedProfile.avatar.path || 
+                     updatedProfile.avatar.filename ||
+                     updatedProfile.avatar.src ||
                      "";
         }
       }
       
       // Fallback to other image fields
       if (!avatarUrl) {
-        avatarUrl = updatedData.profileImage || updatedData.image || "";
+        avatarUrl = updatedProfile.profileImage || updatedProfile.image || "";
       }
       
       // Convert to full URL if it's a relative path
@@ -485,21 +417,27 @@ const CompanyProfile = () => {
         avatarUrl = imagePreview;
       }
       
-      console.log("📥 Processed avatar URL after update:", avatarUrl);
+      // Reset selected image after successful upload
+      if (selectedImage) {
+        setSelectedImage(null);
+        if (avatarUrl) {
+          setImagePreview(avatarUrl);
+        }
+      }
       
       // Update profileData with new data
       setProfileData((prev) => ({
         ...prev,
-        name: updatedData.name || data.name,
-        email: updatedData.email || data.email,
-        phone: updatedData.phone || data.phone,
-        location: updatedData.location || data.location,
-        bio: updatedData.bio || data.bio,
+        name: updatedProfile.name || data.name,
+        email: updatedProfile.email || data.email,
+        phone: updatedProfile.phone || data.phone,
+        location: updatedProfile.location || data.location,
+        bio: updatedProfile.bio || data.bio,
         profileImage: avatarUrl,
-        specializations: Array.isArray(updatedData.specializations) ? updatedData.specializations : specializations,
-        certifications: Array.isArray(updatedData.certifications) ? updatedData.certifications : certifications,
-        rating: updatedData.averageRating || updatedData.rating || prev.rating,
-        reviewsCount: updatedData.reviewsCount || prev.reviewsCount,
+        specializations: Array.isArray(updatedProfile.specializations) ? updatedProfile.specializations : specializations,
+        certifications: Array.isArray(updatedProfile.certifications) ? updatedProfile.certifications : certifications,
+        rating: updatedProfile.averageRating || updatedProfile.rating || prev.rating,
+        reviewsCount: updatedProfile.reviewsCount || prev.reviewsCount,
       }));
       
       // Update image preview if we got a new image URL
