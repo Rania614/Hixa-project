@@ -158,6 +158,293 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// CompanyProtectedRoute component - checks authentication AND verifies user is company
+// Redirects to company login if not authenticated or not a company
+const CompanyProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, language } = useApp();
+  const location = useLocation();
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
+  const [isChecking, setIsChecking] = useState(true);
+  const [isCompany, setIsCompany] = useState(false);
+  
+  // Update token when localStorage changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setToken(localStorage.getItem("token"));
+    };
+    
+    handleStorageChange();
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [isAuthenticated]);
+  
+  // Verify token and company role
+  useEffect(() => {
+    const verifyCompanyAuth = async () => {
+      const currentToken = localStorage.getItem("token");
+      
+      // If no token, not authorized - redirect immediately
+      if (!currentToken) {
+        setIsChecking(false);
+        setIsCompany(false);
+        return;
+      }
+      
+      // Update token state
+      setToken(currentToken);
+      
+      // Must have both token AND isAuthenticated
+      if (!isAuthenticated) {
+        localStorage.removeItem("token");
+        setToken(null);
+        setIsChecking(false);
+        setIsCompany(false);
+        return;
+      }
+      
+      // Check if user is company by verifying role from localStorage or API
+      try {
+        const userDataStr = localStorage.getItem("user");
+        let userData = null;
+        
+        if (userDataStr) {
+          try {
+            userData = JSON.parse(userDataStr);
+          } catch (e) {
+            console.error("Error parsing user data:", e);
+          }
+        }
+        
+        // If no user data in localStorage, try to fetch from API
+        if (!userData) {
+          try {
+            const response = await http.get("/users/me");
+            userData = response.data?.data || response.data?.user || response.data;
+            if (userData) {
+              localStorage.setItem("user", JSON.stringify(userData));
+            }
+          } catch (error: any) {
+            console.warn("Could not fetch user data:", error);
+            setIsChecking(false);
+            setIsCompany(false);
+            return;
+          }
+        }
+        
+        // Verify user is company
+        if (userData) {
+          const userRole = userData.role || "";
+          const bio = userData.bio || '';
+          const hasCompanyName = userData.companyName !== undefined && userData.companyName !== null;
+          const hasContactPersonInBio = bio && bio.includes('Contact Person:');
+          const savedPartnerType = localStorage.getItem('partnerType');
+          
+          const userIsCompany = savedPartnerType === 'company' ||
+                                userRole === 'company' || 
+                                userRole === 'Company' ||
+                                userData.isCompany === true ||
+                                hasCompanyName ||
+                                hasContactPersonInBio;
+          
+          setIsCompany(userIsCompany);
+        } else {
+          setIsCompany(false);
+        }
+      } catch (error) {
+        console.error("Error verifying company role:", error);
+        setIsCompany(false);
+      } finally {
+        setIsChecking(false);
+      }
+    };
+    
+    verifyCompanyAuth();
+  }, [isAuthenticated, location.pathname]);
+  
+  // Check authorization
+  const isAuthorized = useMemo(() => {
+    return isAuthenticated && !!token && isCompany;
+  }, [isAuthenticated, token, isCompany]);
+  
+  // Show loading while checking
+  if (isChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-xl font-semibold text-muted-foreground">
+            {language === "en" ? "Checking authentication..." : "جارٍ التحقق من المصادقة..."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Redirect to company login if not authorized
+  if (!isAuthorized) {
+    // If not company, clear token and redirect
+    if (token && isAuthenticated && !isCompany) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+    }
+    return <Navigate to="/company/login" replace state={{ from: location }} />;
+  }
+  
+  return <>{children}</>;
+};
+
+// ClientProtectedRoute component - checks authentication AND verifies user is client
+// Redirects to client login if not authenticated or not a client
+const ClientProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, language } = useApp();
+  const location = useLocation();
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
+  const [isChecking, setIsChecking] = useState(true);
+  const [isClient, setIsClient] = useState(false);
+  
+  // Update token when localStorage changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setToken(localStorage.getItem("token"));
+    };
+    
+    handleStorageChange();
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [isAuthenticated]);
+  
+  // Verify token and client role
+  useEffect(() => {
+    const verifyClientAuth = async () => {
+      const currentToken = localStorage.getItem("token");
+      
+      // If no token, not authorized - redirect immediately
+      if (!currentToken) {
+        setIsChecking(false);
+        setIsClient(false);
+        return;
+      }
+      
+      // Update token state
+      setToken(currentToken);
+      
+      // Must have both token AND isAuthenticated
+      if (!isAuthenticated) {
+        localStorage.removeItem("token");
+        setToken(null);
+        setIsChecking(false);
+        setIsClient(false);
+        return;
+      }
+      
+      // Check if user is client by verifying role from localStorage or API
+      try {
+        const userDataStr = localStorage.getItem("user");
+        let userData = null;
+        
+        if (userDataStr) {
+          try {
+            userData = JSON.parse(userDataStr);
+          } catch (e) {
+            console.error("Error parsing user data:", e);
+          }
+        }
+        
+        // If no user data in localStorage, try to fetch from API
+        if (!userData) {
+          try {
+            const response = await http.get("/auth/me");
+            userData = response.data?.user || response.data?.data || response.data;
+            if (userData) {
+              localStorage.setItem("user", JSON.stringify(userData));
+            }
+          } catch (error: any) {
+            console.warn("Could not fetch user data:", error);
+            setIsChecking(false);
+            setIsClient(false);
+            return;
+          }
+        }
+        
+        // Verify user is client (not company, not engineer, not admin)
+        if (userData) {
+          const userRole = userData.role || "";
+          const bio = userData.bio || '';
+          const hasCompanyName = userData.companyName !== undefined && userData.companyName !== null;
+          const hasContactPersonInBio = bio && bio.includes('Contact Person:');
+          const savedPartnerType = localStorage.getItem('partnerType');
+          
+          const isCompany = savedPartnerType === 'company' ||
+                            userRole === 'company' || 
+                            userRole === 'Company' ||
+                            userData.isCompany === true ||
+                            hasCompanyName ||
+                            hasContactPersonInBio;
+          
+          const isEngineer = savedPartnerType === 'engineer' ||
+                             userRole === 'engineer' || 
+                             userRole === 'Engineer' ||
+                             userRole === 'partner' ||
+                             userData.isEngineer === true;
+          
+          const isAdmin = userRole === 'admin' || userData.isAdmin === true;
+          
+          // User is client if role is 'client' and not company, engineer, or admin
+          const userIsClient = userRole === 'client' && !isCompany && !isEngineer && !isAdmin;
+          
+          setIsClient(userIsClient);
+        } else {
+          setIsClient(false);
+        }
+      } catch (error) {
+        console.error("Error verifying client role:", error);
+        setIsClient(false);
+      } finally {
+        setIsChecking(false);
+      }
+    };
+    
+    verifyClientAuth();
+  }, [isAuthenticated, location.pathname]);
+  
+  // Check authorization
+  const isAuthorized = useMemo(() => {
+    return isAuthenticated && !!token && isClient;
+  }, [isAuthenticated, token, isClient]);
+  
+  // Show loading while checking
+  if (isChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-xl font-semibold text-muted-foreground">
+            {language === "en" ? "Checking authentication..." : "جارٍ التحقق من المصادقة..."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Redirect to client login if not authorized
+  if (!isAuthorized) {
+    // If not client, clear token and redirect
+    if (token && isAuthenticated && !isClient) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+    }
+    return <Navigate to="/client/login" replace state={{ from: location }} />;
+  }
+  
+  return <>{children}</>;
+};
+
 // EngineerProtectedRoute component - checks authentication AND verifies user is engineer
 // Redirects to engineer login if not authenticated or not an engineer
 const EngineerProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -519,73 +806,73 @@ const AppRoutes = () => {
       <Route 
         path="/client/dashboard" 
         element={
-          <ProtectedRoute>
+          <ClientProtectedRoute>
             <ClientDashboard />
-          </ProtectedRoute>
+          </ClientProtectedRoute>
         } 
       />
       <Route 
         path="/client/projects" 
         element={
-          <ProtectedRoute>
+          <ClientProtectedRoute>
             <ClientProjects />
-          </ProtectedRoute>
+          </ClientProtectedRoute>
         } 
       />
       <Route 
         path="/client/projects/new" 
         element={
-          <ProtectedRoute>
+          <ClientProtectedRoute>
             <CreateProject />
-          </ProtectedRoute>
+          </ClientProtectedRoute>
         } 
       />
       <Route 
         path="/client/projects/:id" 
         element={
-          <ProtectedRoute>
+          <ClientProtectedRoute>
             <ProjectDetails />
-          </ProtectedRoute>
+          </ClientProtectedRoute>
         } 
       />
       <Route 
         path="/client/engineers/:id" 
         element={
-          <ProtectedRoute>
+          <ClientProtectedRoute>
             <EngineerProfileView />
-          </ProtectedRoute>
+          </ClientProtectedRoute>
         } 
       />
       <Route 
         path="/client/messages" 
         element={
-          <ProtectedRoute>
+          <ClientProtectedRoute>
             <ClientMessages />
-          </ProtectedRoute>
+          </ClientProtectedRoute>
         } 
       />
       <Route 
         path="/client/notifications" 
         element={
-          <ProtectedRoute>
+          <ClientProtectedRoute>
             <ClientNotifications />
-          </ProtectedRoute>
+          </ClientProtectedRoute>
         } 
       />
       <Route 
         path="/client/contracts" 
         element={
-          <ProtectedRoute>
+          <ClientProtectedRoute>
             <ClientContracts />
-          </ProtectedRoute>
+          </ClientProtectedRoute>
         } 
       />
       <Route 
         path="/client/profile" 
         element={
-          <ProtectedRoute>
+          <ClientProtectedRoute>
             <ClientProfile />
-          </ProtectedRoute>
+          </ClientProtectedRoute>
         } 
       />
       
@@ -704,15 +991,78 @@ const AppRoutes = () => {
           </PublicRoute>
         } 
       />
-      <Route path="/company/dashboard" element={<CompanyDashboard />} />
-      <Route path="/company/available-projects" element={<CompanyAvailableProjects />} />
-      <Route path="/company/projects" element={<CompanyProjects />} />
-      <Route path="/company/projects/:id" element={<CompanyProjectDetails />} />
-      <Route path="/company/projects/:id/proposal" element={<CompanySubmitProposal />} />
-      <Route path="/company/messages" element={<CompanyMessages />} />
-      <Route path="/company/notifications" element={<CompanyNotifications />} />
-      <Route path="/company/portfolio" element={<CompanyPortfolio />} />
-      <Route path="/company/profile" element={<CompanyProfile />} />
+      <Route 
+        path="/company/dashboard" 
+        element={
+          <CompanyProtectedRoute>
+            <CompanyDashboard />
+          </CompanyProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/company/available-projects" 
+        element={
+          <CompanyProtectedRoute>
+            <CompanyAvailableProjects />
+          </CompanyProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/company/projects" 
+        element={
+          <CompanyProtectedRoute>
+            <CompanyProjects />
+          </CompanyProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/company/projects/:id" 
+        element={
+          <CompanyProtectedRoute>
+            <CompanyProjectDetails />
+          </CompanyProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/company/projects/:id/proposal" 
+        element={
+          <CompanyProtectedRoute>
+            <CompanySubmitProposal />
+          </CompanyProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/company/messages" 
+        element={
+          <CompanyProtectedRoute>
+            <CompanyMessages />
+          </CompanyProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/company/notifications" 
+        element={
+          <CompanyProtectedRoute>
+            <CompanyNotifications />
+          </CompanyProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/company/portfolio" 
+        element={
+          <CompanyProtectedRoute>
+            <CompanyPortfolio />
+          </CompanyProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/company/profile" 
+        element={
+          <CompanyProtectedRoute>
+            <CompanyProfile />
+          </CompanyProtectedRoute>
+        } 
+      />
       
       <Route path="*" element={<NotFound />} />
     </Routes>

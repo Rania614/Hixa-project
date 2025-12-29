@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useApp } from "@/context/AppContext";
 import { getDashboardText } from "@/locales/dashboard";
 import { Bell, MessageSquare, Globe } from "lucide-react";
@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import { useUnreadNotificationsCount } from "@/hooks/useUnreadNotificationsCount";
 import { useNotificationWebSocket } from "@/hooks/useNotificationWebSocket";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
+import { http } from "@/services/http";
 
 interface DashboardTopBarProps {
   userType: "client" | "engineer" | "company";
@@ -27,6 +28,83 @@ export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({ userType }) =>
   const navigate = useNavigate();
   const { unreadCount, refetch: refetchCount } = useUnreadNotificationsCount({ autoRefresh: true });
   const { unreadCount: unreadMessagesCount, refetch: refetchMessagesCount } = useUnreadMessagesCount(30000);
+  const [userName, setUserName] = useState<string>("");
+  const [userInitials, setUserInitials] = useState<string>("");
+
+  // Load user data to display name
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        // Try to get user from localStorage first
+        const userStr = localStorage.getItem("user");
+        let userData = null;
+        
+        if (userStr) {
+          try {
+            userData = JSON.parse(userStr);
+          } catch (e) {
+            console.error("Error parsing user data:", e);
+          }
+        }
+
+        // If no user in localStorage, try to fetch from API
+        if (!userData) {
+          try {
+            const endpoint = userType === "company" ? "/users/me" : "/auth/me";
+            const response = await http.get(endpoint);
+            userData = response.data?.data || response.data?.user || response.data;
+            if (userData) {
+              localStorage.setItem("user", JSON.stringify(userData));
+            }
+          } catch (error: any) {
+            console.warn("Could not fetch user data:", error);
+          }
+        }
+
+        // Extract name based on user type
+        if (userData) {
+          let name = "";
+          let initials = "";
+
+          if (userType === "company") {
+            // For company, prefer companyName, then name
+            name = userData.companyName || userData.name || "Company";
+            // Get first 2 characters, handling Arabic and English
+            const trimmedName = name.trim();
+            if (trimmedName.length >= 2) {
+              initials = trimmedName.substring(0, 2).toUpperCase();
+            } else {
+              initials = trimmedName.substring(0, 1).toUpperCase() || "Co";
+            }
+          } else if (userType === "engineer") {
+            // For engineer, use name
+            name = userData.name || "Engineer";
+            const trimmedName = name.trim();
+            initials = trimmedName.substring(0, 1).toUpperCase() || "E";
+          } else {
+            // For client, use name
+            name = userData.name || "Client";
+            const trimmedName = name.trim();
+            initials = trimmedName.substring(0, 1).toUpperCase() || "C";
+          }
+
+          setUserName(name);
+          setUserInitials(initials);
+        } else {
+          // Fallback to default values
+          setUserName(userType === "client" ? "Client" : userType === "company" ? "Company" : "Engineer");
+          setUserInitials(userType === "client" ? "C" : userType === "company" ? "Co" : "E");
+        }
+      } catch (error) {
+        console.error("Error loading user data:", error);
+        // Fallback to default values
+        setUserName(userType === "client" ? "Client" : userType === "company" ? "Company" : "Engineer");
+        setUserInitials(userType === "client" ? "C" : userType === "company" ? "Co" : "E");
+      }
+    };
+
+    loadUserData();
+  }, [userType]);
 
   // WebSocket integration for real-time notifications
   useNotificationWebSocket({
@@ -42,6 +120,20 @@ export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({ userType }) =>
     setLanguage(newLang);
     document.documentElement.dir = newLang === "ar" ? "rtl" : "ltr";
     document.documentElement.lang = newLang;
+  };
+
+  const handleProfileClick = () => {
+    if (userType === "client") navigate("/client/profile");
+    else if (userType === "company") navigate("/company/profile");
+    else navigate("/engineer/profile");
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    if (userType === "client") navigate("/client/login");
+    else if (userType === "company") navigate("/company/login");
+    else navigate("/engineer/login");
   };
 
   return (
@@ -106,21 +198,28 @@ export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({ userType }) =>
             <Button variant="ghost" className="flex items-center gap-2 hover:bg-hexa-secondary/20 text-hexa-text-light hover:text-hexa-secondary">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-hexa-secondary text-black">
-                  {userType === "client" ? "C" : userType === "company" ? "Co" : "E"}
+                  {userInitials}
                 </AvatarFallback>
               </Avatar>
               <span className="hidden md:block font-medium">
-                {userType === "client" ? "Client" : userType === "company" ? "Company" : "Engineer"}
+                {userName}
               </span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align={language === "ar" ? "start" : "end"} className="w-56 bg-hexa-card border-hexa-border">
             <DropdownMenuLabel className="text-hexa-text-dark">{getDashboardText("profile", language)}</DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-hexa-border" />
-            <DropdownMenuItem className="text-hexa-text-light hover:bg-hexa-secondary/20 hover:text-hexa-secondary">{getDashboardText("settings", language)}</DropdownMenuItem>
-            <DropdownMenuItem className="text-hexa-text-light hover:bg-hexa-secondary/20 hover:text-hexa-secondary">{getDashboardText("profile", language)}</DropdownMenuItem>
+            <DropdownMenuItem 
+              className="text-hexa-text-light hover:bg-hexa-secondary/20 hover:text-hexa-secondary cursor-pointer"
+              onClick={handleProfileClick}
+            >
+              {getDashboardText("profile", language)}
+            </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-hexa-border" />
-            <DropdownMenuItem className="text-red-400 hover:bg-red-900/20 hover:text-red-300">
+            <DropdownMenuItem 
+              className="text-red-400 hover:bg-red-900/20 hover:text-red-300 cursor-pointer"
+              onClick={handleLogout}
+            >
               {getDashboardText("logout", language)}
             </DropdownMenuItem>
           </DropdownMenuContent>

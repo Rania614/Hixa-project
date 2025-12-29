@@ -647,13 +647,16 @@ const EngineerMessages = () => {
                       <div className="space-y-3">
                         {messages.map((msg) => {
                           const senderId = typeof msg.sender === 'string' ? msg.sender : msg.sender?._id;
-                          const senderName = typeof msg.sender === 'object' ? msg.sender?.name : 'Unknown';
+                          // Use registered user name if it's the current user, otherwise use sender name from message
                           const isMe = senderId === user?._id || senderId === user?.id;
+                          const senderName = isMe 
+                            ? (user?.name || 'Unknown')
+                            : (typeof msg.sender === 'object' ? msg.sender?.name : 'Unknown');
                           
                           return (
                             <div
                               key={msg._id}
-                              className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+                              className={`flex ${isMe ? (language === "ar" ? "justify-start" : "justify-end") : (language === "ar" ? "justify-end" : "justify-start")}`}
                             >
                               <div
                                 className={`max-w-[75%] md:max-w-[70%] rounded-xl p-3 ${
@@ -664,6 +667,11 @@ const EngineerMessages = () => {
                               >
                                 {!isMe && (
                                   <p className="text-xs font-semibold text-hexa-text-light mb-1">
+                                    {senderName}
+                                  </p>
+                                )}
+                                {isMe && (
+                                  <p className="text-xs font-semibold text-hexa-text-dark mb-1">
                                     {senderName}
                                   </p>
                                 )}

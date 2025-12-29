@@ -720,9 +720,13 @@ const CompanyProfile = () => {
                   className="hidden"
                 />
                 <Button
+                  type="button"
                   variant="outline"
                   className="border-hexa-border bg-hexa-bg text-hexa-text-light hover:bg-hexa-secondary hover:text-black hover:border-hexa-secondary mb-2"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    fileInputRef.current?.click();
+                  }}
                 >
                   {language === "en" ? "Change Photo" : "تغيير الصورة"}
                 </Button>
