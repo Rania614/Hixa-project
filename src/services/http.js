@@ -37,22 +37,13 @@ http.interceptors.request.use((config) => {
     delete config.headers['Content-Type'];
   }
 
-<<<<<<< HEAD
-  // Normalize URL to avoid double slashes
-  if (config.url) {
-    config.url = config.url.replace(/^\/+/, ''); // remove leading slash
-  }
-
-=======
   // Handle URL construction - preserve /api/api if baseURL has it
   // Remove leading slash from url to avoid triple slashes, but keep baseURL as is
   if (config.url && config.url.startsWith('/')) {
     config.url = config.url.substring(1);
   }
 
-  // Log request for debugging
   // Build full URL: baseURL already includes /api/api if needed
->>>>>>> 795b1730aca6f92c7a89bc97817950c791a279c4
   const fullURL = config.baseURL && config.url
     ? `${config.baseURL}/${config.url}`
     : `${config.baseURL}${config.url}`;
