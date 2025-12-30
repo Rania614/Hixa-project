@@ -37,6 +37,12 @@ class SocketService {
     // Extract base URL for socket (remove /api if present)
     let socketURL = baseURL.trim().replace(/\/api\/?$/, '');
     
+    // Fix: localhost doesn't support HTTPS - convert https://localhost to http://localhost
+    if (socketURL.startsWith('https://localhost') || socketURL.startsWith('https://127.0.0.1')) {
+      console.warn("⚠️ Detected HTTPS on localhost - converting to HTTP for socket");
+      socketURL = socketURL.replace(/^https:\/\//, 'http://');
+    }
+    
     // If baseURL is a full URL (like https://hixa.onrender.com/api), use it directly
     // If it's relative (like /api), use window.location.origin
     if (socketURL.startsWith('http://') || socketURL.startsWith('https://')) {

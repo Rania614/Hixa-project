@@ -147,6 +147,7 @@ export const projectsApi = {
     search?: string;
     city?: string;
     country?: string;
+    category?: string;
   }): Promise<ProjectsResponse> => {
     const response = await http.get('/projects', { params });
     

@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { profileApi } from "@/services/profileApi";
 import { toast } from "@/components/ui/sonner";
+import { http } from "@/services/http";
 import { CountryPhoneInput } from "@/components/shared/CountryPhoneInput";
 import {
   Select,
@@ -100,6 +101,7 @@ const EngineerProfile = () => {
       email: "",
       countryCode: "SA",
       phone: "",
+      city: "",
       location: "",
       bio: "",
     },
@@ -133,32 +135,9 @@ const EngineerProfile = () => {
     try {
       setLoading(true);
       console.log("📤 Fetching profile from GET /users/me");
-      const response = await http.get("/users/me");
+      const data = await profileApi.getProfile();
       
-      console.log("📥 Full response object:", response);
-      console.log("📥 response.data:", response.data);
-      console.log("📥 response.data type:", typeof response.data);
-      console.log("📥 response.data keys:", response.data ? Object.keys(response.data) : "no data");
-      
-      // Handle different response structures
-      // API might return data in response.data.data or response.data.user or directly in response.data
-      let data = response.data;
-      
-      // Check if data is nested
-      if (data && typeof data === 'object' && !Array.isArray(data)) {
-        if (data.data && typeof data.data === 'object') {
-          console.log("📥 Data found in response.data.data");
-          data = data.data;
-        } else if (data.user && typeof data.user === 'object') {
-          console.log("📥 Data found in response.data.user");
-          data = data.user;
-        } else if (data.profile && typeof data.profile === 'object') {
-          console.log("📥 Data found in response.data.profile");
-          data = data.profile;
-        }
-      }
-      
-      console.log("📥 Final data object:", data);
+      console.log("📥 Profile data received:", data);
       console.log("📥 Final data keys:", data ? Object.keys(data) : "no data");
       console.log("📥 Full data JSON:", JSON.stringify(data, null, 2));
       console.log("📥 Avatar structure:", data?.avatar);
@@ -227,11 +206,12 @@ const EngineerProfile = () => {
       console.log("📥 Setting profileImage to:", mappedProfileData.profileImage);
       setProfileData(mappedProfileData);
       
-      // Extract country code from phone if available
-      let countryCode = "SA";
+      // Extract country code - prefer from data.countryCode, otherwise from phone
+      let countryCode = data.countryCode || "SA";
       let phoneNumber = data.phone || data.phoneNumber || "";
       
-      if (phoneNumber && phoneNumber.startsWith("+")) {
+      // If countryCode not in data, try to detect from phone
+      if (!data.countryCode && phoneNumber && phoneNumber.startsWith("+")) {
         const detectedCountry = getCountryFromPhone(phoneNumber);
         if (detectedCountry) {
           countryCode = detectedCountry;
@@ -243,6 +223,7 @@ const EngineerProfile = () => {
         email: data.email || "",
         countryCode,
         phone: phoneNumber,
+        city: data.city || "",
         location: data.location || data.address || "",
         bio: data.bio || data.description || "",
       };
@@ -254,6 +235,7 @@ const EngineerProfile = () => {
       setValue("email", mappedFormData.email);
       setValue("countryCode", mappedFormData.countryCode);
       setValue("phone", mappedFormData.phone);
+      setValue("city", mappedFormData.city);
       setValue("location", mappedFormData.location);
       setValue("bio", mappedFormData.bio);
       setSpecializations(Array.isArray(data.specializations) ? data.specializations : []);
@@ -352,16 +334,51 @@ const EngineerProfile = () => {
     try {
       setSaving(true);
       
+      // Helper function to get country name from country code
+      const getCountryNameFromCode = (code: string): string => {
+        const countryMap: Record<string, string> = {
+          SA: "السعودية",
+          AE: "الإمارات",
+          KW: "الكويت",
+          QA: "قطر",
+          BH: "البحرين",
+          OM: "عُمان",
+          EG: "مصر",
+          JO: "الأردن",
+          LB: "لبنان",
+          SY: "سوريا",
+          YE: "اليمن",
+          SD: "السودان",
+          LY: "ليبيا",
+        };
+        return countryMap[code] || "";
+      };
+      
       // Prepare update data
       const updateData: any = {
         name: data.name,
         email: data.email,
       };
       
-      // Only add optional fields if they have values
+      // Add phone and countryCode if available
       if (data.phone) {
         updateData.phone = data.phone;
       }
+      if (data.countryCode) {
+        updateData.countryCode = data.countryCode;
+        // Also set country name from country code
+        const countryName = getCountryNameFromCode(data.countryCode);
+        if (countryName) {
+          updateData.country = countryName;
+        }
+      }
+      
+      // Add city if available
+      if (data.city) {
+        updateData.city = data.city;
+      }
+      
+      // Add location if available (for backward compatibility)
       if (data.location) {
         updateData.location = data.location;
       }
@@ -658,6 +675,7 @@ const EngineerProfile = () => {
                   className="hidden"
                 />
                 <Button
+                  type="button"
                   variant="outline"
                   className="border-hexa-border bg-hexa-bg text-hexa-text-light hover:bg-hexa-secondary hover:text-black hover:border-hexa-secondary mb-2"
                   onClick={() => fileInputRef.current?.click()}

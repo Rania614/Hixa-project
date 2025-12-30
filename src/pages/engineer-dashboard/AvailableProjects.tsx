@@ -18,6 +18,15 @@ import {
 } from "@/components/ui/breadcrumb";
 import { http } from "@/services/http";
 import { toast } from "@/components/ui/sonner";
+import { countriesWithCities, businessCategories } from "@/constants/filters";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Filter, X } from "lucide-react";
 
 const AvailableProjects = () => {
   const { language } = useApp();
@@ -25,6 +34,12 @@ const AvailableProjects = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [availableProjects, setAvailableProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Filter states
+  const [selectedCountry, setSelectedCountry] = useState<string>("all");
+  const [selectedCity, setSelectedCity] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [showFilters, setShowFilters] = useState(false);
 
   // Fetch available projects from API
   useEffect(() => {
@@ -32,27 +47,19 @@ const AvailableProjects = () => {
       try {
         setLoading(true);
         
-        // Fetch all projects from /api/projects
-        // Try with different query parameters to get available projects for engineers
+        // Build query parameters with filters
+        const queryParams: any = {};
+        if (selectedCountry && selectedCountry !== "all") queryParams.country = selectedCountry;
+        if (selectedCity && selectedCity !== "all") queryParams.city = selectedCity;
+        if (selectedCategory && selectedCategory !== "all") queryParams.category = selectedCategory;
+        
+        // Fetch projects with filters
         let response;
         let projectsData: any[] = [];
         
-        const possibleParams = [
-          {}, // Try without params first
-          { available: true },
-          { isActive: true },
-          { status: 'Draft' },
-          { available: true, isActive: true },
-          { status: 'Draft', isActive: true },
-          { forEngineers: true },
-          { role: 'engineer' }
-        ];
-        
-        // Try each parameter set until we find one that returns projects
-        for (const params of possibleParams) {
-          try {
-            console.log(`🔄 Trying /projects with params:`, params);
-            response = await http.get("/projects", { params });
+        try {
+          console.log(`🔄 Fetching /projects with params:`, queryParams);
+          response = await http.get("/projects", { params: queryParams });
             
             // Handle different response structures
             let tempData = response.data;
@@ -62,64 +69,15 @@ const AvailableProjects = () => {
               projectsData = tempData;
             }
             // If response.data is an object with a data property (like {data: [], meta: {}})
-            else if (tempData && typeof tempData === 'object' && !Array.isArray(tempData)) {
-              if (tempData.data && Array.isArray(tempData.data)) {
-                projectsData = tempData.data;
-              } else if (tempData.projects && Array.isArray(tempData.projects)) {
-                projectsData = tempData.projects;
-              } else if (tempData.items && Array.isArray(tempData.items)) {
-                projectsData = tempData.items;
-              } else if (tempData.results && Array.isArray(tempData.results)) {
-                projectsData = tempData.results;
-              } else {
-                // Try to find any array property
-                const arrayKey = Object.keys(tempData).find(key => Array.isArray(tempData[key]));
-                if (arrayKey) {
-                  projectsData = tempData[arrayKey];
-                }
-              }
-            }
-            
-            // Only break if we actually got projects
-            if (projectsData.length > 0) {
-              console.log(`✅ Found ${projectsData.length} projects with params:`, params);
-              break; // Success, exit loop
-            } else {
-              console.log(`⚠️ Empty response with params:`, params);
-              console.log(`⚠️ Full response structure:`, {
-                responseData: response.data,
-                responseDataKeys: response.data ? Object.keys(response.data) : null,
-                responseDataType: typeof response.data,
-                isArray: Array.isArray(response.data),
-                meta: response.data?.meta,
-                total: response.data?.meta?.total,
-                count: response.data?.meta?.count,
-              });
-            }
-          } catch (err: any) {
-            console.warn(`⚠️ Error with params ${JSON.stringify(params)}:`, err.response?.status || err.message);
-            continue;
-          }
-        }
-        
-        // If still no projects found, try one more time without params
-        if (projectsData.length === 0 && !response) {
-          try {
-            console.log("🔄 Final attempt: /projects without params");
-            response = await http.get("/projects");
-            
-            let tempData = response.data;
-            if (Array.isArray(tempData)) {
-              projectsData = tempData;
-            } else if (tempData?.data && Array.isArray(tempData.data)) {
+            else if (tempData?.data && Array.isArray(tempData.data)) {
               projectsData = tempData.data;
-            } else if (tempData?.projects && Array.isArray(tempData.projects)) {
-              projectsData = tempData.projects;
             }
+            
+            console.log(`✅ Found ${projectsData.length} projects`);
           } catch (err: any) {
-            console.error("❌ Final attempt failed:", err);
+            console.error("❌ Error fetching projects:", err);
+            throw err;
           }
-        }
         
         // Debug: Log the final result
         console.log("🔍 Final projects data:", {
@@ -215,7 +173,27 @@ const AvailableProjects = () => {
       }
     };
     fetchProjects();
-  }, [language]);
+  }, [language, selectedCountry, selectedCity, selectedCategory]);
+  
+  // Reset city when country changes
+  useEffect(() => {
+    if (!selectedCountry || selectedCountry === "all") {
+      setSelectedCity("all");
+    }
+  }, [selectedCountry]);
+  
+  // Get available cities for selected country
+  const availableCities = (selectedCountry && selectedCountry !== "all") ? (countriesWithCities[selectedCountry as keyof typeof countriesWithCities] || []) : [];
+  
+  // Clear all filters
+  const clearFilters = () => {
+    setSelectedCountry("all");
+    setSelectedCity("all");
+    setSelectedCategory("all");
+  };
+  
+  // Check if any filter is active
+  const hasActiveFilters = (selectedCountry && selectedCountry !== "all") || (selectedCity && selectedCity !== "all") || (selectedCategory && selectedCategory !== "all");
 
   const filteredProjects = activeTab === "all"
     ? availableProjects
@@ -301,14 +279,127 @@ const AvailableProjects = () => {
           </BreadcrumbList>
         </Breadcrumb>
 
-        <div>
-          <h1 className="text-3xl font-bold text-hexa-text-dark">
-            {getDashboardText("browseProjects", language)}
-          </h1>
-          <p className="text-hexa-text-light mt-1">
-            {language === "en" ? "Browse and apply to available projects" : "تصفح والتقدم للمشاريع المتاحة"}
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-hexa-text-dark">
+              {getDashboardText("browseProjects", language)}
+            </h1>
+            <p className="text-hexa-text-light mt-1">
+              {language === "en" ? "Browse and apply to available projects" : "تصفح والتقدم للمشاريع المتاحة"}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2"
+          >
+            <Filter className="w-4 h-4" />
+            {language === "en" ? "Filters" : "الفلاتر"}
+            {hasActiveFilters && (
+              <Badge className="ml-1 bg-hexa-secondary text-black">
+                {[selectedCountry, selectedCity, selectedCategory].filter(Boolean).length}
+              </Badge>
+            )}
+          </Button>
         </div>
+
+        {/* Filters Panel */}
+        {showFilters && (
+          <Card className="bg-hexa-card border-hexa-border">
+            <CardHeader className="flex flex-row items-center justify-between pb-4">
+              <CardTitle className="text-lg font-semibold text-hexa-text-dark">
+                {language === "en" ? "Filter Projects" : "فلترة المشاريع"}
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                {hasActiveFilters && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearFilters}
+                    className="text-hexa-text-light hover:text-hexa-secondary"
+                  >
+                    <X className="w-4 h-4 mr-1" />
+                    {language === "en" ? "Clear" : "مسح"}
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowFilters(false)}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Country Filter */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-hexa-text-dark">
+                    {language === "en" ? "Country" : "الدولة"}
+                  </label>
+                  <Select value={selectedCountry} onValueChange={setSelectedCountry}>
+                    <SelectTrigger className="bg-hexa-bg border-hexa-border">
+                      <SelectValue placeholder={language === "en" ? "Select country" : "اختر الدولة"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{language === "en" ? "All Countries" : "جميع الدول"}</SelectItem>
+                      {Object.keys(countriesWithCities).map((country) => (
+                        <SelectItem key={country} value={country}>
+                          {country}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* City Filter */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-hexa-text-dark">
+                    {language === "en" ? "City" : "المدينة"}
+                  </label>
+                  <Select 
+                    value={selectedCity} 
+                    onValueChange={setSelectedCity}
+                    disabled={!selectedCountry || selectedCountry === "all"}
+                  >
+                    <SelectTrigger className="bg-hexa-bg border-hexa-border" disabled={!selectedCountry || selectedCountry === "all"}>
+                      <SelectValue placeholder={language === "en" ? "Select city" : "اختر المدينة"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{language === "en" ? "All Cities" : "جميع المدن"}</SelectItem>
+                      {availableCities.map((city) => (
+                        <SelectItem key={city} value={city}>
+                          {city}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Category Filter */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-hexa-text-dark">
+                    {language === "en" ? "Business Scope" : "نطاق الأعمال"}
+                  </label>
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger className="bg-hexa-bg border-hexa-border">
+                      <SelectValue placeholder={language === "en" ? "Select category" : "اختر نطاق الأعمال"} />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                      <SelectItem value="all">{language === "en" ? "All Categories" : "جميع النطاقات"}</SelectItem>
+                      {businessCategories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className={`grid w-full max-w-2xl grid-cols-5 bg-hexa-card border-hexa-border ${language === "ar" ? "ml-auto" : "mr-auto"}`}>

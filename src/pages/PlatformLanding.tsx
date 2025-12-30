@@ -3,6 +3,7 @@ import { Footer } from '@/components/Footer';
 import { Chatbot } from '@/components/Chatbot';
 import { Hero } from '@/components/Hero';
 import { About } from '@/components/About';
+import { FeaturedProjects } from '@/components/FeaturedProjects';
 import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Instagram, MessageCircle, Twitter, Send, X, Facebook, Linkedin } from 'lucide-react';
@@ -245,6 +246,11 @@ const Landing = () => {
       {/* About Section */}
       <section id="about">
         <About />
+      </section>
+
+      {/* Featured Projects Section */}
+      <section id="featured-projects">
+        <FeaturedProjects />
       </section>
 
       {/* Subscription Section */}

@@ -100,6 +100,7 @@ const CompanyProfile = () => {
       email: "",
       countryCode: "SA",
       phone: "",
+      city: "",
       location: "",
       bio: "",
     },
@@ -133,32 +134,9 @@ const CompanyProfile = () => {
     try {
       setLoading(true);
       console.log("📤 Fetching profile from GET /users/me");
-      const response = await http.get("/users/me");
+      const data = await profileApi.getProfile();
       
-      console.log("📥 Full response object:", response);
-      console.log("📥 response.data:", response.data);
-      console.log("📥 response.data type:", typeof response.data);
-      console.log("📥 response.data keys:", response.data ? Object.keys(response.data) : "no data");
-      
-      // Handle different response structures
-      // API might return data in response.data.data or response.data.user or directly in response.data
-      let data = response.data;
-      
-      // Check if data is nested
-      if (data && typeof data === 'object' && !Array.isArray(data)) {
-        if (data.data && typeof data.data === 'object') {
-          console.log("📥 Data found in response.data.data");
-          data = data.data;
-        } else if (data.user && typeof data.user === 'object') {
-          console.log("📥 Data found in response.data.user");
-          data = data.user;
-        } else if (data.profile && typeof data.profile === 'object') {
-          console.log("📥 Data found in response.data.profile");
-          data = data.profile;
-        }
-      }
-      
-      console.log("📥 Final data object:", data);
+      console.log("📥 Profile data received:", data);
       console.log("📥 Final data keys:", data ? Object.keys(data) : "no data");
       console.log("📥 Full data JSON:", JSON.stringify(data, null, 2));
       console.log("📥 Avatar structure:", data?.avatar);
@@ -176,28 +154,8 @@ const CompanyProfile = () => {
           avatarUrl = data.avatar;
         } else if (typeof data.avatar === 'object') {
           // Try different possible properties
-          avatarUrl = data.avatar.url || 
-                     data.avatar.path || 
-                     data.avatar.filename || 
-                     data.avatar.originalName ||
-                     data.avatar.src ||
-                     "";
-          
-          // If avatar object exists but has no URL, it might be uploaded but URL not in object
-          // In this case, we might need to construct URL from the avatar object info
-          if (!avatarUrl && data.avatar.uploadedAt) {
-            console.log("⚠️ Avatar object exists but no URL found:", data.avatar);
-            // Try to construct URL from filename if available
-            if (data.avatar.filename) {
-              avatarUrl = data.avatar.filename;
-            }
-          }
+          avatarUrl = data.avatar.url || "";
         }
-      }
-      
-      // Fallback to other image fields if avatar is not available
-      if (!avatarUrl) {
-        avatarUrl = data.profileImage || data.image || "";
       }
       
       // Convert to full URL if it's a relative path
@@ -213,13 +171,13 @@ const CompanyProfile = () => {
       const mappedProfileData = {
         name: data.name || "",
         email: data.email || "",
-        phone: data.phone || data.phoneNumber || "",
-        location: data.location || data.address || "",
-        bio: data.bio || data.description || "",
+        phone: data.phone || "",
+        location: data.location || "",
+        bio: data.bio || "",
         profileImage: avatarUrl,
         specializations: Array.isArray(data.specializations) ? data.specializations : [],
         certifications: Array.isArray(data.certifications) ? data.certifications : [],
-        rating: data.averageRating || data.rating || 0,
+        rating: data.averageRating || 0,
         reviewsCount: data.reviewsCount || 0,
       };
       
@@ -228,10 +186,10 @@ const CompanyProfile = () => {
       setProfileData(mappedProfileData);
       
       // Extract country code from phone if available
-      let countryCode = "SA";
-      let phoneNumber = data.phone || data.phoneNumber || "";
+      let countryCode = (data as any).countryCode || "SA";
+      let phoneNumber = data.phone || "";
       
-      if (phoneNumber && phoneNumber.startsWith("+")) {
+      if (!countryCode && phoneNumber && phoneNumber.startsWith("+")) {
         const detectedCountry = getCountryFromPhone(phoneNumber);
         if (detectedCountry) {
           countryCode = detectedCountry;
@@ -243,8 +201,9 @@ const CompanyProfile = () => {
         email: data.email || "",
         countryCode,
         phone: phoneNumber,
-        location: data.location || data.address || "",
-        bio: data.bio || data.description || "",
+        city: (data as any).city || "",
+        location: data.location || "",
+        bio: data.bio || "",
       };
       
       console.log("📥 Mapped form data:", mappedFormData);
@@ -254,6 +213,7 @@ const CompanyProfile = () => {
       setValue("email", mappedFormData.email);
       setValue("countryCode", mappedFormData.countryCode);
       setValue("phone", mappedFormData.phone);
+      setValue("city", mappedFormData.city);
       setValue("location", mappedFormData.location);
       setValue("bio", mappedFormData.bio);
       setSpecializations(Array.isArray(data.specializations) ? data.specializations : []);
@@ -352,6 +312,27 @@ const CompanyProfile = () => {
     try {
       setSaving(true);
       
+      // Helper function to get country name from country code
+      const getCountryNameFromCode = (code: string): string => {
+        const countryMap: Record<string, string> = {
+          SA: "السعودية",
+          AE: "الإمارات",
+          KW: "الكويت",
+          QA: "قطر",
+          BH: "البحرين",
+          OM: "عُمان",
+          EG: "مصر",
+          JO: "الأردن",
+          LB: "لبنان",
+          SY: "سوريا",
+          YE: "اليمن",
+          SD: "السودان",
+          LY: "ليبيا",
+          OTHER: "اخرى",
+        };
+        return countryMap[code] || code; // Return code if not found
+      };
+      
       // Prepare update data
       const updateData: any = {
         name: data.name,
@@ -361,6 +342,17 @@ const CompanyProfile = () => {
       // Only add optional fields if they have values
       if (data.phone) {
         updateData.phone = data.phone;
+      }
+      if (data.countryCode) {
+        updateData.countryCode = data.countryCode;
+        // Also set country name from country code
+        const countryName = getCountryNameFromCode(data.countryCode);
+        if (countryName) {
+          updateData.country = countryName;
+        }
+      }
+      if (data.city) {
+        updateData.city = data.city;
       }
       if (data.location) {
         updateData.location = data.location;
@@ -396,17 +388,8 @@ const CompanyProfile = () => {
         if (typeof updatedProfile.avatar === 'string') {
           avatarUrl = updatedProfile.avatar;
         } else if (typeof updatedProfile.avatar === 'object') {
-          avatarUrl = updatedProfile.avatar.url || 
-                     updatedProfile.avatar.path || 
-                     updatedProfile.avatar.filename ||
-                     updatedProfile.avatar.src ||
-                     "";
+          avatarUrl = updatedProfile.avatar.url || "";
         }
-      }
-      
-      // Fallback to other image fields
-      if (!avatarUrl) {
-        avatarUrl = updatedProfile.profileImage || updatedProfile.image || "";
       }
       
       // Convert to full URL if it's a relative path
@@ -436,7 +419,7 @@ const CompanyProfile = () => {
         profileImage: avatarUrl,
         specializations: Array.isArray(updatedProfile.specializations) ? updatedProfile.specializations : specializations,
         certifications: Array.isArray(updatedProfile.certifications) ? updatedProfile.certifications : certifications,
-        rating: updatedProfile.averageRating || updatedProfile.rating || prev.rating,
+        rating: updatedProfile.averageRating || prev.rating,
         reviewsCount: updatedProfile.reviewsCount || prev.reviewsCount,
       }));
       
@@ -535,7 +518,7 @@ const CompanyProfile = () => {
 
     try {
       setChangingPassword(true);
-      await http.put("/users/me/change-password", {
+      await profileApi.changePassword({
         currentPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword,
         confirmNewPassword: passwordForm.confirmPassword,
