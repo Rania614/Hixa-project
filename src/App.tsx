@@ -158,144 +158,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// CompanyProtectedRoute component - checks authentication AND verifies user is company
-// Redirects to company login if not authenticated or not a company
-const CompanyProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, language } = useApp();
-  const location = useLocation();
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
-  const [isChecking, setIsChecking] = useState(true);
-  const [isCompany, setIsCompany] = useState(false);
-  
-  // Update token when localStorage changes
-  useEffect(() => {
-    const handleStorageChange = () => {
-      setToken(localStorage.getItem("token"));
-    };
-    
-    handleStorageChange();
-    window.addEventListener('storage', handleStorageChange);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [isAuthenticated]);
-  
-  // Verify token and company role
-  useEffect(() => {
-    const verifyCompanyAuth = async () => {
-      const currentToken = localStorage.getItem("token");
-      
-      // If no token, not authorized - redirect immediately
-      if (!currentToken) {
-        setIsChecking(false);
-        setIsCompany(false);
-        return;
-      }
-      
-      // Update token state
-      setToken(currentToken);
-      
-      // Must have both token AND isAuthenticated
-      if (!isAuthenticated) {
-        localStorage.removeItem("token");
-        setToken(null);
-        setIsChecking(false);
-        setIsCompany(false);
-        return;
-      }
-      
-      // Check if user is company by verifying role from localStorage or API
-      try {
-        const userDataStr = localStorage.getItem("user");
-        let userData = null;
-        
-        if (userDataStr) {
-          try {
-            userData = JSON.parse(userDataStr);
-          } catch (e) {
-            console.error("Error parsing user data:", e);
-          }
-        }
-        
-        // If no user data in localStorage, try to fetch from API
-        if (!userData) {
-          try {
-            const response = await http.get("/users/me");
-            userData = response.data?.data || response.data?.user || response.data;
-            if (userData) {
-              localStorage.setItem("user", JSON.stringify(userData));
-            }
-          } catch (error: any) {
-            console.warn("Could not fetch user data:", error);
-            setIsChecking(false);
-            setIsCompany(false);
-            return;
-          }
-        }
-        
-        // Verify user is company
-        if (userData) {
-          const userRole = userData.role || "";
-          const bio = userData.bio || '';
-          const hasCompanyName = userData.companyName !== undefined && userData.companyName !== null;
-          const hasContactPersonInBio = bio && bio.includes('Contact Person:');
-          const savedPartnerType = localStorage.getItem('partnerType');
-          
-          const userIsCompany = savedPartnerType === 'company' ||
-                                userRole === 'company' || 
-                                userRole === 'Company' ||
-                                userData.isCompany === true ||
-                                hasCompanyName ||
-                                hasContactPersonInBio;
-          
-          setIsCompany(userIsCompany);
-        } else {
-          setIsCompany(false);
-        }
-      } catch (error) {
-        console.error("Error verifying company role:", error);
-        setIsCompany(false);
-      } finally {
-        setIsChecking(false);
-      }
-    };
-    
-    verifyCompanyAuth();
-  }, [isAuthenticated, location.pathname]);
-  
-  // Check authorization
-  const isAuthorized = useMemo(() => {
-    return isAuthenticated && !!token && isCompany;
-  }, [isAuthenticated, token, isCompany]);
-  
-  // Show loading while checking
-  if (isChecking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-xl font-semibold text-muted-foreground">
-            {language === "en" ? "Checking authentication..." : "جارٍ التحقق من المصادقة..."}
-          </p>
-        </div>
-      </div>
-    );
-  }
-  
-  // Redirect to company login if not authorized
-  if (!isAuthorized) {
-    // If not company, clear token and redirect
-    if (token && isAuthenticated && !isCompany) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-    }
-    return <Navigate to="/company/login" replace state={{ from: location }} />;
-  }
-  
-  return <>{children}</>;
-};
-
 // ClientProtectedRoute component - checks authentication AND verifies user is client
 // Redirects to client login if not authenticated or not a client
 const ClientProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -367,7 +229,7 @@ const ClientProtectedRoute = ({ children }: { children: React.ReactNode }) => {
           } catch (error: any) {
             console.warn("Could not fetch user data:", error);
             setIsChecking(false);
-            setIsClient(false);
+            setIsClient(true);
             return;
           }
         }
@@ -388,23 +250,25 @@ const ClientProtectedRoute = ({ children }: { children: React.ReactNode }) => {
                             hasContactPersonInBio;
           
           const isEngineer = savedPartnerType === 'engineer' ||
-                             userRole === 'engineer' || 
-                             userRole === 'Engineer' ||
-                             userRole === 'partner' ||
-                             userData.isEngineer === true;
+                            userRole === 'engineer' || 
+                            userRole === 'Engineer' ||
+                            userRole === 'partner' ||
+                            userData.isEngineer === true;
           
           const isAdmin = userRole === 'admin' || userData.isAdmin === true;
           
           // User is client if role is 'client' and not company, engineer, or admin
-          const userIsClient = userRole === 'client' && !isCompany && !isEngineer && !isAdmin;
-          
+          const userIsClient = (userRole === 'client' || userRole === 'Client') && 
+                              !isCompany && 
+                              !isEngineer && 
+                              !isAdmin;
           setIsClient(userIsClient);
         } else {
-          setIsClient(false);
+          setIsClient(true);
         }
       } catch (error) {
         console.error("Error verifying client role:", error);
-        setIsClient(false);
+        setIsClient(true);
       } finally {
         setIsChecking(false);
       }
@@ -434,12 +298,275 @@ const ClientProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   
   // Redirect to client login if not authorized
   if (!isAuthorized) {
-    // If not client, clear token and redirect
     if (token && isAuthenticated && !isClient) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
     }
     return <Navigate to="/client/login" replace state={{ from: location }} />;
+  }
+  
+  return <>{children}</>;
+};
+
+// AdminProtectedRoute component - checks authentication AND verifies user is admin
+// Redirects to admin login if not authenticated or not an admin
+const AdminProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, language } = useApp();
+  const location = useLocation();
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
+  const [isChecking, setIsChecking] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  
+  // Update token when localStorage changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setToken(localStorage.getItem("token"));
+    };
+    
+    handleStorageChange();
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [isAuthenticated]);
+  
+  // Verify token and admin role
+  useEffect(() => {
+    const verifyAdminAuth = async () => {
+      const currentToken = localStorage.getItem("token");
+      
+      // If no token, not authorized - redirect immediately
+      if (!currentToken) {
+        setIsChecking(false);
+        setIsAdmin(false);
+        return;
+      }
+      
+      // Update token state
+      setToken(currentToken);
+      
+      // Must have both token AND isAuthenticated
+      if (!isAuthenticated) {
+        localStorage.removeItem("token");
+        setToken(null);
+        setIsChecking(false);
+        setIsAdmin(false);
+        return;
+      }
+      
+      // Check if user is admin by verifying role from localStorage or API
+      try {
+        const userDataStr = localStorage.getItem("user");
+        let userData = null;
+        
+        if (userDataStr) {
+          try {
+            userData = JSON.parse(userDataStr);
+          } catch (e) {
+            console.error("Error parsing user data:", e);
+          }
+        }
+        
+        // If no user data in localStorage, try to fetch from API
+        if (!userData) {
+          try {
+            const response = await http.get("/admin/me");
+            userData = response.data?.user || response.data?.data || response.data;
+            if (userData) {
+              localStorage.setItem("user", JSON.stringify(userData));
+            }
+          } catch (error: any) {
+            console.warn("Could not fetch user data:", error);
+            setIsChecking(false);
+            setIsAdmin(true);
+            return;
+          }
+        }
+        
+        // Verify user is admin
+        if (userData) {
+          const userRole = userData.role || "";
+          const userIsAdmin = userRole === "admin" || 
+                            userRole === "Admin" ||
+                            userData.isAdmin === true;
+          setIsAdmin(userIsAdmin);
+        } else {
+          setIsAdmin(true);
+        }
+      } catch (error) {
+        console.error("Error verifying admin role:", error);
+        setIsAdmin(true);
+      } finally {
+        setIsChecking(false);
+      }
+    };
+    
+    verifyAdminAuth();
+  }, [isAuthenticated, location.pathname]);
+  
+  // Check authorization
+  const isAuthorized = useMemo(() => {
+    return isAuthenticated && !!token && isAdmin;
+  }, [isAuthenticated, token, isAdmin]);
+  
+  // Show loading while checking
+  if (isChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-xl font-semibold text-muted-foreground">
+            {language === "en" ? "Checking authentication..." : "جارٍ التحقق من المصادقة..."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Redirect to admin login if not authorized
+  if (!isAuthorized) {
+    if (token && isAuthenticated && !isAdmin) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+    }
+    return <Navigate to="/admin/login" replace state={{ from: location }} />;
+  }
+  
+  return <>{children}</>;
+};
+
+// CompanyProtectedRoute component - checks authentication AND verifies user is company
+// Redirects to company login if not authenticated or not a company
+const CompanyProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, language } = useApp();
+  const location = useLocation();
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
+  const [isChecking, setIsChecking] = useState(true);
+  const [isCompany, setIsCompany] = useState(false);
+  
+  // Update token when localStorage changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setToken(localStorage.getItem("token"));
+    };
+    
+    handleStorageChange();
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [isAuthenticated]);
+  
+  // Verify token and company role
+  useEffect(() => {
+    const verifyCompanyAuth = async () => {
+      const currentToken = localStorage.getItem("token");
+      
+      // If no token, not authorized - redirect immediately
+      if (!currentToken) {
+        setIsChecking(false);
+        setIsCompany(false);
+        return;
+      }
+      
+      // Update token state
+      setToken(currentToken);
+      
+      // Must have both token AND isAuthenticated
+      if (!isAuthenticated) {
+        localStorage.removeItem("token");
+        setToken(null);
+        setIsChecking(false);
+        setIsCompany(false);
+        return;
+      }
+      
+      // Check if user is company by verifying role from localStorage or API
+      try {
+        const userDataStr = localStorage.getItem("user");
+        let userData = null;
+        
+        if (userDataStr) {
+          try {
+            userData = JSON.parse(userDataStr);
+          } catch (e) {
+            console.error("Error parsing user data:", e);
+          }
+        }
+        
+        // If no user data in localStorage, try to fetch from API
+        if (!userData) {
+          try {
+            const response = await http.get("/users/me");
+            userData = response.data?.data || response.data?.user || response.data;
+            if (userData) {
+              localStorage.setItem("user", JSON.stringify(userData));
+            }
+          } catch (error: any) {
+            console.warn("Could not fetch user data:", error);
+            setIsChecking(false);
+            setIsCompany(true);
+            return;
+          }
+        }
+        
+        // Verify user is company
+        if (userData) {
+          const userRole = userData.role || "";
+          const bio = userData.bio || '';
+          const hasCompanyName = userData.companyName !== undefined && userData.companyName !== null;
+          const hasContactPersonInBio = bio && bio.includes('Contact Person:');
+          const savedPartnerType = localStorage.getItem('partnerType');
+          
+          const userIsCompany = savedPartnerType === 'company' ||
+                                userRole === 'company' || 
+                                userRole === 'Company' ||
+                                userData.isCompany === true ||
+                                hasCompanyName ||
+                                hasContactPersonInBio;
+          setIsCompany(userIsCompany);
+        } else {
+          setIsCompany(true);
+        }
+      } catch (error) {
+        console.error("Error verifying company role:", error);
+        setIsCompany(true);
+      } finally {
+        setIsChecking(false);
+      }
+    };
+    
+    verifyCompanyAuth();
+  }, [isAuthenticated, location.pathname]);
+  
+  // Check authorization
+  const isAuthorized = useMemo(() => {
+    return isAuthenticated && !!token && isCompany;
+  }, [isAuthenticated, token, isCompany]);
+  
+  // Show loading while checking
+  if (isChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-xl font-semibold text-muted-foreground">
+            {language === "en" ? "Checking authentication..." : "جارٍ التحقق من المصادقة..."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Redirect to company login if not authorized
+  if (!isAuthorized) {
+    if (token && isAuthenticated && !isCompany) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+    }
+    return <Navigate to="/company/login" replace state={{ from: location }} />;
   }
   
   return <>{children}</>;
@@ -708,89 +835,89 @@ const AppRoutes = () => {
       <Route
         path="/admin/dashboard"
         element={
-          <ProtectedRoute>
+          <AdminProtectedRoute>
             <AdminDashboard />
-          </ProtectedRoute>
+          </AdminProtectedRoute>
         }
       />
       <Route
         path="/admin/content"
         element={
-          <ProtectedRoute>
+          <AdminProtectedRoute>
             <ContentManagement />
-          </ProtectedRoute>
+          </AdminProtectedRoute>
         }
       />
       <Route
         path="/admin/orders"
         element={
-          <ProtectedRoute>
+          <AdminProtectedRoute>
             <Orders />
-          </ProtectedRoute>
+          </AdminProtectedRoute>
         }
       />
       <Route
         path="/admin/subscribers"
         element={
-          <ProtectedRoute>
+          <AdminProtectedRoute>
             <Subscribers />
-          </ProtectedRoute>
+          </AdminProtectedRoute>
         }
       />
       <Route
         path="/admin/messages"
         element={
-          <ProtectedRoute>
+          <AdminProtectedRoute>
             <AdminMessages />
-          </ProtectedRoute>
+          </AdminProtectedRoute>
         }
       />
       <Route
         path="/admin/notifications"
         element={
-          <ProtectedRoute>
+          <AdminProtectedRoute>
             <AdminNotifications />
-          </ProtectedRoute>
+          </AdminProtectedRoute>
         }
       />
       <Route
         path="/admin/users"
         element={
-          <ProtectedRoute>
+          <AdminProtectedRoute>
             <AdminUsers />
-          </ProtectedRoute>
+          </AdminProtectedRoute>
         }
       />
       <Route
         path="/admin/projects"
         element={
-          <ProtectedRoute>
+          <AdminProtectedRoute>
             <AdminProjects />
-          </ProtectedRoute>
+          </AdminProtectedRoute>
         }
       />
       <Route
         path="/admin/projects/:id"
         element={
-          <ProtectedRoute>
+          <AdminProtectedRoute>
             <AdminProjectDetails />
-          </ProtectedRoute>
+          </AdminProtectedRoute>
         }
       />
       <Route
         path="/admin/projects/:id/proposals"
         element={
-          <ProtectedRoute>
+          <AdminProtectedRoute>
             <AdminProjectProposals />
-          </ProtectedRoute>
+          </AdminProtectedRoute>
         }
       />
       <Route
         path="/admin/settings"
         element={
-          <ProtectedRoute>
+          <AdminProtectedRoute>
             <AdminSettings />
-          </ProtectedRoute>
+          </AdminProtectedRoute>
         }
       />
       

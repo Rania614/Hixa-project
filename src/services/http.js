@@ -75,13 +75,11 @@ http.interceptors.response.use(
     if (error.response?.status === 401) {
       console.warn("🔒 401 Unauthorized - Token invalid or expired");
       localStorage.removeItem("token");
-      localStorage.removeItem("user");
 
       const pathname = window.location.pathname;
       if (pathname.startsWith('/admin')) window.location.href = '/admin/login';
       else if (pathname.startsWith('/engineer')) window.location.href = '/engineer/login';
       else if (pathname.startsWith('/client')) window.location.href = '/client/login';
-      else if (pathname.startsWith('/company')) window.location.href = '/company/login';
     }
 
     if (error.response?.status === 403) {
