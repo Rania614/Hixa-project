@@ -18,7 +18,7 @@ const AuthPage = () => {
   const initialMode = mode === 'register' ? 'register' : 'login';
 
   const handleAuthSuccess = (partnerType?: 'engineer' | 'company') => {
-    // Authentication successful - redirect to appropriate dashboard based on role
+    // Authentication successful - redirect to appropriate dashboard based on ACTUAL user role
     setIsAuthenticated(true);
     
     // Check user data from localStorage to determine actual role
@@ -33,13 +33,12 @@ const AuthPage = () => {
     }
     
     const userRole = userData?.role || '';
-    // Check if user is company by checking partnerType from localStorage or user data
-    // Note: Companies are registered as role: "client" in database, so we check for companyName or bio field
     const savedPartnerType = localStorage.getItem('partnerType');
     const bio = userData?.bio || '';
     const hasCompanyName = userData?.companyName !== undefined && userData?.companyName !== null;
     const hasContactPersonInBio = bio && bio.includes('Contact Person:');
     
+    // Determine if user is company (companies may have role: "client" in database)
     const isCompany = partnerType === 'company' || 
                       savedPartnerType === 'company' ||
                       userRole === 'company' || 
@@ -48,22 +47,57 @@ const AuthPage = () => {
                       hasCompanyName ||
                       hasContactPersonInBio;
     
-    if (role === 'client') {
-      navigate('/client/dashboard');
-    } else if (role === 'partner') {
-      // Check if it's a company first
-      if (isCompany) {
-        navigate('/company/dashboard');
-      } else if (partnerType === 'engineer' || userRole === 'engineer' || userRole === 'Engineer') {
-        navigate('/engineer/dashboard');
-      } else {
-        // Default to engineer dashboard for partner role
-        navigate('/engineer/dashboard');
-      }
+    // Determine if user is engineer
+    const isEngineer = partnerType === 'engineer' ||
+                       savedPartnerType === 'engineer' ||
+                       userRole === 'engineer' || 
+                       userRole === 'Engineer' ||
+                       userRole === 'partner' ||
+                       userData?.isEngineer === true;
+    
+    // Determine if user is admin
+    const isAdmin = userRole === 'admin' || 
+                   userRole === 'Admin' ||
+                   userData?.isAdmin === true;
+    
+    // Determine redirect path
+    let redirectPath = '/client/dashboard'; // Default fallback
+    
+    if (isAdmin) {
+      redirectPath = '/admin/dashboard';
+    } else if (isCompany) {
+      redirectPath = '/company/dashboard';
+    } else if (isEngineer) {
+      redirectPath = '/engineer/dashboard';
+    } else if (userRole === 'client' || userRole === 'Client') {
+      redirectPath = '/client/dashboard';
     } else {
-      // Default to admin dashboard if role is not specified
-      navigate('/admin/dashboard');
+      // Fallback: try to determine from URL role if user role is unclear
+      if (role === 'client') {
+        redirectPath = '/client/dashboard';
+      } else if (role === 'partner') {
+        // Default to engineer dashboard for partner role if unclear
+        redirectPath = '/engineer/dashboard';
+      }
     }
+    
+    // Log for debugging
+    console.log('🔍 Redirecting user:', {
+      userRole,
+      partnerType,
+      savedPartnerType,
+      isCompany,
+      isEngineer,
+      isAdmin,
+      hasCompanyName,
+      redirectPath,
+      userData,
+      token: localStorage.getItem('token') ? 'exists' : 'missing'
+    });
+    
+    // Use window.location.href for reliable redirect that forces page reload
+    // This ensures ProtectedRoute will check authentication state after reload
+    window.location.href = redirectPath;
   };
 
   const handleClose = () => {

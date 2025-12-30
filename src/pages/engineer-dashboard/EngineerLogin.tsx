@@ -3,7 +3,7 @@ import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Lock, Wrench } from 'lucide-react';
+import { Lock, Wrench, Eye, EyeOff } from 'lucide-react';
 import { HexagonIcon } from '@/components/ui/hexagon-icon';
 import { useNavigate } from 'react-router-dom';
 import { http } from '@/services/http';
@@ -15,6 +15,7 @@ const EngineerLogin = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -184,17 +185,27 @@ const EngineerLogin = () => {
               <label htmlFor="password" className="text-sm font-medium text-hexa-text-dark">
                 {language === 'en' ? 'Password' : 'كلمة المرور'}
               </label>
-              <Input 
-                id="password"
-                type="password" 
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)} 
-                placeholder={language === 'en' ? "••••••••" : "••••••••"} 
-                autoComplete="current-password"
-                className="bg-hexa-bg border-hexa-border text-hexa-text-dark placeholder:text-hexa-text-light h-11"
-                required 
-                disabled={loading}
-              />
+              <div className="relative">
+                <Input 
+                  id="password"
+                  type={showPassword ? "text" : "password"} 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  placeholder={language === 'en' ? "••••••••" : "••••••••"} 
+                  autoComplete="current-password"
+                  className="bg-hexa-bg border-hexa-border text-hexa-text-dark placeholder:text-hexa-text-light h-11 pr-10"
+                  required 
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-hexa-text-light hover:text-hexa-secondary transition-colors"
+                  aria-label={showPassword ? (language === 'en' ? "Hide password" : "إخفاء كلمة المرور") : (language === 'en' ? "Show password" : "إظهار كلمة المرور")}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
 
             {error && (

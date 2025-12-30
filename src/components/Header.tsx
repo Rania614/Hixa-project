@@ -165,32 +165,28 @@ export const Header = () => {
                 
                 {showPlatformDropdown && (
                   <div className="absolute top-full right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-lg z-50 animate-fade-in">
-                    <div className="p-2">
-                      {/* Client Dashboard Button - Commented out */}
-                      {/* <button
+                    <div className="p-2 space-y-1">
+                      {/* Sign In Buttons */}
+                      <button
                         onClick={() => {
-                          navigate('/client/dashboard');
+                          navigate('/auth/partner');
                           setShowPlatformDropdown(false);
                         }}
-                        className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10 opacity-60 hover:opacity-100"
-                      >
-                        <User className="h-4 w-4" />
-                        {language === 'en' ? 'Client Dashboard' : 'لوحة تحكم العميل'}
-                      </button> */}
-                      {/* Engineer Dashboard Button - Commented out */}
-                      {/* <button
-                        onClick={() => {
-                          navigate('/engineer/dashboard');
-                          setShowPlatformDropdown(false);
-                        }}
-                        className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10 opacity-60 hover:opacity-100"
+                        className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10 opacity-100"
                       >
                         <Handshake className="h-4 w-4" />
-                        {language === 'en' ? 'Engineer Dashboard' : 'لوحة تحكم المهندس'}
-                      </button> */}
-                      <p className="text-sm text-muted-foreground text-center py-4 px-2">
-                        {language === 'en' ? 'Coming Soon' : 'قريباً'}
-                      </p>
+                        {language === 'en' ? 'Sign In as Partner' : 'تسجيل الدخول كشريك'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          navigate('/client/login');
+                          setShowPlatformDropdown(false);
+                        }}
+                        className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10 opacity-100"
+                      >
+                        <User className="h-4 w-4" />
+                        {language === 'en' ? 'Sign In as Client' : 'تسجيل الدخول كعميل'}
+                      </button>
                     </div>
                   </div>
                 )}
@@ -242,32 +238,28 @@ export const Header = () => {
                             
                   {showPlatformDropdown && (
                     <div className="mt-2 bg-card border border-border rounded-lg shadow-lg animate-fade-in">
-                      <div className="p-2">
-                        {/* Client Dashboard Button - Commented out */}
-                        {/* <button
+                      <div className="p-2 space-y-1">
+                        {/* Sign In Buttons */}
+                        <button
                           onClick={() => {
-                            navigate('/client/dashboard');
+                            navigate('/auth/partner');
                             setShowPlatformDropdown(false);
                           }}
-                          className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10 opacity-60 hover:opacity-100"
-                        >
-                          <User className="h-4 w-4" />
-                          {language === 'en' ? 'Client Dashboard' : 'لوحة تحكم العميل'}
-                        </button> */}
-                        {/* Engineer Dashboard Button - Commented out */}
-                        {/* <button
-                          onClick={() => {
-                            navigate('/engineer/dashboard');
-                            setShowPlatformDropdown(false);
-                          }}
-                          className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10 opacity-60 hover:opacity-100"
+                          className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10 opacity-100"
                         >
                           <Handshake className="h-4 w-4" />
-                          {language === 'en' ? 'Engineer Dashboard' : 'لوحة تحكم المهندس'}
-                        </button> */}
-                        <p className="text-sm text-muted-foreground text-center py-4 px-2">
-                          {language === 'en' ? 'Coming Soon' : 'قريباً'}
-                        </p>
+                          {language === 'en' ? 'Sign In as Partner' : 'تسجيل الدخول كشريك'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            navigate('/client/login');
+                            setShowPlatformDropdown(false);
+                          }}
+                          className="whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 px-4 py-2 w-full justify-start font-medium flex items-center gap-2 text-foreground hover:bg-gold/10 opacity-100"
+                        >
+                          <User className="h-4 w-4" />
+                          {language === 'en' ? 'Sign In as Client' : 'تسجيل الدخول كعميل'}
+                        </button>
                       </div>
                     </div>
                   )}
