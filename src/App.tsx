@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { AppProvider, useApp } from "./context/AppContext";
 import { useMemo, useState, useEffect } from "react";
 import { http } from "./services/http";
+import { SEOHead } from "@/components/SEOHead";
 
 import Landing from "./pages/PlatformLanding";
 import AdminLogin from "./pages/admin-dashboard/AdminLogin";
@@ -805,7 +806,9 @@ const AppRoutes = () => {
   const location = useLocation();
 
   return (
-    <Routes location={location}>
+    <>
+      <SEOHead />
+      <Routes location={location}>
       <Route path="/" element={<CompanyLanding />} />
       <Route 
         path="/platform" 
@@ -1193,6 +1196,7 @@ const AppRoutes = () => {
       
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </>
   );
 };
 

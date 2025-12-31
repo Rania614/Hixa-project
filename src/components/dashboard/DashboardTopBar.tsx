@@ -50,11 +50,28 @@ export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({ userType }) =>
         // If no user in localStorage, try to fetch from API
         if (!userData) {
           try {
-            const endpoint = userType === "company" ? "/users/me" : "/auth/me";
-            const response = await http.get(endpoint);
-            userData = response.data?.data || response.data?.user || response.data;
-            if (userData) {
-              localStorage.setItem("user", JSON.stringify(userData));
+            // Try multiple endpoints based on user type
+            const endpoints = userType === "company" 
+              ? ["/users/me", "/auth/me"]
+              : ["/auth/me", "/users/me"];
+            
+            let lastError;
+            for (const endpoint of endpoints) {
+              try {
+                const response = await http.get(endpoint);
+                userData = response.data?.data || response.data?.user || response.data;
+                if (userData) {
+                  localStorage.setItem("user", JSON.stringify(userData));
+                  break; // Success, exit loop
+                }
+              } catch (err: any) {
+                lastError = err;
+                continue; // Try next endpoint
+              }
+            }
+            
+            if (!userData && lastError) {
+              console.warn("Could not fetch user data from any endpoint:", lastError);
             }
           } catch (error: any) {
             console.warn("Could not fetch user data:", error);
@@ -77,13 +94,21 @@ export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({ userType }) =>
               initials = trimmedName.substring(0, 1).toUpperCase() || "Co";
             }
           } else if (userType === "engineer") {
-            // For engineer, use name
-            name = userData.name || "Engineer";
+            // For engineer, try multiple name fields
+            name = userData.name || 
+                   userData.fullName || 
+                   userData.username || 
+                   userData.email?.split('@')[0] || 
+                   "Engineer";
             const trimmedName = name.trim();
             initials = trimmedName.substring(0, 1).toUpperCase() || "E";
           } else {
-            // For client, use name
-            name = userData.name || "Client";
+            // For client, try multiple name fields
+            name = userData.name || 
+                   userData.fullName || 
+                   userData.username || 
+                   userData.email?.split('@')[0] || 
+                   "Client";
             const trimmedName = name.trim();
             initials = trimmedName.substring(0, 1).toUpperCase() || "C";
           }

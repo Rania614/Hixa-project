@@ -1,14 +1,28 @@
+# Robots.txt for HIXA Platform
+# https://hixa.com/robots.txt
+
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /client/dashboard/
+Disallow: /engineer/dashboard/
+Disallow: /company/dashboard/
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://hixa.com/sitemap.xml
+
+# Crawl-delay for specific bots
 User-agent: Googlebot
 Allow: /
+Crawl-delay: 1
 
 User-agent: Bingbot
 Allow: /
+Crawl-delay: 1
 
 User-agent: Twitterbot
 Allow: /
 
 User-agent: facebookexternalhit
-Allow: /
-
-User-agent: *
 Allow: /

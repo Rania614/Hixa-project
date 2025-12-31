@@ -46,6 +46,12 @@ const ClientLogin = () => {
         // Save token
         localStorage.setItem('token', response.data.token);
 
+        // Save user data if available
+        const userData = response.data.user;
+        if (userData) {
+          localStorage.setItem('user', JSON.stringify(userData));
+        }
+
         // Set authenticated
         setIsAuthenticated(true);
 

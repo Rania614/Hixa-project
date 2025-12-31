@@ -16,7 +16,7 @@ interface AuthModalProps {
 }
 
 export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 'login' }: AuthModalProps) => {
-  const { setIsAuthenticated } = useApp();
+  const { setIsAuthenticated, language } = useApp();
   // Start with initialMode (login or register)
   const [isLogin, setIsLogin] = useState(initialMode === 'login');
   
@@ -129,13 +129,22 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
       const trimmedPassword = password?.trim() || '';
       const trimmedConfirmPassword = confirmPassword?.trim() || '';
       
+      // Validate required fields
       if (!trimmedName || !trimmedEmail || !trimmedPassword || !trimmedConfirmPassword) {
-        setError('Please fill in all required fields');
+        setError(language === 'ar' ? 'يرجى ملء جميع الحقول المطلوبة' : 'Please fill in all required fields');
         return;
       }
       
+      // Validate password match
       if (trimmedPassword !== trimmedConfirmPassword) {
-        setError('Passwords do not match');
+        setError(language === 'ar' ? 'تأكيد كلمة المرور غير متطابق' : 'Passwords do not match');
+        return;
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmedEmail)) {
+        setError(language === 'ar' ? 'البريد الإلكتروني غير صحيح' : 'Invalid email format');
         return;
       }
 
@@ -151,18 +160,34 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
         };
 
         if (role === 'client') {
-          // Client registration
+          // Client registration - Backend expects: fullName, email, password, confirmPassword
           endpoint = '/auth/register/client';
-          // Ensure name is provided and not empty
-          if (!trimmedName || trimmedName.length === 0) {
-            setError('Full name is required');
+          // Ensure name is provided and not empty (minimum 2 characters)
+          if (!trimmedName || trimmedName.length < 2) {
+            setError(language === 'ar' ? 'الاسم يجب أن يكون حرفين على الأقل' : 'Full name must be at least 2 characters');
             setLoading(false);
             return;
           }
-          registrationData.name = trimmedName;
-          if (companyName?.trim()) {
-            registrationData.companyName = companyName.trim();
+          if (trimmedName.length > 100) {
+            setError(language === 'ar' ? 'الاسم يجب ألا يتجاوز 100 حرف' : 'Full name must not exceed 100 characters');
+            setLoading(false);
+            return;
           }
+          // Backend expects 'fullName' not 'name'
+          registrationData.fullName = trimmedName;
+          
+          // Validate password strength (8+ chars, uppercase, lowercase, number)
+          const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+          if (!passwordRegex.test(trimmedPassword)) {
+            setError(language === 'ar' 
+              ? 'كلمة المرور يجب أن تكون 8 أحرف على الأقل وتحتوي على حرف كبير، حرف صغير، ورقم' 
+              : 'Password must be at least 8 characters and contain uppercase, lowercase, and a number');
+            setLoading(false);
+            return;
+          }
+          
+          // Normalize email to lowercase
+          registrationData.email = trimmedEmail.toLowerCase();
         } else if (role === 'partner') {
           if (partnerType === 'engineer') {
             // Engineer registration - Backend expects: fullName, specialization, licenseNumber, email, password, confirmPassword
@@ -257,7 +282,7 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
           console.log('✅ Registration successful, redirecting with partnerType:', partnerType);
           onAuthSuccess(partnerType);
         } else {
-          setError('Registration successful but no token received');
+          setError(language === 'ar' ? 'تم التسجيل بنجاح لكن لم يتم استلام رمز الوصول' : 'Registration successful but no token received');
         }
       } catch (err: any) {
         console.error('❌ Registration failed:', err);
@@ -286,23 +311,33 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
             });
             errorMessage = errorMessages.length > 0 
               ? errorMessages.join(', ') 
-              : errorData.message || errorData.error || 'Validation error. Please check all required fields.';
+              : errorData.message || errorData.error || (language === 'ar' ? 'خطأ في التحقق. يرجى التحقق من جميع الحقول المطلوبة.' : 'Validation error. Please check all required fields.');
           } else {
             errorMessage = errorData?.message || 
                           errorData?.error || 
-                          'Invalid data. Please check all required fields and try again.';
+                          (language === 'ar' ? 'بيانات غير صالحة. يرجى التحقق من جميع الحقول المطلوبة والمحاولة مرة أخرى.' : 'Invalid data. Please check all required fields and try again.');
           }
+        } else if (err.response?.status === 409) {
+          // Conflict - Email already exists
+          errorMessage = err.response?.data?.message || 
+                        (language === 'ar' ? 'البريد الإلكتروني مستخدم بالفعل' : 'Email already exists');
+        } else if (err.response?.status === 429) {
+          // Too Many Requests - Rate limiting
+          errorMessage = err.response?.data?.message || 
+                        (language === 'ar' ? 'تم تجاوز عدد محاولات الدخول المسموح بها، يرجى المحاولة لاحقاً' : 'Too many requests. Please try again later.');
         } else {
           errorMessage = err.response?.data?.message || 
                         err.response?.data?.error || 
+                        err.response?.data?.errors?.fullName?.message ||
                         err.response?.data?.errors?.name?.message ||
                         err.response?.data?.errors?.email?.message ||
                         err.response?.data?.errors?.password?.message ||
+                        err.response?.data?.errors?.confirmPassword?.message ||
                         err.response?.data?.errors?.specialization?.message ||
                         err.response?.data?.errors?.licenseNumber?.message ||
                         (err.response?.data?.errors && (Object.values(err.response.data.errors)[0] as any)?.message) ||
                         err.message || 
-                        'Registration failed. Please try again.';
+                        (language === 'ar' ? 'فشل التسجيل. يرجى المحاولة مرة أخرى.' : 'Registration failed. Please try again.');
         }
         
         setError(errorMessage);
@@ -603,23 +638,28 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
                     // Client registration form
                     <div>
                       <label htmlFor="clientName" className="block text-sm font-medium mb-2">
-                        Full Name
+                        {language === 'ar' ? 'الاسم الكامل' : 'Full Name'}
                       </label>
                       <Input
                         id="clientName"
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="Your full name"
+                        placeholder={language === 'ar' ? 'أدخل الاسم الكامل' : 'Your full name'}
                         className="bg-secondary/50"
                         required
+                        minLength={2}
+                        maxLength={100}
                       />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {language === 'ar' ? 'من 2 إلى 100 حرف' : '2 to 100 characters'}
+                      </p>
                     </div>
                   )}
                   
                   <div>
                     <label htmlFor="regEmail" className="block text-sm font-medium mb-2">
-                      Email Address
+                      {language === 'ar' ? 'البريد الإلكتروني' : 'Email Address'}
                     </label>
                     <Input
                       id="regEmail"
@@ -635,7 +675,7 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
                   
                   <div>
                     <label htmlFor="regPassword" className="block text-sm font-medium mb-2">
-                      Password
+                      {language === 'ar' ? 'كلمة المرور' : 'Password'}
                     </label>
                     <div className="relative">
                       <Input
@@ -643,25 +683,33 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
                         type={showPassword ? "text" : "password"}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Create a password"
+                        placeholder={language === 'ar' ? 'أنشئ كلمة مرور' : 'Create a password'}
                         className="bg-secondary/50 pr-10"
                         autoComplete="new-password"
                         required
+                        minLength={8}
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        aria-label={showPassword ? (language === 'ar' ? 'إخفاء كلمة المرور' : 'Hide password') : (language === 'ar' ? 'إظهار كلمة المرور' : 'Show password')}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
+                    {role === 'client' && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {language === 'ar' 
+                          ? 'يجب أن تكون 8 أحرف على الأقل وتحتوي على حرف كبير، حرف صغير، ورقم' 
+                          : 'Must be at least 8 characters with uppercase, lowercase, and a number'}
+                      </p>
+                    )}
                   </div>
                   
                   <div>
                     <label htmlFor="confirmPassword" className="block text-sm font-medium mb-2">
-                      Confirm Password
+                      {language === 'ar' ? 'تأكيد كلمة المرور' : 'Confirm Password'}
                     </label>
                     <div className="relative">
                       <Input
@@ -669,7 +717,7 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
                         type={showConfirmPassword ? "text" : "password"}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="Confirm your password"
+                        placeholder={language === 'ar' ? 'أعد إدخال كلمة المرور' : 'Confirm your password'}
                         className="bg-secondary/50 pr-10"
                         autoComplete="new-password"
                         required
@@ -678,7 +726,7 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                        aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                        aria-label={showConfirmPassword ? (language === 'ar' ? 'إخفاء كلمة المرور' : 'Hide password') : (language === 'ar' ? 'إظهار كلمة المرور' : 'Show password')}
                       >
                         {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
