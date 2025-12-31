@@ -1186,6 +1186,30 @@ const AppRoutes = () => {
         } 
       />
       <Route 
+        path="/company/portfolio/add" 
+        element={
+          <CompanyProtectedRoute>
+            <AddWork />
+          </CompanyProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/company/portfolio/:id/edit" 
+        element={
+          <CompanyProtectedRoute>
+            <AddWork />
+          </CompanyProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/company/portfolio/:id" 
+        element={
+          <CompanyProtectedRoute>
+            <WorkDetails />
+          </CompanyProtectedRoute>
+        } 
+      />
+      <Route 
         path="/company/profile" 
         element={
           <CompanyProtectedRoute>

@@ -100,15 +100,20 @@ const CompanyMessages = () => {
   const loadProjectRooms = useCallback(async () => {
     try {
       setLoading(true);
+      console.log('📥 Loading project rooms for company...');
       const rooms = await messagesApi.getProjectRooms();
-      // Filter: Engineer sees only project rooms for projects they submitted proposals for
+      console.log('📥 Received project rooms from API:', rooms.length, rooms);
+      // Filter: Company sees only project rooms for projects they submitted proposals for
       // Backend should already filter this, but we add extra safety
       setProjectRooms(rooms);
       if (rooms.length > 0 && !selectedProjectRoom) {
         setSelectedProjectRoom(rooms[0]);
+        console.log('✅ Selected first project room:', rooms[0]._id);
+      } else if (rooms.length === 0) {
+        console.log('⚠️ No project rooms found - company has not submitted any proposals yet');
       }
     } catch (error: any) {
-      console.error('Error loading project rooms:', error);
+      console.error('❌ Error loading project rooms:', error);
       if (error.response?.status !== 404) {
         toast.error(language === 'en' ? 'Failed to load projects' : 'فشل تحميل المشاريع');
       }
@@ -118,7 +123,7 @@ const CompanyMessages = () => {
     }
   }, [language, selectedProjectRoom]);
 
-  // Load Chat Rooms (filter: admin-engineer and group only)
+  // Load Chat Rooms (filter: admin-company/admin-engineer and group only)
   const loadChatRooms = useCallback(async (projectRoomId: string) => {
     try {
       console.log('📥 Loading chat rooms for projectRoom:', projectRoomId);
@@ -126,33 +131,73 @@ const CompanyMessages = () => {
       console.log('📥 Raw chat rooms from API:', rooms);
       console.log('📥 Current user:', user?._id || user?.id);
       
-      // Filter: Engineer sees only admin-engineer (their own) and group chat rooms
+      // Filter: Company sees only admin-company/admin-engineer (their own) and group chat rooms
       const filteredRooms = rooms.filter(room => {
         console.log('🔍 Checking room:', room._id, 'type:', room.type);
+        
+        // Group rooms: include if company is a participant
         if (room.type === 'group') {
-          console.log('✅ Group room, including');
-          return true;
-        }
-        if (room.type === 'admin-engineer') {
-          // Check if this engineer is a participant in this chat room
-          const isParticipant = room.participants.some(p => {
-            const participantId = typeof p.user === 'string' ? p.user : (typeof p.user === 'object' ? p.user._id || p.user.id : p.user);
+          const isParticipant = room.participants?.some(p => {
+            const participantId = typeof p.user === 'string' 
+              ? p.user 
+              : (typeof p.user === 'object' && p.user !== null 
+                ? (p.user._id || p.user.id || p.user) 
+                : p.user);
             const userId = user?._id || user?.id;
             const matches = participantId?.toString() === userId?.toString();
-            console.log('🔍 Participant check:', { participantId, userId, matches });
             return matches;
           });
+          console.log('🔍 Group room participant check:', isParticipant);
+          return isParticipant;
+        }
+        
+        // Admin-engineer/admin-company rooms: include if company is participant OR engineer field matches
+        if (room.type === 'admin-engineer' || room.type === 'admin-company') {
+          const userId = user?._id || user?.id;
           
-          // Also check if engineer field matches
-          const engineerMatches = room.engineer && (
-            (typeof room.engineer === 'string' ? room.engineer : room.engineer._id || room.engineer.id)?.toString() === (user?._id || user?.id)?.toString()
-          );
+          // Check if this company is a participant in this chat room
+          const isParticipant = room.participants?.some(p => {
+            const participantId = typeof p.user === 'string' 
+              ? p.user 
+              : (typeof p.user === 'object' && p.user !== null 
+                ? (p.user._id || p.user.id || p.user) 
+                : p.user);
+            const matches = participantId?.toString() === userId?.toString();
+            console.log('🔍 Participant check:', { 
+              participantId: participantId?.toString(), 
+              userId: userId?.toString(), 
+              matches 
+            });
+            return matches;
+          }) || false;
+          
+          // Also check if engineer/company field matches
+          let engineerMatches = false;
+          if (room.engineer) {
+            const engineerId = typeof room.engineer === 'string' 
+              ? room.engineer 
+              : (typeof room.engineer === 'object' && room.engineer !== null
+                ? (room.engineer._id || room.engineer.id || room.engineer)
+                : room.engineer);
+            engineerMatches = engineerId?.toString() === userId?.toString();
+            console.log('🔍 Engineer field check:', { 
+              engineerId: engineerId?.toString(), 
+              userId: userId?.toString(), 
+              matches: engineerMatches 
+            });
+          }
           
           const shouldInclude = isParticipant || engineerMatches;
-          console.log('🔍 Engineer check:', { isParticipant, engineerMatches, shouldInclude });
+          console.log('🔍 Company/Engineer final check:', { 
+            isParticipant, 
+            engineerMatches, 
+            shouldInclude,
+            roomType: room.type 
+          });
           return shouldInclude;
         }
-        console.log('❌ Room type not allowed, excluding');
+        
+        console.log('❌ Room type not allowed, excluding:', room.type);
         return false;
       });
       
@@ -361,7 +406,7 @@ const CompanyMessages = () => {
 
   // Get Chat Room Title
   const getChatRoomTitle = (chatRoom: ChatRoom): string => {
-    if (chatRoom.type === 'admin-engineer') {
+    if (chatRoom.type === 'admin-engineer' || chatRoom.type === 'admin-company') {
       return language === 'en' ? 'Admin' : 'المسؤول';
     } else if (chatRoom.type === 'group') {
       return language === 'en' ? 'Group Chat' : 'الدردشة الجماعية';
@@ -371,7 +416,7 @@ const CompanyMessages = () => {
 
   // Get Chat Room Avatar
   const getChatRoomAvatar = (chatRoom: ChatRoom): string => {
-    if (chatRoom.type === 'admin-engineer') {
+    if (chatRoom.type === 'admin-engineer' || chatRoom.type === 'admin-company') {
       return language === 'en' ? 'A' : 'م';
     } else if (chatRoom.type === 'group') {
       return language === 'en' ? 'G' : 'ج';
@@ -652,7 +697,7 @@ const CompanyMessages = () => {
                             const senderAvatar = typeof msg.sender === 'object' ? msg.sender?.name?.charAt(0) : 'U';
                             const senderRole = msg.senderRole || (typeof msg.sender === 'object' ? msg.sender?.role : null);
                             
-                            // Determine if message is from engineer (me) or from admin/system
+                            // Determine if message is from company (me) or from admin/system
                             const isMe = senderId === user?._id || senderId === user?.id;
                             const isSystem = msg.type === 'system';
                             const isAdmin = senderRole === 'admin' || (typeof msg.sender === 'object' && msg.sender?.role === 'admin');

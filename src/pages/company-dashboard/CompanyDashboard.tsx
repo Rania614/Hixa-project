@@ -182,11 +182,11 @@ const CompanyDashboard = () => {
       path: "/company/projects?tab=completed" 
     },
     { 
-      label: language === "en" ? "Total Projects" : "إجمالي المشاريع", 
-      value: statistics.totalProjects || statistics.total || 0, 
+      label: language === "en" ? "Available Projects" : "المشاريع المتاحة", 
+      value: statistics.byStatus?.["Waiting for Engineers"] || statistics.waitingForEngineers || 0, 
       icon: Briefcase, 
-      description: language === "en" ? "All your projects" : "جميع مشاريعك", 
-      path: "/company/projects" 
+      description: language === "en" ? "Projects you can apply to" : "المشاريع التي يمكنك التقدم عليها", 
+      path: "/company/available-projects" 
     },
   ];
 

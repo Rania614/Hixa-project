@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { useApp } from "@/context/AppContext";
 import { getDashboardText } from "@/locales/dashboard";
@@ -24,9 +24,15 @@ const AddWork = () => {
   const { id } = useParams<{ id: string }>();
   const { language } = useApp();
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
   const isEditMode = !!id;
+  
+  // Determine user type from path
+  const isCompany = location.pathname.includes('/company/');
+  const userType = isCompany ? 'company' : 'engineer';
+  const basePath = isCompany ? '/company' : '/engineer';
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -59,7 +65,7 @@ const AddWork = () => {
       });
     } catch (error) {
       console.error("Failed to fetch work:", error);
-      navigate("/engineer/portfolio");
+      navigate(`${basePath}/portfolio`);
     } finally {
       setFetching(false);
     }
@@ -145,7 +151,7 @@ const AddWork = () => {
       
       // Wait a bit before navigating to ensure data is saved
       await new Promise(resolve => setTimeout(resolve, 500));
-      navigate("/engineer/portfolio");
+      navigate(`${basePath}/portfolio`);
     } catch (error) {
       console.error(`Failed to ${isEditMode ? 'update' : 'add'} work:`, error);
       // Error toast is handled in the API function
@@ -155,18 +161,18 @@ const AddWork = () => {
   };
 
   return (
-    <DashboardLayout userType="engineer">
+    <DashboardLayout userType={userType}>
       <div className="space-y-6 max-w-5xl mx-auto">
         {/* Breadcrumb */}
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
               <BreadcrumbLink
-                href="/engineer/dashboard"
+                href={`${basePath}/dashboard`}
                 className="text-hexa-text-light hover:text-hexa-secondary transition-colors"
                 onClick={(e) => {
                   e.preventDefault();
-                  navigate("/engineer/dashboard");
+                  navigate(`${basePath}/dashboard`);
                 }}
               >
                 {getDashboardText("dashboard", language)}
@@ -175,11 +181,11 @@ const AddWork = () => {
             <BreadcrumbSeparator className="text-hexa-text-light" />
             <BreadcrumbItem>
               <BreadcrumbLink
-                href="/engineer/portfolio"
+                href={`${basePath}/portfolio`}
                 className="text-hexa-text-light hover:text-hexa-secondary transition-colors"
                 onClick={(e) => {
                   e.preventDefault();
-                  navigate("/engineer/portfolio");
+                  navigate(`${basePath}/portfolio`);
                 }}
               >
                 {getDashboardText("portfolio", language)}
@@ -378,7 +384,7 @@ const AddWork = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => navigate("/engineer/portfolio")}
+                  onClick={() => navigate(`${basePath}/portfolio`)}
                   className="border-hexa-border bg-hexa-card text-hexa-text-light hover:bg-hexa-secondary/20 hover:text-hexa-secondary hover:border-hexa-secondary h-11 px-6"
                 >
                   {language === "en" ? "Cancel" : "إلغاء"}

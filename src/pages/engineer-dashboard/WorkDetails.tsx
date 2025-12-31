@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { useApp } from "@/context/AppContext";
 import { getDashboardText } from "@/locales/dashboard";
@@ -58,10 +58,16 @@ const WorkDetails = () => {
   const { id } = useParams<{ id: string }>();
   const { language } = useApp();
   const navigate = useNavigate();
+  const location = useLocation();
   const [work, setWork] = useState<PortfolioWork | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  
+  // Determine user type from path
+  const isCompany = location.pathname.includes('/company/');
+  const userType = isCompany ? 'company' : 'engineer';
+  const basePath = isCompany ? '/company' : '/engineer';
 
   useEffect(() => {
     if (id) {
@@ -127,7 +133,7 @@ const WorkDetails = () => {
     } catch (error) {
       console.error("Failed to fetch work:", error);
       // Navigate back if work not found
-      navigate("/engineer/portfolio");
+      navigate(`${basePath}/portfolio`);
     } finally {
       setLoading(false);
     }
@@ -149,7 +155,7 @@ const WorkDetails = () => {
 
   if (loading) {
     return (
-      <DashboardLayout userType="engineer">
+      <DashboardLayout userType={userType}>
         <div className="flex items-center justify-center min-h-[400px]">
           <Loader2 className="w-8 h-8 text-hexa-secondary animate-spin" />
           <span className="ml-3 text-hexa-text-light">
@@ -162,7 +168,7 @@ const WorkDetails = () => {
 
   if (!work) {
     return (
-      <DashboardLayout userType="engineer">
+      <DashboardLayout userType={userType}>
         <div className="text-center py-12">
           <p className="text-hexa-text-light">
             {language === "en" ? "Work not found" : "العمل غير موجود"}
@@ -186,11 +192,11 @@ const WorkDetails = () => {
           <BreadcrumbList>
             <BreadcrumbItem>
               <BreadcrumbLink
-                href="/engineer/dashboard"
+                href={`${basePath}/dashboard`}
                 className="text-hexa-text-light hover:text-hexa-secondary transition-colors"
                 onClick={(e) => {
                   e.preventDefault();
-                  navigate("/engineer/dashboard");
+                  navigate(`${basePath}/dashboard`);
                 }}
               >
                 {getDashboardText("dashboard", language)}
@@ -199,11 +205,11 @@ const WorkDetails = () => {
             <BreadcrumbSeparator className="text-hexa-text-light" />
             <BreadcrumbItem>
               <BreadcrumbLink
-                href="/engineer/portfolio"
+                href={`${basePath}/portfolio`}
                 className="text-hexa-text-light hover:text-hexa-secondary transition-colors"
                 onClick={(e) => {
                   e.preventDefault();
-                  navigate("/engineer/portfolio");
+                  navigate(`${basePath}/portfolio`);
                 }}
               >
                 {getDashboardText("portfolio", language)}
@@ -255,7 +261,7 @@ const WorkDetails = () => {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={() => navigate(`/engineer/portfolio/${work.id || id}/edit`)}
+              onClick={() => navigate(`${basePath}/portfolio/${work.id || id}/edit`)}
               className="border-hexa-border bg-hexa-bg text-hexa-text-light hover:bg-hexa-secondary hover:text-black hover:border-hexa-secondary"
             >
               <Edit className={`w-4 h-4 ${language === "ar" ? "ml-2" : "mr-2"}`} />

@@ -12,7 +12,7 @@ export interface ProjectRoom {
 
 export interface ChatRoomParticipant {
   user: string;
-  role: 'admin' | 'client' | 'engineer';
+  role: 'admin' | 'client' | 'engineer' | 'company';
   joinedAt: string;
   lastReadAt?: string;
 }
@@ -27,7 +27,7 @@ export interface ChatRoom {
   _id: string;
   project: string;
   projectRoom: string;
-  type: 'admin-engineer' | 'admin-client' | 'group';
+  type: 'admin-engineer' | 'admin-company' | 'admin-client' | 'group';
   engineer?: string;
   participants: ChatRoomParticipant[];
   lastMessage?: LastMessage;
