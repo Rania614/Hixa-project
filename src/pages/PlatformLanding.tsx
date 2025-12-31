@@ -36,35 +36,42 @@ const Landing = () => {
     facebook: 'https://www.facebook.com/share/1FpuCgzK8y/'
   };
 
-  const handleSubscribe = async (name: string, email: string, phone?: string) => {
-    if (!email || !email.trim()) {
+  const handleSubscribe = async (name?: string, email?: string, phone?: string) => {
+    // At least one contact method (email or phone) must be provided
+    if ((!email || !email.trim()) && (!phone || !phone.trim())) {
       toast.error(language === 'en' 
-        ? 'Please enter a valid email address' 
-        : 'يرجى إدخال بريد إلكتروني صحيح');
+        ? 'Please provide at least an email address or phone number' 
+        : 'يرجى إدخال بريد إلكتروني أو رقم هاتف على الأقل');
       return;
     }
 
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(email)) {
-      toast.error(language === 'en' 
-        ? 'Please enter a valid email address' 
-        : 'يرجى إدخال بريد إلكتروني صحيح');
-      return;
+    // Validate email format if provided
+    if (email && email.trim()) {
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(email.trim())) {
+        toast.error(language === 'en' 
+          ? 'Please enter a valid email address' 
+          : 'يرجى إدخال بريد إلكتروني صحيح');
+        return;
+      }
     }
 
     setSubscribing(true);
     try {
       const payload: { 
         name?: string;
-        email: string; 
+        email?: string; 
         phone?: string;
-      } = {
-        email: email.trim()
-      };
+      } = {};
       
       // Add name if provided
       if (name && name.trim()) {
         payload.name = name.trim();
+      }
+      
+      // Add email if provided
+      if (email && email.trim()) {
+        payload.email = email.trim();
       }
       
       // Add phone if provided
@@ -142,8 +149,16 @@ const Landing = () => {
 
   const handleSubscribeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (subscribeEmail.trim()) {
-      handleSubscribe(subscribeName, subscribeEmail.trim(), subscribePhone.trim() || undefined);
+    // At least email or phone must be provided
+    const email = subscribeEmail.trim() || undefined;
+    const phone = subscribePhone.trim() || undefined;
+    
+    if (email || phone) {
+      handleSubscribe(subscribeName.trim() || undefined, email, phone);
+    } else {
+      toast.error(language === 'en' 
+        ? 'Please provide at least an email address or phone number' 
+        : 'يرجى إدخال بريد إلكتروني أو رقم هاتف على الأقل');
     }
   };
 
@@ -275,7 +290,7 @@ const Landing = () => {
             <form onSubmit={handleSubscribeSubmit} className="max-w-md mx-auto mb-6 space-y-4 mt-8">
               <div>
                 <label htmlFor="subscription-name" className="block text-sm font-medium mb-2 text-foreground text-left">
-                  {language === 'en' ? 'Name (Optional)' : 'الاسم (اختياري)'}
+                  {language === 'en' ? 'Name ' : 'الاسم '}
                 </label>
                 <Input
                   id="subscription-name"
@@ -289,7 +304,7 @@ const Landing = () => {
               
               <div>
                 <label htmlFor="subscription-email" className="block text-sm font-medium mb-2 text-foreground text-left">
-                  {language === 'en' ? 'Email' : 'البريد الإلكتروني'} <span className="text-red-500">*</span>
+                  {language === 'en' ? 'Email (Optional)' : 'البريد الإلكتروني (اختياري)'}
                 </label>
                 <Input
                   id="subscription-email"
@@ -298,13 +313,12 @@ const Landing = () => {
                   onChange={(e) => setSubscribeEmail(e.target.value)}
                   placeholder={language === 'en' ? 'your.email@example.com' : 'بريدك@example.com'}
                   className="w-full px-4 py-3 rounded-lg bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-gold"
-                  required
                 />
               </div>
               
               <div>
                 <label htmlFor="subscription-phone" className="block text-sm font-medium mb-2 text-foreground text-left">
-                  {language === 'en' ? 'Phone Number (Optional )' : 'رقم الهاتف (اختياري )'}
+                  {language === 'en' ? 'Phone Number (Optional)' : 'رقم الهاتف (اختياري)'}
                 </label>
                 <Input
                   id="subscription-phone"
@@ -315,12 +329,12 @@ const Landing = () => {
                   className="w-full px-4 py-3 rounded-lg bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-gold"
                 />
               </div>
-              
+{/*               
               <p className="text-sm text-muted-foreground text-left">
                 {language === 'en' 
                   ? 'We send one email per month only – no spam.'
                   : 'نرسل بريدًا واحدًا شهريًا فقط – بدون سبام.'}
-              </p>
+              </p> */}
               
               <button 
                 type="submit"
@@ -423,7 +437,7 @@ const Landing = () => {
             }
           }}
         >
-          <Card className="w-full max-w-md glass-card relative border-2 border-gold/20 rounded-2xl">
+          <Card className="w-full max-w-md max-h-[90vh] glass-card relative border-2 border-gold/20 rounded-2xl flex flex-col">
             <Button
               onClick={() => {
                 setSubscribeModalOpen(false);
@@ -433,12 +447,12 @@ const Landing = () => {
               }}
               variant="ghost"
               size="icon"
-              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground z-10"
             >
               <X className="h-4 w-4" />
             </Button>
             
-            <CardHeader className="text-center pb-4">
+            <CardHeader className="text-center pb-4 flex-shrink-0">
               <CardTitle className="text-2xl font-bold text-gold">
                 {language === 'en' ? 'Subscribe' : 'اشترك'}
               </CardTitle>
@@ -456,11 +470,11 @@ const Landing = () => {
               </div>
             </CardHeader>
             
-            <CardContent>
+            <CardContent className="overflow-y-auto flex-1">
               <form onSubmit={handleSubscribeSubmit} className="space-y-4">
                 <div>
                   <label htmlFor="subscribe-name" className="block text-sm font-medium mb-2 text-foreground">
-                    {language === 'en' ? 'Name (Optional)' : 'الاسم (اختياري)'}
+                    {language === 'en' ? 'Name ' : 'الاسم '}
                   </label>
                   <Input
                     id="subscribe-name"
@@ -475,7 +489,7 @@ const Landing = () => {
                 
                 <div>
                   <label htmlFor="subscribe-email" className="block text-sm font-medium mb-2 text-foreground">
-                    {language === 'en' ? 'Email' : 'البريد الإلكتروني'} <span className="text-red-500">*</span>
+                    {language === 'en' ? 'Email (Optional)' : 'البريد الإلكتروني (اختياري)'}
                   </label>
                   <Input
                     id="subscribe-email"
@@ -484,13 +498,12 @@ const Landing = () => {
                     onChange={(e) => setSubscribeEmail(e.target.value)}
                     placeholder={language === 'en' ? 'your.email@example.com' : 'بريدك@example.com'}
                     className="w-full px-4 py-3 rounded-lg bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-gold"
-                    required
                   />
                 </div>
                 
                 <div>
                   <label htmlFor="subscribe-phone" className="block text-sm font-medium mb-2 text-foreground">
-                    {language === 'en' ? 'Phone Number (Optional )' : 'رقم الهاتف (اختيار )'}
+                    {language === 'en' ? 'Phone Number (Optional)' : 'رقم الهاتف (اختياري)'}
                   </label>
                   <Input
                     id="subscribe-phone"
@@ -502,11 +515,11 @@ const Landing = () => {
                   />
                 </div>
                 
-                <p className="text-sm text-muted-foreground">
+                {/* <p className="text-sm text-muted-foreground">
                   {language === 'en' 
                     ? 'We send one email per month only – no spam.'
                     : 'نرسل بريدًا واحدًا شهريًا فقط – بدون سبام.'}
-                </p>
+                </p> */}
                 
                 <div className="flex gap-3">
                   <Button

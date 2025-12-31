@@ -156,6 +156,12 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
         setError(language === 'ar' ? 'البريد الإلكتروني غير صحيح' : 'Invalid email format');
         return;
       }
+      
+      // Validate phone and countryCode
+      if (!phone || !countryCode) {
+        setError(language === 'ar' ? 'رقم الهاتف ورمز الدولة مطلوبان' : 'Phone number and country code are required');
+        return;
+      }
 
       try {
         setLoading(true);
@@ -387,12 +393,12 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <Card className="w-full max-w-md glass-card relative">
+      <Card className="w-full max-w-md max-h-[90vh] glass-card relative flex flex-col">
         <Button
           onClick={onClose}
           variant="ghost"
           size="icon"
-          className="absolute top-4 right-4"
+          className="absolute top-4 right-4 z-10"
         >
           <X className="h-4 w-4" />
         </Button>
@@ -400,12 +406,12 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
         <Button
           onClick={handleBack}
           variant="ghost"
-          className="absolute top-4 left-4 flex items-center gap-1"
+          className="absolute top-4 left-4 flex items-center gap-1 z-10"
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
         
-        <CardHeader className="text-center">
+        <CardHeader className="text-center flex-shrink-0">
           <div className="mx-auto mb-4 w-16 h-16 bg-gold/10 flex items-center justify-center hexagon">
             {role === 'client' ? (
               <User className="h-8 w-8 text-gold" />
@@ -437,7 +443,7 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
           </CardDescription>
         </CardHeader>
         
-        <CardContent>
+        <CardContent className="overflow-y-auto flex-1">
           {isLogin ? (
             <>
               <div className="flex gap-2 mb-6">

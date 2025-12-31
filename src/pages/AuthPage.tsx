@@ -95,9 +95,12 @@ const AuthPage = () => {
       token: localStorage.getItem('token') ? 'exists' : 'missing'
     });
     
-    // Use window.location.href for reliable redirect that forces page reload
-    // This ensures ProtectedRoute will check authentication state after reload
-    window.location.href = redirectPath;
+    // Use navigate instead of window.location.href to avoid page reload
+    // This preserves the authentication state in context
+    // Small delay to ensure state is updated before navigation
+    setTimeout(() => {
+      navigate(redirectPath, { replace: true });
+    }, 100);
   };
 
   const handleClose = () => {
