@@ -30,6 +30,7 @@ export interface ProfileUpdateData {
   name?: string;
   email?: string;
   phone?: string;
+  countryCode?: string;
   country?: string;
   city?: string;
   location?: string;

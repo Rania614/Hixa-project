@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { User, Handshake, X, Wrench, Building, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { http } from '@/services/http';
 import { toast } from '@/components/ui/sonner';
+import { CountryPhoneInput } from '@/components/shared/CountryPhoneInput';
+import { useForm } from 'react-hook-form';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -35,8 +37,11 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
       setPartnerType(null);
       setShowPassword(false);
       setShowConfirmPassword(false);
+      // Reset form
+      reset();
     }
   }, [isOpen, initialMode]);
+  const { control, watch, formState: { errors }, reset } = useForm();
   const [partnerType, setPartnerType] = useState<'engineer' | 'company' | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -49,6 +54,10 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // Watch phone and countryCode from form
+  const phone = watch('phone');
+  const countryCode = watch('countryCode');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,6 +166,8 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
           email: trimmedEmail,
           password: trimmedPassword,
           confirmPassword: trimmedConfirmPassword, // Backend requires confirmPassword
+          phone: phone,
+          countryCode: countryCode,
         };
 
         if (role === 'client') {
@@ -672,6 +683,15 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
                       required
                     />
                   </div>
+                  
+                  <CountryPhoneInput
+                    control={control}
+                    countryCodeName="countryCode"
+                    phoneName="phone"
+                    label="Phone Number"
+                    errors={errors}
+                    required={true}
+                  />
                   
                   <div>
                     <label htmlFor="regPassword" className="block text-sm font-medium mb-2">

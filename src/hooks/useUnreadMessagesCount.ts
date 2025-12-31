@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { messagesApi } from '@/services/messagesApi';
 
 interface UnreadCount {
@@ -22,7 +22,7 @@ export const useUnreadMessagesCount = (refreshInterval: number = 30000) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchUnreadCount = async () => {
+  const fetchUnreadCount = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -30,13 +30,21 @@ export const useUnreadMessagesCount = (refreshInterval: number = 30000) => {
       const result = await messagesApi.getUnreadMessagesCount();
       setUnreadCount(result);
     } catch (err: any) {
+      // Don't show error for 429 (Too Many Requests) - just log it silently
+      if (err.response?.status === 429) {
+        console.warn('Rate limit exceeded for unread messages count. Will retry later.');
+        // Don't set error state for rate limiting - it will retry automatically
+        setLoading(false);
+        return;
+      }
+      
       const errorMessage = err.response?.data?.message || err.message || 'فشل في جلب عدد الرسائل غير المقروءة';
       setError(errorMessage);
       console.error('Error fetching unread count:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchUnreadCount();
@@ -45,7 +53,7 @@ export const useUnreadMessagesCount = (refreshInterval: number = 30000) => {
     const interval = setInterval(fetchUnreadCount, refreshInterval);
     
     return () => clearInterval(interval);
-  }, [refreshInterval]);
+  }, [refreshInterval, fetchUnreadCount]);
 
   return { 
     unreadCount, 

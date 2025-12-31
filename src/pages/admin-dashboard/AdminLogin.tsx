@@ -10,8 +10,15 @@ import axios from 'axios';
 
 // ---------- AXIOS INSTANCE WITH INTERCEPTOR ----------
 let baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
-// Normalize baseURL - keep /api/api if it exists, only remove trailing slashes
 baseURL = baseURL.trim();
+
+// Fix: localhost doesn't support HTTPS - convert https://localhost to http://localhost
+if (baseURL.startsWith('https://localhost') || baseURL.startsWith('https://127.0.0.1')) {
+  console.warn("⚠️ Detected HTTPS on localhost - converting to HTTP");
+  baseURL = baseURL.replace(/^https:\/\//, 'http://');
+}
+
+// Normalize baseURL - keep /api/api if it exists, only remove trailing slashes
 // Keep /api/api if it exists (don't remove double /api/api)
 baseURL = baseURL.replace(/\/+$/, ''); // remove trailing slashes only
 

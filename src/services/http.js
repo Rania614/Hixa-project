@@ -6,6 +6,13 @@ import axios from "axios";
 // -------------------------------
 let baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
 baseURL = baseURL.trim();
+
+// Fix: localhost doesn't support HTTPS - convert https://localhost to http://localhost
+if (baseURL.startsWith('https://localhost') || baseURL.startsWith('https://127.0.0.1')) {
+  console.warn("⚠️ Detected HTTPS on localhost - converting to HTTP");
+  baseURL = baseURL.replace(/^https:\/\//, 'http://');
+}
+
 // Keep /api/api if it exists (don't remove double /api/api)
 // Only remove trailing slashes
 baseURL = baseURL.replace(/\/+$/, ''); // remove trailing slashes
@@ -20,6 +27,8 @@ export const http = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 30000, // 30 seconds timeout
+  withCredentials: false, // Don't send cookies automatically
 });
 
 // -------------------------------
@@ -38,15 +47,24 @@ http.interceptors.request.use((config) => {
   }
 
   // Handle URL construction - preserve /api/api if baseURL has it
-  // Remove leading slash from url to avoid triple slashes, but keep baseURL as is
-  if (config.url && config.url.startsWith('/')) {
-    config.url = config.url.substring(1);
+  // Normalize URL to avoid double slashes
+  if (config.url) {
+    // Remove leading slash from url
+    config.url = config.url.replace(/^\/+/, '');
   }
 
-  // Build full URL: baseURL already includes /api/api if needed
-  const fullURL = config.baseURL && config.url
-    ? `${config.baseURL}/${config.url}`
-    : `${config.baseURL}${config.url}`;
+  // Build full URL properly
+  let fullURL = '';
+  if (config.baseURL && config.url) {
+    // Ensure baseURL doesn't end with / and url doesn't start with /
+    const cleanBaseURL = config.baseURL.replace(/\/+$/, '');
+    const cleanURL = config.url.replace(/^\/+/, '');
+    fullURL = `${cleanBaseURL}/${cleanURL}`;
+  } else if (config.baseURL) {
+    fullURL = config.baseURL;
+  } else if (config.url) {
+    fullURL = config.url;
+  }
 
   console.log(`📤 HTTP Request: ${config.method?.toUpperCase()} ${fullURL}`, {
     baseURL: config.baseURL,
@@ -54,7 +72,8 @@ http.interceptors.request.use((config) => {
     fullURL: fullURL,
     hasToken: !!token,
     tokenLength: token?.length,
-    data: config.data,
+    origin: window.location.origin,
+    data: config.data instanceof FormData ? '[FormData]' : config.data,
   });
 
   return config;
@@ -110,6 +129,62 @@ http.interceptors.response.use(
       const isOptionalEndpoint = optionalEndpoints.some(endpoint => error.config?.url?.includes(endpoint));
       if (!isOptionalEndpoint) console.warn("⚠️ 404 Not Found:", error.config?.url);
       return Promise.resolve({ data: null });
+    }
+
+    // Handle Network Errors (ERR_NETWORK, ECONNREFUSED, etc.)
+    if (!error.response) {
+      // Network error - no response from server
+      const errorMessage = error.message || 'Network Error';
+      const errorCode = error.code || 'ERR_NETWORK';
+      
+      const attemptedURL = error.config?.baseURL && error.config?.url 
+        ? `${error.config.baseURL.replace(/\/+$/, '')}/${error.config.url.replace(/^\/+/, '')}` 
+        : error.config?.url || 'unknown';
+      
+      console.error("🌐 Network Error:", {
+        message: errorMessage,
+        code: errorCode,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL,
+        attemptedURL: attemptedURL,
+        currentOrigin: window.location.origin,
+        envBaseURL: import.meta.env.VITE_API_BASE_URL,
+      });
+
+      // Check if it's a CORS error
+      if (errorMessage.includes('CORS') || errorMessage.includes('cors') || errorCode === 'ERR_NETWORK') {
+        console.error("🚫 CORS or Network Error - Possible causes:");
+        console.error("  1. Server is not running");
+        console.error("  2. CORS not configured correctly");
+        console.error("  3. Wrong baseURL:", baseURL);
+        console.error("  4. Network connectivity issue");
+        console.error("  5. Firewall blocking the request");
+        console.error("🚫 Current baseURL:", baseURL);
+        console.error("🚫 Attempted URL:", attemptedURL);
+        console.error("🚫 Current origin:", window.location.origin);
+      }
+
+      // Check if it's a timeout
+      if (errorCode === 'ECONNABORTED' || errorMessage.includes('timeout')) {
+        console.error("⏱️ Request timeout - Server took too long to respond");
+        console.error("⏱️ Try increasing timeout or check server performance");
+      }
+
+      // Check if it's connection refused
+      if (errorCode === 'ECONNREFUSED' || errorMessage.includes('refused')) {
+        console.error("🔌 Connection Refused - Server might not be running");
+        console.error("🔌 Check if the server is running on:", baseURL);
+      }
+
+      // Don't reject for network errors in some cases - let the component handle it
+      // But log it for debugging
+      return Promise.reject({
+        ...error,
+        isNetworkError: true,
+        message: errorMessage,
+        code: errorCode,
+        attemptedURL: attemptedURL,
+      });
     }
 
     return Promise.reject(error);

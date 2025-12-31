@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, Mail, Phone, MapPin, Save, Star, Award, Loader2, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { http } from "@/services/http";
+import { profileApi } from "@/services/profileApi";
 import { toast } from "@/components/ui/sonner";
 import { CountryPhoneInput } from "@/components/shared/CountryPhoneInput";
 import {
@@ -100,6 +100,7 @@ const CompanyProfile = () => {
       email: "",
       countryCode: "SA",
       phone: "",
+      city: "",
       location: "",
       bio: "",
     },
@@ -133,32 +134,9 @@ const CompanyProfile = () => {
     try {
       setLoading(true);
       console.log("📤 Fetching profile from GET /users/me");
-      const response = await http.get("/users/me");
+      const data = await profileApi.getProfile();
       
-      console.log("📥 Full response object:", response);
-      console.log("📥 response.data:", response.data);
-      console.log("📥 response.data type:", typeof response.data);
-      console.log("📥 response.data keys:", response.data ? Object.keys(response.data) : "no data");
-      
-      // Handle different response structures
-      // API might return data in response.data.data or response.data.user or directly in response.data
-      let data = response.data;
-      
-      // Check if data is nested
-      if (data && typeof data === 'object' && !Array.isArray(data)) {
-        if (data.data && typeof data.data === 'object') {
-          console.log("📥 Data found in response.data.data");
-          data = data.data;
-        } else if (data.user && typeof data.user === 'object') {
-          console.log("📥 Data found in response.data.user");
-          data = data.user;
-        } else if (data.profile && typeof data.profile === 'object') {
-          console.log("📥 Data found in response.data.profile");
-          data = data.profile;
-        }
-      }
-      
-      console.log("📥 Final data object:", data);
+      console.log("📥 Profile data received:", data);
       console.log("📥 Final data keys:", data ? Object.keys(data) : "no data");
       console.log("📥 Full data JSON:", JSON.stringify(data, null, 2));
       console.log("📥 Avatar structure:", data?.avatar);
@@ -176,28 +154,8 @@ const CompanyProfile = () => {
           avatarUrl = data.avatar;
         } else if (typeof data.avatar === 'object') {
           // Try different possible properties
-          avatarUrl = data.avatar.url || 
-                     data.avatar.path || 
-                     data.avatar.filename || 
-                     data.avatar.originalName ||
-                     data.avatar.src ||
-                     "";
-          
-          // If avatar object exists but has no URL, it might be uploaded but URL not in object
-          // In this case, we might need to construct URL from the avatar object info
-          if (!avatarUrl && data.avatar.uploadedAt) {
-            console.log("⚠️ Avatar object exists but no URL found:", data.avatar);
-            // Try to construct URL from filename if available
-            if (data.avatar.filename) {
-              avatarUrl = data.avatar.filename;
-            }
-          }
+          avatarUrl = data.avatar.url || "";
         }
-      }
-      
-      // Fallback to other image fields if avatar is not available
-      if (!avatarUrl) {
-        avatarUrl = data.profileImage || data.image || "";
       }
       
       // Convert to full URL if it's a relative path
@@ -213,13 +171,13 @@ const CompanyProfile = () => {
       const mappedProfileData = {
         name: data.name || "",
         email: data.email || "",
-        phone: data.phone || data.phoneNumber || "",
-        location: data.location || data.address || "",
-        bio: data.bio || data.description || "",
+        phone: data.phone || "",
+        location: data.location || "",
+        bio: data.bio || "",
         profileImage: avatarUrl,
         specializations: Array.isArray(data.specializations) ? data.specializations : [],
         certifications: Array.isArray(data.certifications) ? data.certifications : [],
-        rating: data.averageRating || data.rating || 0,
+        rating: data.averageRating || 0,
         reviewsCount: data.reviewsCount || 0,
       };
       
@@ -228,10 +186,10 @@ const CompanyProfile = () => {
       setProfileData(mappedProfileData);
       
       // Extract country code from phone if available
-      let countryCode = "SA";
-      let phoneNumber = data.phone || data.phoneNumber || "";
+      let countryCode = (data as any).countryCode || "SA";
+      let phoneNumber = data.phone || "";
       
-      if (phoneNumber && phoneNumber.startsWith("+")) {
+      if (!countryCode && phoneNumber && phoneNumber.startsWith("+")) {
         const detectedCountry = getCountryFromPhone(phoneNumber);
         if (detectedCountry) {
           countryCode = detectedCountry;
@@ -243,8 +201,9 @@ const CompanyProfile = () => {
         email: data.email || "",
         countryCode,
         phone: phoneNumber,
-        location: data.location || data.address || "",
-        bio: data.bio || data.description || "",
+        city: (data as any).city || "",
+        location: data.location || "",
+        bio: data.bio || "",
       };
       
       console.log("📥 Mapped form data:", mappedFormData);
@@ -254,6 +213,7 @@ const CompanyProfile = () => {
       setValue("email", mappedFormData.email);
       setValue("countryCode", mappedFormData.countryCode);
       setValue("phone", mappedFormData.phone);
+      setValue("city", mappedFormData.city);
       setValue("location", mappedFormData.location);
       setValue("bio", mappedFormData.bio);
       setSpecializations(Array.isArray(data.specializations) ? data.specializations : []);
@@ -352,7 +312,28 @@ const CompanyProfile = () => {
     try {
       setSaving(true);
       
-      // Always update profile data first using JSON (without image)
+      // Helper function to get country name from country code
+      const getCountryNameFromCode = (code: string): string => {
+        const countryMap: Record<string, string> = {
+          SA: "السعودية",
+          AE: "الإمارات",
+          KW: "الكويت",
+          QA: "قطر",
+          BH: "البحرين",
+          OM: "عُمان",
+          EG: "مصر",
+          JO: "الأردن",
+          LB: "لبنان",
+          SY: "سوريا",
+          YE: "اليمن",
+          SD: "السودان",
+          LY: "ليبيا",
+          OTHER: "اخرى",
+        };
+        return countryMap[code] || code; // Return code if not found
+      };
+      
+      // Prepare update data
       const updateData: any = {
         name: data.name,
         email: data.email,
@@ -361,6 +342,17 @@ const CompanyProfile = () => {
       // Only add optional fields if they have values
       if (data.phone) {
         updateData.phone = data.phone;
+      }
+      if (data.countryCode) {
+        updateData.countryCode = data.countryCode;
+        // Also set country name from country code
+        const countryName = getCountryNameFromCode(data.countryCode);
+        if (countryName) {
+          updateData.country = countryName;
+        }
+      }
+      if (data.city) {
+        updateData.city = data.city;
       }
       if (data.location) {
         updateData.location = data.location;
@@ -379,102 +371,25 @@ const CompanyProfile = () => {
         updateData.certifications = certifications;
       }
       
-      console.log("📤 Sending profile update to PUT /users/me");
-      console.log("📤 Update data:", updateData);
+      console.log("📤 Updating profile:", updateData);
+      console.log("📤 Selected image:", selectedImage);
       
-      // Update profile data using PUT /api/users/me (JSON)
-      let response = await http.put("/users/me", updateData);
+      // Update profile with or without avatar using profileApi
+      const updatedProfile = await profileApi.updateProfile(
+        updateData,
+        selectedImage || undefined
+      );
       
-      console.log("✅ Profile update response:", response.data);
-      
-      // If there's an image, upload it separately using FormData
-      if (selectedImage) {
-        console.log("📤 Uploading avatar image separately...");
-        const avatarFormData = new FormData();
-        avatarFormData.append("avatar", selectedImage);
-        
-        // Try different endpoints for avatar upload
-        let avatarUploaded = false;
-        
-        // Try 1: /users/me/avatar endpoint
-        try {
-          console.log("🔄 Trying PUT /users/me/avatar");
-          const avatarResponse = await http.put("/users/me/avatar", avatarFormData);
-          console.log("✅ Avatar uploaded successfully via /users/me/avatar:", avatarResponse.data);
-          // Merge avatar response with profile response
-          response.data = { ...response.data, ...avatarResponse.data };
-          avatarUploaded = true;
-        } catch (avatarError1: any) {
-          console.warn("⚠️ Failed to upload via /users/me/avatar:", avatarError1.response?.status, avatarError1.response?.data);
-          
-          // Try 2: POST /users/me/avatar endpoint (some APIs use POST for file uploads)
-          try {
-            console.log("🔄 Trying POST /users/me/avatar");
-            const avatarResponse2 = await http.post("/users/me/avatar", avatarFormData);
-            console.log("✅ Avatar uploaded successfully via POST /users/me/avatar:", avatarResponse2.data);
-            response.data = { ...response.data, ...avatarResponse2.data };
-            avatarUploaded = true;
-          } catch (avatarError2: any) {
-            console.warn("⚠️ Failed to upload via POST /users/me/avatar:", avatarError2.response?.status, avatarError2.response?.data);
-            
-            // Try 3: /upload/avatar endpoint
-            try {
-              console.log("🔄 Trying POST /upload/avatar");
-              const avatarResponse3 = await http.post("/upload/avatar", avatarFormData);
-              console.log("✅ Avatar uploaded successfully via /upload/avatar:", avatarResponse3.data);
-              response.data = { ...response.data, ...avatarResponse3.data };
-              avatarUploaded = true;
-            } catch (avatarError3: any) {
-              console.error("❌ All avatar upload methods failed:", {
-                method1: avatarError1.response?.status,
-                method2: avatarError2.response?.status,
-                method3: avatarError3.response?.status,
-              });
-              
-              // Show error but don't fail the whole update
-              toast.error(
-                language === "en"
-                  ? "Profile updated but avatar upload failed. The image may not be supported or the upload endpoint is not available."
-                  : "تم تحديث الملف الشخصي لكن فشل رفع الصورة. قد لا تكون الصورة مدعومة أو endpoint الرفع غير متاح."
-              );
-            }
-          }
-        }
-        
-        if (!avatarUploaded) {
-          console.warn("⚠️ Avatar was not uploaded, but profile was updated successfully");
-        }
-      }
-      
-      // Handle different response structures
-      let updatedData = response.data;
-      if (updatedData && typeof updatedData === 'object' && !Array.isArray(updatedData)) {
-        if (updatedData.data && typeof updatedData.data === 'object') {
-          updatedData = updatedData.data;
-        } else if (updatedData.user && typeof updatedData.user === 'object') {
-          updatedData = updatedData.user;
-        }
-      }
-      
-      console.log("📥 Processed updated data:", updatedData);
+      console.log("✅ Profile updated successfully:", updatedProfile);
       
       // Handle avatar from response - it's an object with url property
       let avatarUrl = "";
-      if (updatedData.avatar) {
-        if (typeof updatedData.avatar === 'string') {
-          avatarUrl = updatedData.avatar;
-        } else if (typeof updatedData.avatar === 'object') {
-          avatarUrl = updatedData.avatar.url || 
-                     updatedData.avatar.path || 
-                     updatedData.avatar.filename ||
-                     updatedData.avatar.src ||
-                     "";
+      if (updatedProfile.avatar) {
+        if (typeof updatedProfile.avatar === 'string') {
+          avatarUrl = updatedProfile.avatar;
+        } else if (typeof updatedProfile.avatar === 'object') {
+          avatarUrl = updatedProfile.avatar.url || "";
         }
-      }
-      
-      // Fallback to other image fields
-      if (!avatarUrl) {
-        avatarUrl = updatedData.profileImage || updatedData.image || "";
       }
       
       // Convert to full URL if it's a relative path
@@ -485,21 +400,27 @@ const CompanyProfile = () => {
         avatarUrl = imagePreview;
       }
       
-      console.log("📥 Processed avatar URL after update:", avatarUrl);
+      // Reset selected image after successful upload
+      if (selectedImage) {
+        setSelectedImage(null);
+        if (avatarUrl) {
+          setImagePreview(avatarUrl);
+        }
+      }
       
       // Update profileData with new data
       setProfileData((prev) => ({
         ...prev,
-        name: updatedData.name || data.name,
-        email: updatedData.email || data.email,
-        phone: updatedData.phone || data.phone,
-        location: updatedData.location || data.location,
-        bio: updatedData.bio || data.bio,
+        name: updatedProfile.name || data.name,
+        email: updatedProfile.email || data.email,
+        phone: updatedProfile.phone || data.phone,
+        location: updatedProfile.location || data.location,
+        bio: updatedProfile.bio || data.bio,
         profileImage: avatarUrl,
-        specializations: Array.isArray(updatedData.specializations) ? updatedData.specializations : specializations,
-        certifications: Array.isArray(updatedData.certifications) ? updatedData.certifications : certifications,
-        rating: updatedData.averageRating || updatedData.rating || prev.rating,
-        reviewsCount: updatedData.reviewsCount || prev.reviewsCount,
+        specializations: Array.isArray(updatedProfile.specializations) ? updatedProfile.specializations : specializations,
+        certifications: Array.isArray(updatedProfile.certifications) ? updatedProfile.certifications : certifications,
+        rating: updatedProfile.averageRating || prev.rating,
+        reviewsCount: updatedProfile.reviewsCount || prev.reviewsCount,
       }));
       
       // Update image preview if we got a new image URL
@@ -597,7 +518,7 @@ const CompanyProfile = () => {
 
     try {
       setChangingPassword(true);
-      await http.put("/users/me/change-password", {
+      await profileApi.changePassword({
         currentPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword,
         confirmNewPassword: passwordForm.confirmPassword,
