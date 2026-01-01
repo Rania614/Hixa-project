@@ -168,34 +168,104 @@ const CreateProject = () => {
       console.log("📤 businessScope value:", formData.businessScope);
       console.log("📤 category in payload:", payload.category);
 
-      // Handle file uploads if any
-      // Note: File uploads are optional and may require different endpoint
-      // For now, we'll skip file uploads if /content/upload is not accessible
-      // Files can be uploaded later after project creation
-      if (attachments.length > 0) {
-        console.warn('⚠️ File uploads are currently disabled for clients. Files will be skipped.');
-        toast.warning(
-          language === "en" 
-            ? "File uploads are not available. You can add attachments later." 
-            : "رفع الملفات غير متاح حالياً. يمكنك إضافة المرفقات لاحقاً."
-        );
-        // Skip file uploads for now - can be added later via project update endpoint
-      }
-
       // Send POST request to /projects endpoint
       const response = await http.post('/projects', payload);
 
       console.log("✅ Project created successfully:", response.data);
+      console.log("📦 Full response:", JSON.stringify(response.data, null, 2));
 
-      // Show success message
-      toast.success(
-        language === "en" 
-          ? "Project created successfully!" 
-          : "تم إنشاء المشروع بنجاح!"
-      );
+      // Get project ID from response - backend returns { message, data: { id, ... } }
+      // sanitizeProject returns 'id' field, not '_id'
+      const projectId = response.data?.data?.id || 
+                       response.data?.data?._id || 
+                       response.data?.id || 
+                       response.data?._id ||
+                       response.data?.project?.id ||
+                       response.data?.project?._id;
+      
+      console.log("🆔 Extracted project ID:", projectId);
+      console.log("📎 Attachments to upload:", attachments.length);
+      
+      // Upload attachments if any
+      if (attachments.length > 0) {
+        if (!projectId) {
+          console.error("❌ No project ID found in response!");
+          toast.error(
+            language === "en" 
+              ? "Project created but could not get project ID. Please add files manually." 
+              : "تم إنشاء المشروع لكن لم يتم الحصول على معرف المشروع. يرجى إضافة الملفات يدوياً."
+          );
+        } else {
+          setUploading(true);
+          setUploadProgress(0);
+          
+          try {
+            // Upload files one by one
+            for (let i = 0; i < attachments.length; i++) {
+              const file = attachments[i];
+              console.log(`📤 Uploading file ${i + 1}/${attachments.length}:`, file.name);
+              
+              const formData = new FormData();
+              formData.append('file', file);
+              formData.append('name', file.name);
+              
+              // Update progress
+              const currentProgress = Math.round(((i + 1) / attachments.length) * 100);
+              setUploadProgress(currentProgress);
+              
+              // Upload file - http.js automatically handles FormData and removes Content-Type header
+              const uploadResponse = await http.post(`/projects/${projectId}/attachments`, formData);
+              
+              console.log(`✅ File ${i + 1} uploaded successfully:`, uploadResponse.data);
+            }
+            
+            setUploadProgress(100);
+            console.log("✅ All attachments uploaded successfully");
+            toast.success(
+              language === "en" 
+                ? `Project created and ${attachments.length} file(s) uploaded successfully!` 
+                : `تم إنشاء المشروع ورفع ${attachments.length} ملف(ات) بنجاح!`
+            );
+          } catch (uploadError: any) {
+            console.error("❌ Error uploading attachments:", uploadError);
+            console.error("❌ Upload error response:", uploadError.response?.data);
+            console.error("❌ Upload error status:", uploadError.response?.status);
+            
+            // Show detailed error message
+            const errorMessage = uploadError.response?.data?.message || 
+                               uploadError.message || 
+                               (language === "en" 
+                                 ? "Failed to upload files" 
+                                 : "فشل رفع الملفات");
+            
+            toast.error(
+              language === "en" 
+                ? `Project created, but file upload failed: ${errorMessage}` 
+                : `تم إنشاء المشروع، لكن فشل رفع الملفات: ${errorMessage}`
+            );
+          } finally {
+            setUploading(false);
+          }
+        }
+      }
 
-      // Navigate to projects list only after successful creation
-      navigate("/client/projects");
+      // Show success message (only if no files were uploaded, or files were uploaded successfully)
+      if (attachments.length === 0 || (attachments.length > 0 && projectId)) {
+        // Message will be shown in the upload section if files were uploaded
+        if (attachments.length === 0) {
+          toast.success(
+            language === "en" 
+              ? "Project created successfully!" 
+              : "تم إنشاء المشروع بنجاح!"
+          );
+        }
+      }
+
+      // Navigate to projects list only after successful creation and file uploads (if any)
+      // Wait a bit to ensure all toasts are shown
+      setTimeout(() => {
+        navigate("/client/projects");
+      }, attachments.length > 0 ? 1500 : 500);
     } catch (error: any) {
       console.error("❌ Error creating project:", error);
       console.error("❌ Error response data:", error.response?.data);

@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, MapPin, FileText, Download } from "lucide-react";
+import { ArrowLeft, MapPin, FileText, Download, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -264,7 +265,8 @@ const CompanyProjectDetails = () => {
               project.adminApproval?.toLowerCase() || "";
             const isApproved = adminApprovalStatus === "approved" || adminApprovalStatus === "accept" || adminApprovalStatus === "";
             
-            const shouldShowSubmit = isWaitingForEngineers && isApproved && canSubmitProposal;
+            const isCancelled = status === "cancelled";
+            const shouldShowSubmit = isWaitingForEngineers && isApproved && canSubmitProposal && !isCancelled;
             
             if (!shouldShowSubmit) return null;
             
@@ -279,6 +281,18 @@ const CompanyProjectDetails = () => {
             );
           })()}
         </div>
+
+        {/* Cancelled Project Alert */}
+        {project.status === "Cancelled" || project.status === "cancelled" ? (
+          <Alert className="bg-red-500/10 border-red-500/50 text-red-500">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {language === "en" 
+                ? "This project has been cancelled by the client. Proposals are no longer accepted."
+                : "تم إلغاء هذا المشروع من قبل العميل. لم يعد من الممكن تقديم عروض عليه."}
+            </AlertDescription>
+          </Alert>
+        ) : null}
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

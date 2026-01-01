@@ -110,10 +110,14 @@ const ClientDashboard = () => {
       "inProgress": { label: getDashboardText("inProgress", language), variant: "default" },
       "Completed": { label: getDashboardText("completed", language), variant: "default" },
       "completed": { label: getDashboardText("completed", language), variant: "default" },
+      "Cancelled": { label: language === "en" ? "Cancelled" : "ملغي", variant: "destructive" },
+      "cancelled": { label: language === "en" ? "Cancelled" : "ملغي", variant: "destructive" },
     };
     const statusInfo = statusMap[status] || statusMap["Pending Review"];
     return (
-      <Badge variant={statusInfo.variant} className="bg-hexa-secondary/20 text-hexa-secondary border-hexa-secondary/40 font-medium">
+      <Badge variant={statusInfo.variant} className={(status === "Cancelled" || status === "cancelled")
+        ? "bg-red-500/20 text-red-500 border-red-500/40 font-medium"
+        : "bg-hexa-secondary/20 text-hexa-secondary border-hexa-secondary/40 font-medium"}>
         {statusInfo.label}
       </Badge>
     );
@@ -128,10 +132,11 @@ const ClientDashboard = () => {
     completed: statistics.byStatus?.["Completed"] || statistics.completed || projects.filter(p => p.status === "Completed" || p.status === "completed").length,
   };
 
-  // Filter active projects (not completed)
-  const activeProjects = projects.filter(p => 
-    p.status !== "Completed" && p.status !== "completed"
-  ).slice(0, 6);
+  // Filter active projects (not completed and not cancelled)
+  const activeProjects = projects.filter(p => {
+    const status = p.status?.toLowerCase() || "";
+    return status !== "completed" && status !== "cancelled" && status !== "cancelled";
+  }).slice(0, 6);
 
   return (
     <DashboardLayout userType="client">
@@ -330,8 +335,8 @@ const ClientDashboard = () => {
                               className="flex items-center gap-3 p-3 rounded-lg bg-hexa-bg/50 cursor-pointer hover:bg-hexa-secondary/10 transition-colors"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                const engineerId = typeof project.assignedEngineer === 'object' 
-                                  ? (project.assignedEngineer._id || project.assignedEngineer.id)
+                                const engineerId = typeof project.assignedEngineer === 'object' && project.assignedEngineer
+                                  ? (project.assignedEngineer._id || (project.assignedEngineer as any).id)
                                   : project.assignedEngineer;
                                 navigate(`/client/engineers/${engineerId}`);
                               }}

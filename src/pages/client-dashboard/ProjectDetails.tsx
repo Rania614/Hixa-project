@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, MapPin, FileText, Star } from "lucide-react";
+import { ArrowLeft, MapPin, FileText, Star, X } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { http } from "@/services/http";
 import { toast } from "@/components/ui/sonner";
@@ -30,6 +30,7 @@ const ProjectDetails = () => {
   const [proposals, setProposals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [proposalsLoading, setProposalsLoading] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   // Fetch project details
   useEffect(() => {
@@ -41,6 +42,41 @@ const ProjectDetails = () => {
         
         let projectData = response.data?.data || response.data?.project || response.data;
         
+        // Format attachments from API response
+        const attachments = projectData.attachments || [];
+        console.log("📎 Raw attachments from API:", attachments);
+        const formattedFiles = attachments.map((att: any) => {
+          // Try multiple possible field names for URL
+          const fileUrl = att.url || att.path || att.fileUrl || att.link || "";
+          const fileName = att.name || att.filename || `File ${att._id}`;
+          const fileSize = att.size 
+            ? (att.size > 1024 * 1024 
+                ? `${(att.size / (1024 * 1024)).toFixed(2)} MB`
+                : `${(att.size / 1024).toFixed(2)} KB`)
+            : "";
+          const fileDate = att.uploadedAt || att.createdAt || "";
+          
+          console.log("📄 Formatted file:", {
+            _id: att._id,
+            name: fileName,
+            url: fileUrl,
+            hasUrl: !!fileUrl,
+            originalAtt: att
+          });
+          
+          return {
+            _id: att._id || att.id,
+            name: fileName,
+            url: fileUrl,
+            size: fileSize,
+            date: fileDate ? new Date(fileDate).toLocaleDateString() : "",
+            type: att.type || "other",
+          };
+        });
+        
+        console.log("📁 Formatted files array:", formattedFiles);
+        console.log("📁 Files count:", formattedFiles.length);
+
         setProject({
           id: projectData._id || projectData.id || id,
           title: projectData.title || projectData.name || "Unknown Project",
@@ -50,6 +86,7 @@ const ProjectDetails = () => {
           description: projectData.description || "",
           startDate: projectData.startDate || projectData.createdAt,
           endDate: projectData.endDate || projectData.deadline,
+          files: formattedFiles,
           engineer: projectData.assignedTo ? {
             name: projectData.assignedTo.name || "Unknown Engineer",
             rating: projectData.assignedTo.rating || 0,
@@ -90,6 +127,80 @@ const ProjectDetails = () => {
     };
     fetchProposals();
   }, [id, language]);
+
+  // Cancel project
+  const handleCancelProject = async () => {
+    if (!id) return;
+    
+    const confirmMessage = language === "en" 
+      ? "Are you sure you want to cancel this project? This action cannot be undone."
+      : "هل أنت متأكد من إلغاء هذا المشروع؟ لا يمكن التراجع عن هذا الإجراء.";
+    
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+    
+    try {
+      setCancelling(true);
+      await http.patch(`/projects/${id}/cancel`);
+      toast.success(
+        language === "en" 
+          ? "Project cancelled successfully" 
+          : "تم إلغاء المشروع بنجاح"
+      );
+      // Refresh project data
+      const response = await http.get(`/projects/${id}`);
+      let projectData = response.data?.data || response.data?.project || response.data;
+      
+      // Format attachments
+      const attachments = projectData.attachments || [];
+      const formattedFiles = attachments.map((att: any) => {
+        const fileUrl = att.url || att.path || att.fileUrl || att.link || "";
+        const fileName = att.name || att.filename || `File ${att._id}`;
+        const fileSize = att.size 
+          ? (att.size > 1024 * 1024 
+              ? `${(att.size / (1024 * 1024)).toFixed(2)} MB`
+              : `${(att.size / 1024).toFixed(2)} KB`)
+          : "";
+        const fileDate = att.uploadedAt || att.createdAt || "";
+        
+        return {
+          _id: att._id || att.id,
+          name: fileName,
+          url: fileUrl,
+          size: fileSize,
+          date: fileDate ? new Date(fileDate).toLocaleDateString() : "",
+          type: att.type || "other",
+        };
+      });
+      
+      setProject({
+        id: projectData._id || projectData.id || id,
+        title: projectData.title || projectData.name || "Unknown Project",
+        type: projectData.category || projectData.projectType || "N/A",
+        location: projectData.location || "N/A",
+        status: projectData.status || "pending",
+        description: projectData.description || "",
+        startDate: projectData.startDate || projectData.createdAt,
+        endDate: projectData.endDate || projectData.deadline,
+        files: formattedFiles,
+        engineer: projectData.assignedTo ? {
+          name: projectData.assignedTo.name || "Unknown Engineer",
+          rating: projectData.assignedTo.rating || 0,
+          specializations: projectData.assignedTo.specializations || [],
+        } : null,
+      });
+      // Navigate back to projects list
+      navigate("/client/projects");
+    } catch (error: any) {
+      console.error("Error cancelling project:", error);
+      const errorMessage = error.response?.data?.message || 
+        (language === "en" ? "Failed to cancel project" : "فشل إلغاء المشروع");
+      toast.error(errorMessage);
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   // Fallback project data
   const fallbackProject = {
@@ -211,6 +322,24 @@ const ProjectDetails = () => {
               </span>
             </div>
           </div>
+          {/* Cancel Project Button - Only show if project is not completed or cancelled */}
+          {displayProject.status !== "Completed" && 
+           displayProject.status !== "Cancelled" && 
+           displayProject.status !== "cancelled" && 
+           displayProject.status !== "completed" && (
+            <Button
+              variant="outline"
+              onClick={handleCancelProject}
+              disabled={cancelling}
+              className="border-red-500/50 bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:text-red-600 hover:border-red-500"
+            >
+              <X className={`w-4 h-4 ${language === "ar" ? "ml-2" : "mr-2"}`} />
+              {cancelling 
+                ? (language === "en" ? "Cancelling..." : "جاري الإلغاء...")
+                : (language === "en" ? "Cancel Project" : "إلغاء المشروع")
+              }
+            </Button>
+          )}
         </div>
 
         {/* Tabs */}
@@ -420,26 +549,52 @@ const ProjectDetails = () => {
                 <CardTitle className="text-hexa-text-dark">{getDashboardText("filesAttachments", language)}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {((displayProject.files && displayProject.files.length > 0) ? displayProject.files : []).map((file: any, idx: number) => (
-                    <div key={idx} className="flex items-center justify-between p-3 border-hexa-border rounded-lg hover:bg-hexa-bg transition-colors bg-hexa-card border">
-                      <div className="flex items-center gap-3">
-                        <FileText className="w-5 h-5 text-hexa-secondary" />
-                        <div>
-                          <p className="font-medium text-hexa-text-dark">{file.name}</p>
-                          <p className="text-sm text-hexa-text-light">{file.size} • {file.date}</p>
+                {displayProject.files && displayProject.files.length > 0 ? (
+                  <div className="space-y-3">
+                    {displayProject.files.map((file: any, idx: number) => {
+                      console.log("🔍 Rendering file:", file);
+                      return (
+                        <div key={file._id || idx} className="flex items-center justify-between p-3 border-hexa-border rounded-lg hover:bg-hexa-bg transition-colors bg-hexa-card border">
+                          <div className="flex items-center gap-3">
+                            <FileText className="w-5 h-5 text-hexa-secondary" />
+                            <div>
+                              <p className="font-medium text-hexa-text-dark">{file.name}</p>
+                              {(file.size || file.date) && (
+                                <p className="text-sm text-hexa-text-light">
+                                  {file.size} {file.size && file.date ? "•" : ""} {file.date}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              if (file.url) {
+                                window.open(file.url, '_blank');
+                              } else {
+                                console.error("❌ File URL is missing:", file);
+                                toast.error(
+                                  language === "en" 
+                                    ? "File URL is not available" 
+                                    : "رابط الملف غير متاح"
+                                );
+                              }
+                            }}
+                            disabled={!file.url}
+                            className="border-hexa-border bg-hexa-bg text-hexa-text-light hover:bg-hexa-secondary hover:text-black hover:border-hexa-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {language === "en" ? "Download" : "تحميل"}
+                          </Button>
                         </div>
-                      </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="border-hexa-border bg-hexa-bg text-hexa-text-light hover:bg-hexa-secondary hover:text-black hover:border-hexa-secondary"
-                      >
-                        {language === "en" ? "Download" : "تحميل"}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-hexa-text-light">
+                    {language === "en" ? "No files available" : "لا توجد ملفات متاحة"}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

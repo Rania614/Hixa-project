@@ -116,6 +116,9 @@ const AdminProjects = () => {
   const [projectToDelete, setProjectToDelete] = useState<{ id: string; name: string } | null>(null);
   const [hardDeleting, setHardDeleting] = useState(false);
   const [duplicating, setDuplicating] = useState<string | null>(null);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [projectToCancel, setProjectToCancel] = useState<{ id: string; name: string } | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   // Mock Data for demonstration
   const getMockProjects = (): Project[] => [
@@ -921,6 +924,17 @@ const AdminProjects = () => {
                                     </>
                                   )}
                                   
+                                  {/* Show Cancel button for active projects (not completed or cancelled) */}
+                                  {project.status !== 'Completed' && 
+                                   project.status !== 'completed' &&
+                                   project.status !== 'Cancelled' &&
+                                   project.status !== 'cancelled' && (
+                                    <DropdownMenuItem onClick={() => openCancelDialog(project)}>
+                                      <X className="h-4 w-4 mr-2" />
+                                      {language === 'en' ? 'Cancel Project' : 'إلغاء المشروع'}
+                                    </DropdownMenuItem>
+                                  )}
+                                  
                                   {projectId && (
                                     <DropdownMenuItem 
                                       onClick={() => navigate(`/admin/projects/${projectId}/proposals`)}
@@ -1077,6 +1091,44 @@ const AdminProjects = () => {
                   {language === 'en' ? 'Delete Permanently' : 'حذف نهائي'}
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Project Dialog */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'en' ? 'Cancel Project' : 'إلغاء المشروع'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'en' 
+                ? `Are you sure you want to cancel "${projectToCancel?.name}"? This action cannot be undone.`
+                : `هل أنت متأكد من إلغاء "${projectToCancel?.name}"؟ لا يمكن التراجع عن هذا الإجراء.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCancelDialogOpen(false);
+                setProjectToCancel(null);
+              }}
+              disabled={cancelling}
+            >
+              {language === 'en' ? 'Cancel' : 'إلغاء'}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelProject}
+              disabled={cancelling}
+            >
+              {cancelling 
+                ? (language === 'en' ? 'Cancelling...' : 'جاري الإلغاء...')
+                : (language === 'en' ? 'Confirm Cancel' : 'تأكيد الإلغاء')
+              }
             </Button>
           </DialogFooter>
         </DialogContent>

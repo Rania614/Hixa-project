@@ -515,6 +515,7 @@ const AvailableProjects = () => {
                           // Button shows only if: project.status === "Waiting for Engineers" AND project.adminApproval.status === "approved"
                           // Note: Backend will prevent duplicate proposals, so we don't check here
                           const status = project.status?.toLowerCase() || "";
+                          const isCancelled = status === "cancelled";
                           const isWaitingForEngineers = 
                             status === "waiting for engineers" || 
                             status === "waiting_for_engineers" ||
@@ -526,7 +527,7 @@ const AvailableProjects = () => {
                             project.adminApproval?.toLowerCase() || "";
                           const isApproved = adminApprovalStatus === "approved" || adminApprovalStatus === "accept" || adminApprovalStatus === "";
                           
-                          const shouldShowSubmit = isWaitingForEngineers && isApproved;
+                          const shouldShowSubmit = isWaitingForEngineers && isApproved && !isCancelled;
                           
                           if (!shouldShowSubmit) return null;
                           

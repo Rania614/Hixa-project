@@ -29,6 +29,7 @@ import AuthPage from "./pages/AuthPage";
 import ClientLogin from "./pages/client-dashboard/ClientLogin";
 import ClientDashboard from "./pages/client-dashboard/ClientDashboard";
 import ClientProjects from "./pages/client-dashboard/ClientProjects";
+import ClientBrowseProjects from "./pages/client-dashboard/ClientBrowseProjects";
 import ClientMessages from "./pages/client-dashboard/ClientMessages";
 import ClientNotifications from "./pages/client-dashboard/ClientNotifications";
 import ClientContracts from "./pages/client-dashboard/ClientContracts";
@@ -946,6 +947,14 @@ const AppRoutes = () => {
         element={
           <ClientProtectedRoute>
             <ClientProjects />
+          </ClientProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/client/projects/browse" 
+        element={
+          <ClientProtectedRoute>
+            <ClientBrowseProjects />
           </ClientProtectedRoute>
         } 
       />

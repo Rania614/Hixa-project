@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, MessageSquare, FileText, Eye, Plus, Loader2 } from "lucide-react";
+import { MapPin, MessageSquare, FileText, Eye, Plus, Loader2, X } from "lucide-react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -25,6 +25,7 @@ const ClientProjects = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cancellingProjectId, setCancellingProjectId] = useState<string | null>(null);
 
   // Fetch projects from API
   const fetchProjects = async () => {
@@ -63,23 +64,35 @@ const ClientProjects = () => {
         ? response.data 
         : (response.data.projects || response.data.items || response.data.data || []);
       
-      const transformedProjects = projectsData.map((project: any) => ({
-        id: project._id || project.id,
-        title: project.title || project.name || '',
-        type: project.projectType || project.category || project.type || '',
-        location: project.location || '',
-        status: mapStatusToComponent(project.status),
-        engineer: project.assignedEngineer?.name || project.assignedEngineer || null,
-        proposals: project.proposalsCount || project.proposals?.length || 0,
-        description: project.description || '',
-        requirements: project.requirements || '',
-        budget: project.budget || null,
-        deadline: project.deadline || null,
-        attachments: project.attachments || [],
-        tags: project.tags || [],
-        isActive: project.isActive !== false,
-        ...project // Keep original data for details page
-      }));
+      const transformedProjects = projectsData.map((project: any) => {
+        const mappedStatus = mapStatusToComponent(project.status);
+        console.log('🔍 Project status mapping:', {
+          original: project.status,
+          mapped: mappedStatus,
+          projectTitle: project.title || project.name
+        });
+        
+        return {
+          id: project._id || project.id,
+          title: project.title || project.name || '',
+          type: project.projectType || project.category || project.type || '',
+          location: project.location || '',
+          status: mappedStatus, // Use mapped status, don't let original override it
+          engineer: project.assignedEngineer?.name || project.assignedEngineer || null,
+          proposals: project.proposalsCount || project.proposals?.length || 0,
+          description: project.description || '',
+          requirements: project.requirements || '',
+          budget: project.budget || null,
+          deadline: project.deadline || null,
+          attachments: project.attachments || [],
+          tags: project.tags || [],
+          isActive: project.isActive !== false,
+          // Keep original data but exclude status to prevent override
+          ...Object.fromEntries(
+            Object.entries(project).filter(([key]) => key !== 'status')
+          )
+        };
+      });
       
       setProjects(transformedProjects);
     } catch (error: any) {
@@ -104,25 +117,67 @@ const ClientProjects = () => {
     }
   };
 
+  // Cancel project
+  const handleCancelProject = async (projectId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    
+    const confirmMessage = language === "en" 
+      ? "Are you sure you want to cancel this project? This action cannot be undone."
+      : "هل أنت متأكد من إلغاء هذا المشروع؟ لا يمكن التراجع عن هذا الإجراء.";
+    
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+    
+    try {
+      setCancellingProjectId(projectId);
+      await http.patch(`/projects/${projectId}/cancel`);
+      toast.success(
+        language === "en" 
+          ? "Project cancelled successfully" 
+          : "تم إلغاء المشروع بنجاح"
+      );
+      // Refresh projects list
+      fetchProjects();
+    } catch (error: any) {
+      console.error("Error cancelling project:", error);
+      const errorMessage = error.response?.data?.message || 
+        (language === "en" ? "Failed to cancel project" : "فشل إلغاء المشروع");
+      toast.error(errorMessage);
+    } finally {
+      setCancellingProjectId(null);
+    }
+  };
+
   // Map API status to component status
   const mapStatusToComponent = (status: string) => {
     if (!status) return 'pendingReview';
     
-    const statusLower = status.toLowerCase();
+    const statusLower = status.toLowerCase().trim();
+    console.log('🔍 Mapping status:', { original: status, lower: statusLower });
+    
     const statusMap: Record<string, string> = {
       'draft': 'pendingReview',
       'pending': 'pendingReview',
+      'pending review': 'pendingReview',
       'pending_review': 'pendingReview',
+      'waiting for engineers': 'waitingForEngineers',
       'waiting_for_engineers': 'waitingForEngineers',
       'waiting': 'waitingForEngineers',
+      'in progress': 'inProgress',
       'in_progress': 'inProgress',
       'inprogress': 'inProgress',
       'active': 'inProgress',
       'completed': 'completed',
       'done': 'completed',
+      'cancelled': 'cancelled',
+      'canceled': 'cancelled',
       'review': 'pendingReview'
     };
-    return statusMap[statusLower] || 'pendingReview';
+    
+    const mapped = statusMap[statusLower] || 'pendingReview';
+    console.log('🔍 Mapped result:', mapped);
+    return mapped;
   };
 
   useEffect(() => {
@@ -135,10 +190,13 @@ const ClientProjects = () => {
       waitingForEngineers: { label: getDashboardText("waitingForEngineers", language), variant: "secondary" },
       inProgress: { label: getDashboardText("inProgress", language), variant: "default" },
       completed: { label: getDashboardText("completed", language), variant: "default" },
+      cancelled: { label: language === "en" ? "Cancelled" : "ملغي", variant: "destructive" },
     };
     const statusInfo = statusMap[status] || statusMap.pendingReview;
     return (
-      <Badge variant={statusInfo.variant} className="bg-hexa-secondary/10 text-hexa-secondary border-hexa-secondary/20">
+      <Badge variant={statusInfo.variant} className={status === "cancelled" 
+        ? "bg-red-500/10 text-red-500 border-red-500/20" 
+        : "bg-hexa-secondary/10 text-hexa-secondary border-hexa-secondary/20"}>
         {statusInfo.label}
       </Badge>
     );
@@ -345,6 +403,25 @@ const ClientProjects = () => {
                           title={getDashboardText("chat", language)}
                         >
                           <MessageSquare className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {/* Cancel Project Button - Only show if project is not completed or cancelled */}
+                      {project.status !== "Completed" && 
+                       project.status !== "Cancelled" && 
+                       project.status !== "cancelled" && 
+                       project.status !== "completed" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => handleCancelProject(project.id, e)}
+                          disabled={cancellingProjectId === project.id}
+                          className="w-full md:w-auto border-red-500/50 bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:text-red-600 hover:border-red-500 transition-all text-sm font-medium"
+                        >
+                          <X className={`w-4 h-4 ${language === "ar" ? "ml-2" : "mr-2"}`} />
+                          {cancellingProjectId === project.id
+                            ? (language === "en" ? "Cancelling..." : "جاري الإلغاء...")
+                            : (language === "en" ? "Cancel" : "إلغاء")
+                          }
                         </Button>
                       )}
                     </div>

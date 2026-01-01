@@ -33,6 +33,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ userType }) 
   const clientMenuItems = [
     { icon: LayoutDashboard, label: getDashboardText("dashboard", language), path: "/client/dashboard" },
     { icon: FolderKanban, label: getDashboardText("myProjects", language), path: "/client/projects" },
+    { icon: Briefcase, label: language === "en" ? "Browse Projects" : "تصفح المشاريع", path: "/client/projects/browse" },
     { icon: MessageSquare, label: getDashboardText("messages", language), path: "/client/messages" },
     { icon: Bell, label: getDashboardText("notifications", language), path: "/client/notifications" },
     { icon: User, label: getDashboardText("profileSettings", language), path: "/client/profile" },

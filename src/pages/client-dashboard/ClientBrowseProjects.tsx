@@ -6,7 +6,7 @@ import { getDashboardText } from "@/locales/dashboard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Eye, FileText } from "lucide-react";
+import { MapPin, Eye } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Breadcrumb,
@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Filter, X } from "lucide-react";
 
-const CompanyAvailableProjects = () => {
+const ClientBrowseProjects = () => {
   const { language } = useApp();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("all");
@@ -48,7 +48,12 @@ const CompanyAvailableProjects = () => {
         setLoading(true);
         
         // Build query parameters with filters
-        const queryParams: any = {};
+        // Add 'browseOnly' parameter to tell backend we only want public approved projects (not own projects)
+        const queryParams: any = {
+          browseOnly: "true", // This tells backend to return only public approved projects, not own projects
+          limit: 100, // Get more projects (default is 10, max is 100)
+          page: 1, // Start from first page
+        };
         if (selectedCountry && selectedCountry !== "all") queryParams.country = selectedCountry;
         if (selectedCity && selectedCity !== "all") queryParams.city = selectedCity;
         if (selectedCategory && selectedCategory !== "all") queryParams.category = selectedCategory;
@@ -60,7 +65,7 @@ const CompanyAvailableProjects = () => {
         try {
           console.log(`🔄 Fetching /projects with params:`, queryParams);
           response = await http.get("/projects", { params: queryParams });
-          
+            
           // Handle different response structures
           let tempData = response.data;
           
@@ -79,87 +84,54 @@ const CompanyAvailableProjects = () => {
           throw err;
         }
         
-        // Debug: Log the final result
-        console.log("🔍 Final projects data:", {
-          count: projectsData.length,
-          sample: projectsData.length > 0 ? projectsData[0] : null,
-          fullResponse: response?.data
-        });
-        
-        if (projectsData.length === 0) {
-          console.warn("⚠️ No projects found! Full response:", response?.data);
-          console.warn("⚠️ This might be a backend issue - check if projects exist in database");
-        }
-        
-        // Filter projects on the frontend to show only available projects for engineers
-        // Show all projects except those explicitly marked as inactive or completed
-        const excludedStatuses = ['Completed', 'completed', 'Cancelled', 'cancelled', 'Rejected', 'rejected', 'closed', 'Closed'];
-        const filteredProjects = projectsData.filter((project: any) => {
-          // Log each project for debugging
-          console.log("🔍 Checking project:", {
-            id: project._id || project.id,
-            title: project.title || project.name,
-            isActive: project.isActive,
-            status: project.status,
-          });
-          
-          // Check if project is explicitly inactive (only exclude if isActive === false)
-          const isExplicitlyInactive = project.isActive === false;
-          
-          // Get status (handle different formats and null/undefined)
-          const status = project.status ? project.status.toString().trim() : '';
-          
-          // Exclude completed/cancelled projects (case-insensitive)
-          const isExcludedStatus = status && excludedStatuses.some(excludedStatus => 
-            status.toLowerCase() === excludedStatus.toLowerCase()
-          );
-          
-          // Show project if it's not explicitly inactive and not in excluded status
-          const shouldInclude = !isExplicitlyInactive && !isExcludedStatus;
-          
-          if (!shouldInclude) {
-            console.log(`❌ Project excluded:`, {
-              title: project.title || project.name,
-              reason: isExplicitlyInactive ? 'isActive === false' : isExcludedStatus ? `status: ${status}` : 'unknown'
-            });
+        // Filter projects to show only public projects (not owned by current client)
+        // Backend should already filter, but we'll filter on frontend too for safety
+        const userDataStr = localStorage.getItem('user');
+        let userData = null;
+        if (userDataStr) {
+          try {
+            userData = JSON.parse(userDataStr);
+          } catch (e) {
+            console.error("Error parsing user data:", e);
           }
-          
-          return shouldInclude;
-        });
-        
-        console.log(`📊 Projects after filtering: ${filteredProjects.length} out of ${projectsData.length}`);
-        
-        // If no projects after filtering but we have projects in data, show all for debugging
-        // TODO: Remove this after fixing the backend/API issue
-        const projectsToUse = filteredProjects.length === 0 && projectsData.length > 0 
-          ? projectsData 
-          : filteredProjects;
-        
-        if (projectsToUse.length !== filteredProjects.length) {
-          console.warn("⚠️ Showing all projects (filtering disabled) for debugging. Projects were filtered out.");
         }
+        
+        const currentClientId = userData?._id || userData?.id;
+        
+        // Backend already filters to show only public approved projects (not own projects)
+        // No need for additional filtering on frontend
+        const filteredProjects = projectsData;
+        
+        console.log("✅ Projects received from backend (already filtered):", {
+          total: projectsData.length,
+          projects: projectsData.map((p: any) => ({ 
+            title: p.title, 
+            status: p.status, 
+            approved: p.adminApproval?.status || p.adminApproval,
+            client: p.client?._id || p.client
+          }))
+        });
         
         // Transform projects to match the expected format
-        const transformedProjects = projectsToUse.map((project: any) => ({
+        const transformedProjects = filteredProjects.map((project: any) => ({
           id: project._id || project.id,
           title: project.title || project.name || "Unknown Project",
-          category: project.category || "N/A", // Keep category separate from projectType
+          category: project.category || "N/A",
           location: project.location || "N/A",
           description: project.description || "",
-          isNew: project.isNew !== undefined ? project.isNew : project.isActive !== false,
           deadline: project.deadline,
           status: project.status,
           requirements: project.requirements,
-          projectType: project.projectType || project.category || "N/A", // Use projectType for filtering
+          projectType: project.projectType || project.category || "N/A",
           isActive: project.isActive,
           adminApproval: project.adminApproval || project.admin_approval,
+          client: project.client,
         }));
         
         setAvailableProjects(transformedProjects);
       } catch (error: any) {
         console.error("Error fetching projects:", error);
         console.error("Error response:", error.response);
-        // Show error message
         if (error.response?.status !== 404) {
           toast.error(
             language === "en" 
@@ -198,12 +170,10 @@ const CompanyAvailableProjects = () => {
   const filteredProjects = activeTab === "all"
     ? availableProjects
     : availableProjects.filter(p => {
-        // Get both category and projectType for filtering
         const category = (p.category || "").toLowerCase();
         const projectType = (p.projectType || "").toLowerCase();
         const tabLower = activeTab.toLowerCase();
         
-        // Map filter values to possible matches (Arabic and English)
         const filterMappings: Record<string, string[]> = {
           architecture: [
             "architecture", "architect", "architectural", "معماري", "معمارية", 
@@ -222,49 +192,46 @@ const CompanyAvailableProjects = () => {
           ]
         };
         
-        // Get possible matches for the selected tab
         const possibleMatches = filterMappings[tabLower] || [];
-        
-        // Check if category or projectType matches any of the possible values
         const matchesCategory = possibleMatches.some(match => 
           category.includes(match.toLowerCase()) || match.toLowerCase().includes(category)
         );
-        
         const matchesProjectType = possibleMatches.some(match => 
           projectType.includes(match.toLowerCase()) || match.toLowerCase().includes(projectType)
         );
         
-        const shouldInclude = matchesCategory || matchesProjectType;
-        
-        // Debug logging (can be removed later)
-        if (!shouldInclude && availableProjects.length > 0) {
-          console.log(`🔍 Filtering project "${p.title}":`, {
-            activeTab: tabLower,
-            category,
-            projectType,
-            possibleMatches,
-            matchesCategory,
-            matchesProjectType,
-            shouldInclude
-          });
-        }
-        
-        return shouldInclude;
+        return matchesCategory || matchesProjectType;
       });
 
+  const getStatusBadge = (status: string) => {
+    const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+      "Waiting for Engineers": { label: language === "en" ? "Published" : "منشور", variant: "secondary" },
+      "In Progress": { label: getDashboardText("inProgress", language), variant: "default" },
+      "Completed": { label: getDashboardText("completed", language), variant: "default" },
+    };
+    const normalizedStatus = status || "";
+    const statusInfo = statusMap[normalizedStatus] || { label: status, variant: "outline" as const };
+    
+    return (
+      <Badge variant={statusInfo.variant} className="bg-hexa-secondary/20 text-hexa-secondary border-hexa-secondary/40 font-medium">
+        {statusInfo.label}
+      </Badge>
+    );
+  };
+
   return (
-    <DashboardLayout userType="company">
+    <DashboardLayout userType="client">
       <div className="space-y-6">
         {/* Breadcrumb */}
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
               <BreadcrumbLink
-                href="/company/dashboard"
+                href="/client/dashboard"
                 className="text-hexa-text-light hover:text-hexa-secondary transition-colors"
                 onClick={(e) => {
                   e.preventDefault();
-                  navigate("/company/dashboard");
+                  navigate("/client/dashboard");
                 }}
               >
                 {getDashboardText("dashboard", language)}
@@ -273,7 +240,7 @@ const CompanyAvailableProjects = () => {
             <BreadcrumbSeparator className="text-hexa-text-light" />
             <BreadcrumbItem>
               <BreadcrumbPage className="text-hexa-secondary font-semibold">
-                {getDashboardText("browseProjects", language)}
+                {language === "en" ? "Browse Projects" : "تصفح المشاريع"}
               </BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
@@ -282,10 +249,10 @@ const CompanyAvailableProjects = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-hexa-text-dark">
-              {getDashboardText("browseProjects", language)}
+              {language === "en" ? "Browse Projects" : "تصفح المشاريع"}
             </h1>
             <p className="text-hexa-text-light mt-1">
-              {language === "en" ? "Browse and apply to available projects" : "تصفح والتقدم للمشاريع المتاحة"}
+              {language === "en" ? "Browse published, in-progress, and completed projects" : "تصفح المشاريع المنشورة وقيد التنفيذ والمكتملة"}
             </p>
           </div>
           <Button
@@ -460,11 +427,7 @@ const CompanyAvailableProjects = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-3 mb-4">
                           <CardTitle className="text-lg font-bold text-hexa-text-dark line-clamp-2 flex-1">{project.title}</CardTitle>
-                          {project.isNew && (
-                            <Badge className="bg-hexa-secondary text-black font-bold flex-shrink-0">
-                              {getDashboardText("newProject", language)}
-                            </Badge>
-                          )}
+                          {getStatusBadge(project.status)}
                         </div>
                         <CardDescription className="flex items-center gap-2 mb-4 text-hexa-text-light">
                           <MapPin className="w-4 h-4 text-hexa-secondary" />
@@ -504,43 +467,12 @@ const CompanyAvailableProjects = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => navigate(`/company/projects/${project.id}`)}
+                          onClick={() => navigate(`/client/projects/${project.id}`)}
                           className="w-full md:w-auto border-hexa-border bg-hexa-bg text-hexa-text-light hover:bg-hexa-secondary/20 hover:text-hexa-secondary hover:border-hexa-secondary transition-all"
                         >
                           <Eye className="w-4 h-4 ms-2" />
                           {getDashboardText("viewDetails", language)}
                         </Button>
-                        {(() => {
-                          // Check if submit button should be shown
-                          // Button shows only if: project.status === "Waiting for Engineers" AND project.adminApproval.status === "approved"
-                          // Note: Backend will prevent duplicate proposals, so we don't check here
-                          const status = project.status?.toLowerCase() || "";
-                          const isCancelled = status === "cancelled";
-                          const isWaitingForEngineers = 
-                            status === "waiting for engineers" || 
-                            status === "waiting_for_engineers" ||
-                            status === "waitingforengineers" ||
-                            status === "published" ||
-                            status === "approved";
-                          
-                          const adminApprovalStatus = project.adminApproval?.status?.toLowerCase() || 
-                            project.adminApproval?.toLowerCase() || "";
-                          const isApproved = adminApprovalStatus === "approved" || adminApprovalStatus === "accept" || adminApprovalStatus === "";
-                          
-                          const shouldShowSubmit = isWaitingForEngineers && isApproved && !isCancelled;
-                          
-                          if (!shouldShowSubmit) return null;
-                          
-                          return (
-                            <Button
-                              onClick={() => navigate(`/company/projects/${project.id}/proposal`)}
-                              className="w-full md:w-auto bg-hexa-secondary hover:bg-hexa-secondary/90 text-black font-semibold"
-                            >
-                              <FileText className="w-4 h-4 ms-2" />
-                              {getDashboardText("submitProposal", language)}
-                            </Button>
-                          );
-                        })()}
                       </div>
                     </div>
                   </Card>
@@ -554,5 +486,5 @@ const CompanyAvailableProjects = () => {
   );
 };
 
-export default CompanyAvailableProjects;
+export default ClientBrowseProjects;
 
