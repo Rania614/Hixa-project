@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { useApp } from "@/context/AppContext";
@@ -9,9 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, MapPin } from "lucide-react";
+import { ArrowLeft, Save, MapPin, Upload, X, Loader2 } from "lucide-react";
 import { http } from "@/services/http";
 import { toast } from "@/components/ui/sonner";
+import { Badge } from "@/components/ui/badge";
+import { businessCategories } from "@/constants/filters";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -28,13 +30,23 @@ const CreateProject = () => {
     title: "",
     type: "",
     category: "",
+    businessScope: "", // نطاق الأعمال - مطلوب
     country: "",
     city: "",
     location: "",
     description: "",
     requirements: "",
     deadline: "",
+    startDate: "",
+    budgetAmount: "",
+    budgetCurrency: "SAR",
+    tags: [] as string[],
   });
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [tagInput, setTagInput] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -49,6 +61,16 @@ const CreateProject = () => {
     e.preventDefault();
     
     try {
+      // التحقق من businessScope أولاً (مطلوب)
+      if (!formData.businessScope?.trim()) {
+        toast.error(
+          language === "en" 
+            ? "Business scope is required. Please select a business scope." 
+            : "نطاق الأعمال مطلوب. يرجى اختيار نطاق الأعمال."
+        );
+        return;
+      }
+
       // القيم المسموحة من الباك إند (case-sensitive)
       const validProjectTypes = [
         "Architecture",
@@ -74,31 +96,91 @@ const CreateProject = () => {
         return;
       }
 
-      // Prepare payload matching database structure:
-      // title, projectType, country, city, location, description, deadline (optional)
-      const payload: {
-        title: string;
-        projectType: string;
-        country: string;
-        city: string;
-        location: string;
-        description: string;
-        deadline?: string;
-      } = {
+      // Get country and city labels (not codes)
+      const selectedCountry = countries.find(c => c.value === formData.country);
+      const selectedCity = availableCities.find(c => c.value === formData.city);
+      
+      // Prepare payload matching database structure
+      const payload: any = {
         title: formData.title.trim(),
-        projectType: selectedProjectType, // استخدام القيمة المفحوصة
-        country: formData.country.trim(),
-        city: formData.city.trim(),
-        location: formData.location.trim(),
+        projectType: selectedProjectType,
+        country: selectedCountry?.label || formData.country.trim(),
+        city: selectedCity 
+          ? (language === "en" ? selectedCity.label.en : selectedCity.label.ar)
+          : formData.city.trim(),
         description: formData.description.trim(),
       };
 
-      // Add optional deadline only if it has a value
+      // Add optional location (if empty, backend will auto-generate)
+      if (formData.location?.trim()) {
+        payload.location = formData.location.trim();
+      }
+
+      // Add businessScope as category (نطاق الأعمال) - backend uses 'category' field for business scope
+      // businessScope is required, so we always set it as category
+      if (formData.businessScope?.trim()) {
+        // Validate that the businessScope value is from the allowed list
+        const isValidBusinessScope = businessCategories.includes(formData.businessScope.trim());
+        if (!isValidBusinessScope) {
+          toast.error(
+            language === "en" 
+              ? "Invalid business scope. Please select a valid business scope from the list." 
+              : "نطاق الأعمال غير صحيح. يرجى اختيار نطاق أعمال صحيح من القائمة."
+          );
+          return;
+        }
+        payload.category = formData.businessScope.trim();
+        console.log("✅ Valid business scope selected:", formData.businessScope.trim());
+      }
+      
+      // Note: The separate 'category' input field is not used - businessScope replaces it
+
+      // Add optional requirements
+      if (formData.requirements?.trim()) {
+        payload.requirements = formData.requirements.trim();
+      }
+
+      // Add optional deadline
       if (formData.deadline?.trim()) {
         payload.deadline = formData.deadline.trim();
       }
 
-      console.log("📤 Sending project data:", payload);
+      // Add optional startDate
+      if (formData.startDate?.trim()) {
+        payload.startDate = formData.startDate.trim();
+      }
+
+      // Add optional budget
+      if (formData.budgetAmount?.trim()) {
+        payload.budget = {
+          amount: parseFloat(formData.budgetAmount),
+          currency: formData.budgetCurrency || "SAR",
+        };
+      }
+
+      // Add optional tags
+      if (formData.tags.length > 0) {
+        payload.tags = formData.tags;
+      }
+
+      console.log("📤 Sending project data:", JSON.stringify(payload, null, 2));
+      console.log("📤 Payload keys:", Object.keys(payload));
+      console.log("📤 businessScope value:", formData.businessScope);
+      console.log("📤 category in payload:", payload.category);
+
+      // Handle file uploads if any
+      // Note: File uploads are optional and may require different endpoint
+      // For now, we'll skip file uploads if /content/upload is not accessible
+      // Files can be uploaded later after project creation
+      if (attachments.length > 0) {
+        console.warn('⚠️ File uploads are currently disabled for clients. Files will be skipped.');
+        toast.warning(
+          language === "en" 
+            ? "File uploads are not available. You can add attachments later." 
+            : "رفع الملفات غير متاح حالياً. يمكنك إضافة المرفقات لاحقاً."
+        );
+        // Skip file uploads for now - can be added later via project update endpoint
+      }
 
       // Send POST request to /projects endpoint
       const response = await http.post('/projects', payload);
@@ -248,6 +330,65 @@ const CreateProject = () => {
 
   const availableCities = getCitiesForCountry(formData.country);
 
+  // Handle file selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const maxSize = 10 * 1024 * 1024; // 10MB per file
+    const invalidFiles = files.filter(file => file.size > maxSize);
+    
+    if (invalidFiles.length > 0) {
+      toast.error(
+        language === "en" 
+          ? `File size exceeds 10MB: ${invalidFiles.map(f => f.name).join(', ')}`
+          : `حجم الملف يتجاوز 10 ميجابايت: ${invalidFiles.map(f => f.name).join(', ')}`
+      );
+      const validFiles = files.filter(file => file.size <= maxSize);
+      if (validFiles.length > 0) {
+        setAttachments((prev) => [...prev, ...validFiles]);
+      }
+    } else {
+      setAttachments((prev) => [...prev, ...files]);
+    }
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Handle tag input
+  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && tagInput.trim()) {
+      e.preventDefault();
+      const newTag = tagInput.trim();
+      if (newTag.length > 50) {
+        toast.error(
+          language === "en" 
+            ? "Tag must be 50 characters or less"
+            : "يجب ألا يتجاوز الوسم 50 حرف"
+        );
+        return;
+      }
+      if (!formData.tags.includes(newTag)) {
+        setFormData((prev) => ({
+          ...prev,
+          tags: [...prev.tags, newTag],
+        }));
+      }
+      setTagInput("");
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      tags: prev.tags.filter((tag) => tag !== tagToRemove),
+    }));
+  };
+
   return (
     <DashboardLayout userType="client">
       <div className="space-y-6 max-w-5xl mx-auto">
@@ -379,6 +520,38 @@ const CreateProject = () => {
                 </div>
               </div>
 
+              {/* Business Scope (نطاق الأعمال) - Required */}
+              <div className="space-y-2.5">
+                <Label htmlFor="businessScope" className="text-hexa-text-dark text-base font-medium">
+                  {language === "en" ? "Business Scope" : "نطاق الأعمال"} *
+                </Label>
+                <Select
+                  value={formData.businessScope}
+                  onValueChange={(value) => handleSelectChange("businessScope", value)}
+                  required
+                >
+                  <SelectTrigger className="bg-hexa-bg border-hexa-border text-hexa-text-dark h-11">
+                    <SelectValue placeholder={language === "en" ? "Select business scope" : "اختر نطاق الأعمال"} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-hexa-card border-hexa-border max-h-[300px]">
+                    {businessCategories.map((scope) => (
+                      <SelectItem
+                        key={scope}
+                        value={scope}
+                        className="text-hexa-text-dark hover:bg-hexa-secondary/20"
+                      >
+                        {scope}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-hexa-text-light">
+                  {language === "en" 
+                    ? "Select the business scope that best describes your project"
+                    : "اختر نطاق الأعمال الذي يصف مشروعك بشكل أفضل"}
+                </p>
+              </div>
+
               {/* Location - Country and City */}
               <div className="space-y-4">
                 <Label className="text-hexa-text-dark text-base font-medium block">
@@ -470,19 +643,79 @@ const CreateProject = () => {
                 </div>
               </div>
 
-              {/* Deadline */}
+              {/* Start Date and Deadline */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2.5">
+                  <Label htmlFor="startDate" className="text-hexa-text-dark text-base font-medium">
+                    {language === "en" ? "Start Date" : "تاريخ البدء"}
+                  </Label>
+                  <Input
+                    id="startDate"
+                    name="startDate"
+                    type="date"
+                    value={formData.startDate}
+                    onChange={handleInputChange}
+                    className="bg-hexa-bg border-hexa-border text-hexa-text-dark h-11"
+                  />
+                </div>
+                <div className="space-y-2.5">
+                  <Label htmlFor="deadline" className="text-hexa-text-dark text-base font-medium">
+                    {language === "en" ? "Expected Deadline" : "الموعد المتوقع"}
+                  </Label>
+                  <Input
+                    id="deadline"
+                    name="deadline"
+                    type="date"
+                    value={formData.deadline}
+                    onChange={handleInputChange}
+                    className="bg-hexa-bg border-hexa-border text-hexa-text-dark h-11"
+                  />
+                </div>
+              </div>
+
+              {/* Budget */}
               <div className="space-y-2.5">
-                <Label htmlFor="deadline" className="text-hexa-text-dark text-base font-medium">
-                  {language === "en" ? "Expected Deadline" : "الموعد المتوقع"}
+                <Label className="text-hexa-text-dark text-base font-medium block">
+                  {language === "en" ? "Budget" : "الميزانية"}
                 </Label>
-                <Input
-                  id="deadline"
-                  name="deadline"
-                  type="date"
-                  value={formData.deadline}
-                  onChange={handleInputChange}
-                  className="bg-hexa-bg border-hexa-border text-hexa-text-dark h-11"
-                />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-2 space-y-2.5">
+                    <Label htmlFor="budgetAmount" className="text-hexa-text-dark text-sm font-medium">
+                      {language === "en" ? "Amount" : "المبلغ"}
+                    </Label>
+                    <Input
+                      id="budgetAmount"
+                      name="budgetAmount"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.budgetAmount}
+                      onChange={handleInputChange}
+                      className="bg-hexa-bg border-hexa-border text-hexa-text-dark h-11"
+                      placeholder={language === "en" ? "e.g., 500000" : "مثال: 500000"}
+                    />
+                  </div>
+                  <div className="space-y-2.5">
+                    <Label htmlFor="budgetCurrency" className="text-hexa-text-dark text-sm font-medium">
+                      {language === "en" ? "Currency" : "العملة"}
+                    </Label>
+                    <Select
+                      value={formData.budgetCurrency}
+                      onValueChange={(value) => setFormData((prev) => ({ ...prev, budgetCurrency: value }))}
+                    >
+                      <SelectTrigger className="bg-hexa-bg border-hexa-border text-hexa-text-dark h-11">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-hexa-card border-hexa-border">
+                        <SelectItem value="SAR" className="text-hexa-text-dark">SAR</SelectItem>
+                        <SelectItem value="USD" className="text-hexa-text-dark">USD</SelectItem>
+                        <SelectItem value="EUR" className="text-hexa-text-dark">EUR</SelectItem>
+                        <SelectItem value="AED" className="text-hexa-text-dark">AED</SelectItem>
+                        <SelectItem value="EGP" className="text-hexa-text-dark">EGP</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
 
               {/* Description */}
@@ -518,6 +751,112 @@ const CreateProject = () => {
                 />
               </div>
 
+              {/* Tags */}
+              <div className="space-y-2.5">
+                <Label htmlFor="tags" className="text-hexa-text-dark text-base font-medium">
+                  {language === "en" ? "Tags" : "الوسوم"}
+                </Label>
+                <Input
+                  id="tags"
+                  type="text"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={handleTagInputKeyDown}
+                  className="bg-hexa-bg border-hexa-border text-hexa-text-dark h-11"
+                  placeholder={language === "en" ? "Press Enter to add a tag" : "اضغط Enter لإضافة وسم"}
+                />
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {formData.tags.map((tag, index) => (
+                    <Badge
+                      key={index}
+                      variant="secondary"
+                      className="bg-hexa-secondary/20 text-hexa-text-dark hover:bg-hexa-secondary/30 px-3 py-1"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        className="ml-2 hover:text-red-500"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+                <p className="text-xs text-hexa-text-light">
+                  {language === "en" 
+                    ? "Add tags to help categorize your project (max 50 characters per tag)"
+                    : "أضف وسوماً لمساعدة في تصنيف مشروعك (حد أقصى 50 حرف لكل وسم)"}
+                </p>
+              </div>
+
+              {/* Attachments */}
+              <div className="space-y-2.5">
+                <Label className="text-hexa-text-dark text-base font-medium block">
+                  {language === "en" ? "Attachments" : "المرفقات"}
+                </Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-hexa-border bg-hexa-bg text-hexa-text-light hover:bg-hexa-secondary/20 hover:text-hexa-secondary hover:border-hexa-secondary"
+                  disabled={uploading}
+                >
+                  <Upload className={`w-4 h-4 ${language === "ar" ? "ml-2" : "mr-2"}`} />
+                  {language === "en" ? "Upload Files" : "رفع ملفات"}
+                </Button>
+                {uploading && (
+                  <div className="mt-2">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-hexa-secondary" />
+                      <span className="text-sm text-hexa-text-light">
+                        {language === "en" ? "Uploading..." : "جاري الرفع..."} {uploadProgress}%
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {attachments.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {attachments.map((file, index) => {
+                      const fileSize = file.size > 1024 * 1024 
+                        ? `${(file.size / (1024 * 1024)).toFixed(2)} MB`
+                        : `${(file.size / 1024).toFixed(2)} KB`;
+                      return (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-2 bg-hexa-bg border border-hexa-border rounded-lg"
+                        >
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <span className="text-sm text-hexa-text-dark truncate">{file.name}</span>
+                            <span className="text-xs text-hexa-text-light">({fileSize})</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeAttachment(index)}
+                            className="ml-2 hover:text-red-500 text-hexa-text-light"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <p className="text-xs text-hexa-text-light">
+                  {language === "en" 
+                    ? "Upload images, PDFs, or documents (max 10MB per file)"
+                    : "ارفع صوراً أو ملفات PDF أو مستندات (حد أقصى 10 ميجابايت لكل ملف)"}
+                </p>
+              </div>
+
               {/* Form Actions */}
               <div className="flex items-center justify-end gap-4 pt-6 mt-6 border-t border-hexa-border">
                 <Button
@@ -531,9 +870,19 @@ const CreateProject = () => {
                 <Button
                   type="submit"
                   className="bg-hexa-secondary hover:bg-hexa-secondary/90 text-black font-semibold px-6 h-11"
+                  disabled={uploading}
                 >
-                  <Save className={`w-4 h-4 ${language === "ar" ? "ml-2" : "mr-2"}`} />
-                  {language === "en" ? "Create Project" : "إنشاء المشروع"}
+                  {uploading ? (
+                    <>
+                      <Loader2 className={`w-4 h-4 animate-spin ${language === "ar" ? "ml-2" : "mr-2"}`} />
+                      {language === "en" ? "Creating..." : "جاري الإنشاء..."}
+                    </>
+                  ) : (
+                    <>
+                      <Save className={`w-4 h-4 ${language === "ar" ? "ml-2" : "mr-2"}`} />
+                      {language === "en" ? "Create Project" : "إنشاء المشروع"}
+                    </>
+                  )}
                 </Button>
               </div>
             </form>

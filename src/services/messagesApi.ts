@@ -11,7 +11,13 @@ export interface ProjectRoom {
 }
 
 export interface ChatRoomParticipant {
-  user: string;
+  user: string | {
+    _id: string;
+    name: string;
+    email: string;
+    role: string;
+    avatar?: { url: string };
+  };
   role: 'admin' | 'client' | 'engineer' | 'company';
   joinedAt: string;
   lastReadAt?: string;
@@ -25,8 +31,15 @@ export interface LastMessage {
 
 export interface ChatRoom {
   _id: string;
-  project: string;
-  projectRoom: string;
+  project: string | {
+    _id: string;
+    title: string;
+    status: string;
+  };
+  projectRoom: string | {
+    _id: string;
+    projectTitle: string;
+  };
   type: 'admin-engineer' | 'admin-company' | 'admin-client' | 'group';
   engineer?: string;
   participants: ChatRoomParticipant[];
@@ -83,8 +96,32 @@ export interface Message {
 export const messagesApi = {
   // Get all project rooms (Admin sees all)
   getProjectRooms: async (): Promise<ProjectRoom[]> => {
-    const response = await http.get('/project-rooms');
-    return response.data?.data || response.data || [];
+    try {
+      const response = await http.get('/project-rooms');
+      return response.data?.data || response.data || [];
+    } catch (error: any) {
+      // Handle rate limiting (429) - http.js will retry automatically
+      if (error.response?.status === 429 || error.isRateLimitError) {
+        console.warn('⏳ Rate limit exceeded for project-rooms, will retry automatically');
+        // Return empty array and let http.js retry
+        throw error; // Re-throw to let http.js handle retry
+      }
+      // Re-throw other errors
+      throw error;
+    }
+  },
+
+  // Get all chat rooms (Admin sees all chat rooms in the system)
+  getAllChatRooms: async (): Promise<ChatRoom[]> => {
+    try {
+      const response = await http.get('/chat-rooms');
+      return response.data?.data || response.data || [];
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        return [];
+      }
+      throw error;
+    }
   },
 
   // Get chat rooms for a specific project room

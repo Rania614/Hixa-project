@@ -106,14 +106,28 @@ const CompanyMessages = () => {
       // Filter: Company sees only project rooms for projects they submitted proposals for
       // Backend should already filter this, but we add extra safety
       setProjectRooms(rooms);
-      if (rooms.length > 0 && !selectedProjectRoom) {
-        setSelectedProjectRoom(rooms[0]);
-        console.log('✅ Selected first project room:', rooms[0]._id);
-      } else if (rooms.length === 0) {
+      setSelectedProjectRoom((prev) => {
+        if (!prev && rooms.length > 0) {
+          console.log('✅ Selected first project room:', rooms[0]._id);
+          return rooms[0];
+        }
+        return prev;
+      });
+      if (rooms.length === 0) {
         console.log('⚠️ No project rooms found - company has not submitted any proposals yet');
       }
     } catch (error: any) {
       console.error('❌ Error loading project rooms:', error);
+      
+      // Handle rate limiting (429) gracefully
+      if (error.response?.status === 429 || error.isRateLimitError) {
+        console.warn('⏳ Rate limit exceeded, will retry automatically');
+        // Don't show error toast for rate limiting - http.js will retry automatically
+        // Just set empty array to prevent UI issues
+        setProjectRooms([]);
+        return;
+      }
+      
       if (error.response?.status !== 404) {
         toast.error(language === 'en' ? 'Failed to load projects' : 'فشل تحميل المشاريع');
       }
@@ -121,7 +135,7 @@ const CompanyMessages = () => {
     } finally {
       setLoading(false);
     }
-  }, [language, selectedProjectRoom]);
+  }, [language]);
 
   // Load Chat Rooms (filter: admin-company/admin-engineer and group only)
   const loadChatRooms = useCallback(async (projectRoomId: string) => {
@@ -131,7 +145,7 @@ const CompanyMessages = () => {
       console.log('📥 Raw chat rooms from API:', rooms);
       console.log('📥 Current user:', user?._id || user?.id);
       
-      // Filter: Company sees only admin-company/admin-engineer (their own) and group chat rooms
+      // Filter: Company sees admin-client (chat with admin), admin-company, admin-engineer (their own), and group chat rooms
       const filteredRooms = rooms.filter(room => {
         console.log('🔍 Checking room:', room._id, 'type:', room.type);
         
@@ -148,6 +162,27 @@ const CompanyMessages = () => {
             return matches;
           });
           console.log('🔍 Group room participant check:', isParticipant);
+          return isParticipant;
+        }
+        
+        // Admin-client rooms: include if company is a participant (chat with admin after assignment)
+        if (room.type === 'admin-client') {
+          const userId = user?._id || user?.id;
+          const isParticipant = room.participants?.some(p => {
+            const participantId = typeof p.user === 'string' 
+              ? p.user 
+              : (typeof p.user === 'object' && p.user !== null 
+                ? (p.user._id || p.user.id || p.user) 
+                : p.user);
+            const matches = participantId?.toString() === userId?.toString();
+            console.log('🔍 Admin-client participant check:', { 
+              participantId: participantId?.toString(), 
+              userId: userId?.toString(), 
+              matches 
+            });
+            return matches;
+          }) || false;
+          console.log('🔍 Admin-client final check:', { isParticipant, roomType: room.type });
           return isParticipant;
         }
         
@@ -406,7 +441,7 @@ const CompanyMessages = () => {
 
   // Get Chat Room Title
   const getChatRoomTitle = (chatRoom: ChatRoom): string => {
-    if (chatRoom.type === 'admin-engineer' || chatRoom.type === 'admin-company') {
+    if (chatRoom.type === 'admin-client' || chatRoom.type === 'admin-engineer' || chatRoom.type === 'admin-company') {
       return language === 'en' ? 'Admin' : 'المسؤول';
     } else if (chatRoom.type === 'group') {
       return language === 'en' ? 'Group Chat' : 'الدردشة الجماعية';
@@ -416,7 +451,7 @@ const CompanyMessages = () => {
 
   // Get Chat Room Avatar
   const getChatRoomAvatar = (chatRoom: ChatRoom): string => {
-    if (chatRoom.type === 'admin-engineer' || chatRoom.type === 'admin-company') {
+    if (chatRoom.type === 'admin-client' || chatRoom.type === 'admin-engineer' || chatRoom.type === 'admin-company') {
       return language === 'en' ? 'A' : 'م';
     } else if (chatRoom.type === 'group') {
       return language === 'en' ? 'G' : 'ج';
@@ -458,16 +493,19 @@ const CompanyMessages = () => {
     setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Effects
+  // Effects - Load project rooms only once on mount
   useEffect(() => {
     loadProjectRooms();
-  }, [loadProjectRooms]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
+  // Load chat rooms when project room changes
   useEffect(() => {
-    if (selectedProjectRoom) {
+    if (selectedProjectRoom?._id) {
       loadChatRooms(selectedProjectRoom._id);
     }
-  }, [selectedProjectRoom, loadChatRooms]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProjectRoom?._id]); // Only depend on project room ID
 
   // Track if we've already tried to load messages for this chat room
   const loadAttemptedRef = useRef<string | null>(null);

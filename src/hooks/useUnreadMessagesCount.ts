@@ -38,6 +38,27 @@ export const useUnreadMessagesCount = (refreshInterval: number = 30000) => {
         return;
       }
       
+      // Don't show error for CORS/Network errors (502, ERR_NETWORK, CORS issues)
+      // These are usually temporary server issues
+      if (
+        err.code === 'ERR_NETWORK' || 
+        err.message?.includes('CORS') ||
+        err.message?.includes('Network Error') ||
+        err.response?.status === 502 || // Bad Gateway
+        err.response?.status === 503 || // Service Unavailable
+        err.response?.status === 504    // Gateway Timeout
+      ) {
+        console.warn('Network/CORS error fetching unread count. Will retry later.', {
+          code: err.code,
+          status: err.response?.status,
+          message: err.message
+        });
+        // Don't set error state for network issues - it will retry automatically
+        setLoading(false);
+        return;
+      }
+      
+      // Only set error for actual API errors (not network/CORS issues)
       const errorMessage = err.response?.data?.message || err.message || 'فشل في جلب عدد الرسائل غير المقروءة';
       setError(errorMessage);
       console.error('Error fetching unread count:', err);

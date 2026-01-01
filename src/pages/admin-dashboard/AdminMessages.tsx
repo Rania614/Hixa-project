@@ -14,6 +14,7 @@ import { toast } from "@/components/ui/sonner";
 import { messagesApi, ProjectRoom, ChatRoom, Message } from "@/services/messagesApi";
 import { socketService, SocketMessageEvent } from "@/services/socketService";
 import { formatDistanceToNow } from "date-fns";
+import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import {
   Dialog,
   DialogContent,
@@ -47,6 +48,11 @@ const AdminMessages = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [filter, setFilter] = useState<'all' | 'client' | 'engineer'>('all');
+  const [viewMode, setViewMode] = useState<'all' | 'project'>('all'); // 'all' = show all chat rooms, 'project' = show by project
+  
+  // Unread messages count
+  const { unreadCount } = useUnreadMessagesCount(30000); // Refresh every 30 seconds
   
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -289,6 +295,29 @@ const AdminMessages = () => {
       } else {
         toast.error(language === 'en' ? 'Failed to load projects' : 'فشل تحميل المشاريع');
       }
+    } finally {
+      setLoading(false);
+    }
+  }, [language]);
+
+  // Load all chat rooms (Admin sees all chat rooms in the system)
+  const loadAllChatRooms = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const rooms = await messagesApi.getAllChatRooms();
+      setChatRooms(rooms);
+      setSelectedChatRoom((prev) => {
+        if (!prev && rooms.length > 0) {
+          return rooms[0];
+        }
+        return prev;
+      });
+    } catch (error: any) {
+      console.error('Error loading all chat rooms:', error);
+      if (error.response?.status !== 404) {
+        toast.error(language === 'en' ? 'Failed to load chat rooms' : 'فشل تحميل غرف الدردشة');
+      }
+      setChatRooms([]);
     } finally {
       setLoading(false);
     }
@@ -658,6 +687,19 @@ const AdminMessages = () => {
     return language === 'en' ? 'Chat' : 'محادثة';
   };
 
+  const getProjectTitle = (chatRoom: ChatRoom): string => {
+    if (typeof chatRoom.project === 'object' && chatRoom.project !== null) {
+      return chatRoom.project.title || '';
+    }
+    if (typeof chatRoom.projectRoom === 'object' && chatRoom.projectRoom !== null) {
+      return chatRoom.projectRoom.projectTitle || '';
+    }
+    // Fallback: try to find project from projectRooms
+    const projectId = typeof chatRoom.project === 'string' ? chatRoom.project : '';
+    const projectRoom = projectRooms.find(pr => pr.project === projectId);
+    return projectRoom?.projectTitle || '';
+  };
+
   const getChatRoomSubtitle = (chatRoom: ChatRoom): string => {
     if (chatRoom.type === 'admin-client') {
       return language === 'en' ? 'Project Owner' : 'صاحب المشروع';
@@ -701,7 +743,11 @@ const AdminMessages = () => {
   };
 
   const getUnreadCount = (chatRoom: ChatRoom): number => {
-    return 0; // Placeholder
+    if (!unreadCount) return 0;
+    const roomCount = unreadCount.unreadCounts.find(
+      (uc) => uc.chatRoom === chatRoom._id
+    );
+    return roomCount?.count || 0;
   };
 
   const formatTime = (dateString: string): string => {
@@ -719,7 +765,11 @@ const AdminMessages = () => {
 
   // Effects
   useEffect(() => {
-    loadProjectRooms();
+    if (viewMode === 'all') {
+      loadAllChatRooms();
+    } else {
+      loadProjectRooms();
+    }
     socketService.connect();
     const handleNewMessage = (data: SocketMessageEvent) => {
       console.log('📨 New message received:', data);
@@ -771,13 +821,15 @@ const AdminMessages = () => {
     return () => {
       socketService.off('new_message', handleNewMessage);
     };
-  }, [selectedChatRoom?._id, scrollToBottom, loadProjectRooms]);
+  }, [selectedChatRoom?._id, scrollToBottom, loadProjectRooms, loadAllChatRooms, viewMode]);
 
   useEffect(() => {
-    if (selectedProjectRoom) {
+    if (viewMode === 'project' && selectedProjectRoom) {
       loadChatRooms(selectedProjectRoom._id);
+    } else if (viewMode === 'all') {
+      loadAllChatRooms();
     }
-  }, [selectedProjectRoom?._id, loadChatRooms]);
+  }, [selectedProjectRoom?._id, loadChatRooms, viewMode, loadAllChatRooms]);
 
   // Use ref to prevent multiple loads for the same chat room
   const loadAttemptedRef = React.useRef<string | null>(null);
@@ -810,7 +862,12 @@ const AdminMessages = () => {
   }, [selectedChatRoom?._id]); // Remove loadMessages from dependencies
 
   const filteredChatRooms = chatRooms.filter((room) => {
+    // Filter by type
+    if (filter === 'client' && room.type !== 'admin-client') return false;
+    if (filter === 'engineer' && room.type !== 'admin-engineer') return false;
     if (room.type === 'group') return false;
+    
+    // Filter by search term
     const title = getChatRoomTitle(room);
     if (!title || typeof title !== 'string') return true; // Include if title is invalid
     return title.toLowerCase().includes(searchTerm.toLowerCase());
@@ -836,12 +893,13 @@ const AdminMessages = () => {
 
            {/* Main Content - 2 Columns */}
            <div className="flex-1 flex gap-2 overflow-hidden min-h-0">
-             {/* Left Sidebar - Projects */}
-             <Card className="w-48 flex-shrink-0 flex flex-col overflow-hidden glass-card h-full">
-               <CardHeader className="flex-shrink-0 pb-2 px-3 pt-3">
-                 <CardTitle className="text-sm font-semibold">
-                   {language === "en" ? "Projects" : "المشاريع"}
-                 </CardTitle>
+             {/* Left Sidebar - Projects or View Mode Toggle */}
+             {viewMode === 'project' ? (
+               <Card className="w-48 flex-shrink-0 flex flex-col overflow-hidden glass-card h-full">
+                 <CardHeader className="flex-shrink-0 pb-2 px-3 pt-3">
+                   <CardTitle className="text-sm font-semibold">
+                     {language === "en" ? "Projects" : "المشاريع"}
+                   </CardTitle>
                  <div className="relative mt-2">
                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                          <Input
@@ -885,6 +943,33 @@ const AdminMessages = () => {
                 </ScrollArea>
               </CardContent>
             </Card>
+            ) : (
+              <Card className="w-48 flex-shrink-0 flex flex-col overflow-hidden glass-card h-full">
+                <CardHeader className="flex-shrink-0 pb-2 px-3 pt-3">
+                  <CardTitle className="text-sm font-semibold mb-2">
+                    {language === "en" ? "View Mode" : "وضع العرض"}
+                  </CardTitle>
+                  <div className="flex flex-col gap-1.5">
+                    <Button
+                      variant={viewMode === 'all' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setViewMode('all')}
+                      className="h-7 text-xs justify-start"
+                    >
+                      {language === "en" ? "All Chats" : "جميع المحادثات"}
+                    </Button>
+                    <Button
+                      variant={viewMode === 'project' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setViewMode('project')}
+                      className="h-7 text-xs justify-start"
+                    >
+                      {language === "en" ? "By Project" : "حسب المشروع"}
+                    </Button>
+                  </div>
+                </CardHeader>
+              </Card>
+            )}
 
              {/* Main Area - Chats & Messages */}
              <div className="flex-1 flex gap-2 overflow-hidden min-h-0">
@@ -893,13 +978,40 @@ const AdminMessages = () => {
                  <CardHeader className="flex-shrink-0 pb-2 px-3 pt-3">
                    <div className="flex items-center justify-between mb-2">
                      <CardTitle className="text-sm font-semibold truncate">
-                       {selectedProjectRoom ? selectedProjectRoom.projectTitle : (language === "en" ? "Chats" : "المحادثات")}
+                       {viewMode === 'all' 
+                         ? (language === "en" ? "All Chats" : "جميع المحادثات")
+                         : (selectedProjectRoom ? selectedProjectRoom.projectTitle : (language === "en" ? "Chats" : "المحادثات"))}
                      </CardTitle>
-                     {selectedProjectRoom && (
-                       <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
-                         {filteredChatRooms.length}
-                       </Badge>
-                     )}
+                     <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                       {filteredChatRooms.length}
+                     </Badge>
+                   </div>
+                   {/* Filter Buttons */}
+                   <div className="flex gap-1 mb-2">
+                     <Button
+                       variant={filter === 'all' ? 'default' : 'outline'}
+                       size="sm"
+                       onClick={() => setFilter('all')}
+                       className="h-6 text-[10px] px-2 flex-1"
+                     >
+                       {language === "en" ? "All" : "الكل"}
+                     </Button>
+                     <Button
+                       variant={filter === 'client' ? 'default' : 'outline'}
+                       size="sm"
+                       onClick={() => setFilter('client')}
+                       className="h-6 text-[10px] px-2 flex-1"
+                     >
+                       {language === "en" ? "Clients" : "العملاء"}
+                     </Button>
+                     <Button
+                       variant={filter === 'engineer' ? 'default' : 'outline'}
+                       size="sm"
+                       onClick={() => setFilter('engineer')}
+                       className="h-6 text-[10px] px-2 flex-1"
+                     >
+                       {language === "en" ? "Engineers" : "المهندسين"}
+                     </Button>
                    </div>
                       <div className="relative">
                      <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
@@ -914,7 +1026,7 @@ const AdminMessages = () => {
                  <CardContent className="flex-1 overflow-hidden p-0 min-h-0">
                    <ScrollArea className="h-full">
                       <div className="p-2">
-                    {!selectedProjectRoom ? (
+                    {viewMode === 'project' && !selectedProjectRoom ? (
                       <p className="text-xs text-muted-foreground/70 text-center py-8">
                         {language === "en" ? "Select a project" : "اختر مشروع"}
                       </p>
@@ -970,6 +1082,11 @@ const AdminMessages = () => {
                                  {subtitle && (
                                    <p className="text-xs text-muted-foreground/60 mb-0.5">
                                      {subtitle}
+                                   </p>
+                                 )}
+                                 {viewMode === 'all' && (
+                                   <p className="text-xs text-muted-foreground/50 mb-0.5 truncate">
+                                     {getProjectTitle(room)}
                                    </p>
                                  )}
                                  {room.lastMessage && (

@@ -131,6 +131,38 @@ http.interceptors.response.use(
       return Promise.resolve({ data: null });
     }
 
+    // Handle 429 Too Many Requests - Rate Limiting
+    if (error.response?.status === 429) {
+      const retryAfter = error.response?.headers?.['retry-after'] || error.response?.headers?.['Retry-After'];
+      const retryDelay = retryAfter ? parseInt(retryAfter) * 1000 : 5000; // Default 5 seconds
+      
+      // Check if this request has already been retried
+      const retryCount = error.config.__retryCount || 0;
+      const maxRetries = 2; // Maximum 2 retries
+      
+      if (retryCount < maxRetries) {
+        console.warn(`⏳ 429 Too Many Requests - Retrying (${retryCount + 1}/${maxRetries}) after ${retryDelay}ms:`, error.config?.url);
+        
+        // Mark this request as retried
+        error.config.__retryCount = retryCount + 1;
+        
+        // Wait before retrying with exponential backoff
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            resolve(http.request(error.config));
+          }, retryDelay * (retryCount + 1)); // Exponential backoff: 5s, 10s, 15s
+        });
+      } else {
+        console.error("❌ 429 Too Many Requests - Max retries reached:", error.config?.url);
+        // Return a graceful error response instead of rejecting
+        return Promise.reject({
+          ...error,
+          isRateLimitError: true,
+          message: 'Too many requests. Please wait a moment and try again.',
+        });
+      }
+    }
+
     // Handle Network Errors (ERR_NETWORK, ECONNREFUSED, etc.)
     if (!error.response) {
       // Network error - no response from server
@@ -141,27 +173,38 @@ http.interceptors.response.use(
         ? `${error.config.baseURL.replace(/\/+$/, '')}/${error.config.url.replace(/^\/+/, '')}` 
         : error.config?.url || 'unknown';
       
-      console.error("🌐 Network Error:", {
-        message: errorMessage,
-        code: errorCode,
-        url: error.config?.url,
-        baseURL: error.config?.baseURL,
-        attemptedURL: attemptedURL,
-        currentOrigin: window.location.origin,
-        envBaseURL: import.meta.env.VITE_API_BASE_URL,
-      });
+      // Only log network errors in development or for non-optional endpoints
+      // For optional endpoints like /messages/unread/count, log as warning instead
+      const isOptionalEndpoint = error.config?.url?.includes('unread/count') || 
+                                 error.config?.url?.includes('notifications');
+      
+      if (isOptionalEndpoint) {
+        // For optional endpoints, just log a warning (less verbose)
+        console.warn("⚠️ Network error for optional endpoint:", error.config?.url);
+      } else {
+        // For required endpoints, log full error details
+        console.error("🌐 Network Error:", {
+          message: errorMessage,
+          code: errorCode,
+          url: error.config?.url,
+          baseURL: error.config?.baseURL,
+          attemptedURL: attemptedURL,
+          currentOrigin: window.location.origin,
+          envBaseURL: import.meta.env.VITE_API_BASE_URL,
+        });
 
-      // Check if it's a CORS error
-      if (errorMessage.includes('CORS') || errorMessage.includes('cors') || errorCode === 'ERR_NETWORK') {
-        console.error("🚫 CORS or Network Error - Possible causes:");
-        console.error("  1. Server is not running");
-        console.error("  2. CORS not configured correctly");
-        console.error("  3. Wrong baseURL:", baseURL);
-        console.error("  4. Network connectivity issue");
-        console.error("  5. Firewall blocking the request");
-        console.error("🚫 Current baseURL:", baseURL);
-        console.error("🚫 Attempted URL:", attemptedURL);
-        console.error("🚫 Current origin:", window.location.origin);
+        // Check if it's a CORS error
+        if (errorMessage.includes('CORS') || errorMessage.includes('cors') || errorCode === 'ERR_NETWORK') {
+          console.error("🚫 CORS or Network Error - Possible causes:");
+          console.error("  1. Server is not running");
+          console.error("  2. CORS not configured correctly");
+          console.error("  3. Wrong baseURL:", baseURL);
+          console.error("  4. Network connectivity issue");
+          console.error("  5. Firewall blocking the request");
+          console.error("🚫 Current baseURL:", baseURL);
+          console.error("🚫 Attempted URL:", attemptedURL);
+          console.error("🚫 Current origin:", window.location.origin);
+        }
       }
 
       // Check if it's a timeout
