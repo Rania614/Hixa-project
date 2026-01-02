@@ -31,6 +31,13 @@ const AdminNotifications = () => {
   useNotificationWebSocket({
     enabled: true,
     onNewNotification: (notification) => {
+      // Show toast notification for new projects
+      if (notification.type === 'project_created' || notification.type === 'project_submitted') {
+        toast.info(notification.title, {
+          description: notification.message,
+          duration: 5000,
+        });
+      }
       // Refresh notifications list when a new notification arrives
       refetch();
       refetchCount();
@@ -39,6 +46,9 @@ const AdminNotifications = () => {
 
   const getIcon = (type: Notification["type"]) => {
     switch (type) {
+      case "project_created":
+      case "project_submitted":
+        return <FileText className="w-5 h-5 text-blue-500" />;
       case "proposal_submitted":
       case "proposal_accepted":
       case "proposal_rejected":

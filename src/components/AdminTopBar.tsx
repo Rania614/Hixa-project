@@ -6,12 +6,22 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { useUnreadNotificationsCount } from '@/hooks/useUnreadNotificationsCount';
 import { useUnreadMessagesCount } from '@/hooks/useUnreadMessagesCount';
+import { useNotificationWebSocket } from '@/hooks/useNotificationWebSocket';
 
 export const AdminTopBar = () => {
   const { language } = useApp();
   const navigate = useNavigate();
-  const { unreadCount } = useUnreadNotificationsCount();
+  const { unreadCount, refetch: refetchNotificationsCount } = useUnreadNotificationsCount();
   const { unreadCount: unreadMessagesCount } = useUnreadMessagesCount(30000);
+
+  // Listen for new notifications to update the badge in real-time
+  useNotificationWebSocket({
+    enabled: true,
+    onNewNotification: () => {
+      // Refresh unread count when new notification arrives
+      refetchNotificationsCount();
+    },
+  });
 
   return (
     <header className="h-16 border-b border-border bg-card/50 backdrop-blur-lg flex items-center justify-between px-6">
