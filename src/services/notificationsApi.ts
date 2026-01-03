@@ -2,6 +2,8 @@ import { http } from './http';
 
 // Types based on the backend structure
 export type NotificationType =
+  | 'project_created'
+  | 'project_submitted'
   | 'project_approved'
   | 'project_rejected'
   | 'proposal_submitted'

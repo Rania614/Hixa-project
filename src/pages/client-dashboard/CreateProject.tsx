@@ -574,7 +574,7 @@ const CreateProject = () => {
                     </SelectContent>
                   </Select>
                 </div>
-
+{/* 
                 <div className="space-y-2.5">
                   <Label htmlFor="category" className="text-hexa-text-dark text-base font-medium">
                     {language === "en" ? "Category" : "الفئة"}
@@ -587,7 +587,7 @@ const CreateProject = () => {
                     className="bg-hexa-bg border-hexa-border text-hexa-text-dark placeholder:text-hexa-text-light h-11"
                     placeholder={language === "en" ? "e.g., Residential, Commercial" : "مثل: سكني، تجاري"}
                   />
-                </div>
+                </div> */}
               </div>
 
               {/* Business Scope (نطاق الأعمال) - Required */}

@@ -1,9 +1,13 @@
 import { useLandingStore } from '@/stores/landingStore';
 import { useApp } from '@/context/AppContext';
 import { useShallow } from 'zustand/react/shallow';
+import React from 'react';
+import { ExternalLink } from 'lucide-react';
 
 export const Partners = () => {
   const { language } = useApp();
+  const isAr = language === 'ar';
+  
   const { partners, loading } = useLandingStore(
     useShallow((state) => ({
       partners: state.partners,
@@ -11,157 +15,99 @@ export const Partners = () => {
     }))
   );
   
-  // Render nothing if content is not loaded yet
-  if (loading || !partners || partners.length === 0) {
-    return null;
-  }
+  if (loading || !partners || partners.length === 0) return null;
   
-  // Filter active partners and handle both name_en/name_ar and name: { en, ar } structures
   const activePartners = partners.filter((partner: any) => partner.isActive !== false && partner.active !== false);
 
   const getPartnerName = (partner: any) => {
-    if (partner.name_en && language === 'en') return partner.name_en;
-    if (partner.name_ar && language === 'ar') return partner.name_ar;
-    if (partner.name?.[language]) return partner.name[language];
-    return partner.name_en || partner.name_ar || partner.name?.en || 'Partner';
-  };
-
-  const getValidLogoUrl = (logo: string | undefined | null) => {
-    if (!logo || logo.trim() === '') return '/placeholder.svg';
-    
-    const trimmedLogo = logo.trim();
-    
-    // FIRST: Check if it looks like a placeholder or invalid value (before any other checks)
-    const invalidPatterns = [
-      'existing-logo',
-      'placeholder',
-      'example.com',
-    ];
-    
-    const isInvalid = invalidPatterns.some(pattern => 
-      trimmedLogo.toLowerCase().includes(pattern.toLowerCase())
-    );
-    
-    if (isInvalid) {
-      return '/placeholder.svg';
-    }
-    
-    // Check if it's a valid URL (starts with http:// or https://)
-    if (trimmedLogo.startsWith('http://') || trimmedLogo.startsWith('https://')) {
-      return trimmedLogo;
-    }
-    
-    // Check if it's a data URL (base64)
-    if (trimmedLogo.startsWith('data:')) {
-      return trimmedLogo;
-    }
-    
-    // If it's a relative path starting with /, use it
-    if (trimmedLogo.startsWith('/')) {
-      return trimmedLogo;
-    }
-    
-    // If it's just a filename without path (like "existing-logo.png"), it's invalid
-    // This catches any string that doesn't start with http://, https://, /, or data:
-    // It's likely just a filename, not a valid URL
-    return '/placeholder.svg';
-  };
-
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    e.currentTarget.src = '/placeholder.svg';
+    if (isAr) return partner.name_ar || partner.name?.ar;
+    return partner.name_en || partner.name?.en;
   };
 
   const handlePartnerClick = (link: string | undefined | null) => {
-    if (!link || link.trim() === '') return;
-    
-    const trimmedLink = link.trim();
-    
-    // Check if it's a valid URL
-    if (trimmedLink.startsWith('http://') || trimmedLink.startsWith('https://')) {
-      window.open(trimmedLink, '_blank', 'noopener,noreferrer');
-    } else if (trimmedLink.startsWith('/')) {
-      // Internal route
-      window.location.href = trimmedLink;
+    if (link && link.trim() !== '' && link !== 'https://example.com') {
+      window.open(link, '_blank', 'noopener,noreferrer');
     }
   };
 
   return (
-    <section id="partners" className="py-20 px-6">
-        <div className="container mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">{language === 'en' ? 'Partners' : 'الشركاء'}</h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              {language === 'en' 
-                ? 'We collaborate with industry leaders to deliver exceptional results.' 
-                : 'نتعاون مع قادة الصناعة لتقديم نتائج استثنائية.'}
-            </p>
-          </div>
-          <div className="relative overflow-hidden">
-            {/* Smooth Sliding Container */}
-            <div 
-              className="flex gap-8 lg:gap-12"
-              style={{
-                animation: `scroll-partners ${Math.max(activePartners.length * 2, 20)}s linear infinite`,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.animationPlayState = 'paused';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.animationPlayState = 'running';
-              }}
-            >
-              {/* First set of partners */}
-              {activePartners.map((partner: any) => {
-                const partnerId = partner._id || partner.id;
-                const partnerName = getPartnerName(partner);
-                const logoUrl = getValidLogoUrl(partner.logo);
-                const partnerLink = partner.link;
-                const hasLink = partnerLink && partnerLink.trim() !== '';
-                
-                return (
-                  <div key={partnerId} className="flex-shrink-0">
-                    <div 
-                      onClick={() => handlePartnerClick(partnerLink)}
-                      className={`hexagon w-32 h-32 sm:w-36 sm:h-36 lg:w-40 lg:h-40 bg-card p-4 sm:p-5 lg:p-6 flex items-center justify-center transition-all duration-300 hover:scale-110 hover:bg-card/80 hover:shadow-lg hover:shadow-gold/20 group overflow-hidden ${hasLink ? 'cursor-pointer' : ''}`}
-                    >
-                      <img 
-                        src={logoUrl} 
-                        alt={partnerName} 
-                        className="w-full h-full object-contain hexagon"
-                        onError={handleImageError}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-              {/* Duplicate set for seamless loop */}
-              {activePartners.map((partner: any) => {
-                const partnerId = `duplicate-${partner._id || partner.id}`;
-                const partnerName = getPartnerName(partner);
-                const logoUrl = getValidLogoUrl(partner.logo);
-                const partnerLink = partner.link;
-                const hasLink = partnerLink && partnerLink.trim() !== '';
-                
-                return (
-                  <div key={partnerId} className="flex-shrink-0">
-                    <div 
-                      onClick={() => handlePartnerClick(partnerLink)}
-                      className={`hexagon w-32 h-32 sm:w-36 sm:h-36 lg:w-40 lg:h-40 bg-card p-4 sm:p-5 lg:p-6 flex items-center justify-center transition-all duration-300 hover:scale-110 hover:bg-card/80 hover:shadow-lg hover:shadow-gold/20 group overflow-hidden ${hasLink ? 'cursor-pointer' : ''}`}
-                    >
-                      <img 
-                        src={logoUrl} 
-                        alt={partnerName} 
-                        className="w-full h-full object-contain hexagon"
-                        onError={handleImageError}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          
+    // الخلفية أصبحت بيج فاتح جداً ومطفأ (درجة دافئة)
+    <section id="partners" className="py-24 bg-[#F5F2ED] overflow-hidden" dir={isAr ? "rtl" : "ltr"}>
+      <div className="container mx-auto px-6">
+        
+        <div className="text-center mb-16">
+          <h2 className="text-4xl font-arabic font-bold text-[#1A1A1A] mb-4">
+            {isAr ? 'شركاؤنا' : 'Our Partners'}
+          </h2>
+          <div className="w-20 h-1 bg-gold mx-auto"></div>
         </div>
-      </section>
+
+        <div className="relative">
+          {/* تدرج جانبي متوافق مع اللون البيج */}
+          <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-[#F5F2ED] to-transparent z-10 pointer-events-none"></div>
+          <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-[#F5F2ED] to-transparent z-10 pointer-events-none"></div>
+
+          <div 
+            className="flex gap-8 animate-scroll-partners hover:pause-animation"
+            style={{ width: 'max-content' }}
+          >
+            {[...activePartners, ...activePartners].map((partner: any, index: number) => {
+              const partnerName = getPartnerName(partner);
+              const logoUrl = partner.logoUrl || partner.logo;
+              const hasLink = partner.link && partner.link !== 'https://example.com';
+              
+              return (
+                <div 
+                  key={`${partner._id}-${index}`}
+                  onClick={() => handlePartnerClick(partner.link)}
+                  className="w-[320px] group cursor-pointer"
+                >
+                  {/* الكارد أبيض دافئ بلمسة زجاجية */}
+                  <div className="relative h-52 bg-white/60 backdrop-blur-md border border-[#E8E1D5] rounded-[32px] p-6 flex flex-col items-center justify-center transition-all duration-500 group-hover:bg-white/90 group-hover:shadow-[0_20px_50px_rgba(232,225,213,0.5)] overflow-hidden">
+                    
+                    {/* اللوجو الكبير (الألوان الأصلية) */}
+                    <div className="h-28 w-full flex items-center justify-center transition-all duration-500 group-hover:scale-90 group-hover:opacity-10">
+                      <img 
+                        src={logoUrl || '/placeholder.svg'} 
+                        alt={partnerName} 
+                        className="max-h-full max-w-[85%] object-contain transition-all duration-700" 
+                        onError={(e) => { e.currentTarget.src = '/placeholder.svg' }}
+                      />
+                    </div>
+
+                    {/* الهوفر الداكن الشفاف */}
+                    <div className="absolute inset-0 bg-[#1A1A1A]/50 backdrop-blur-[2px] flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-400 p-4">
+                      <p className="text-gold font-arabic font-bold text-2xl mb-2 text-center drop-shadow-lg">
+                        {partnerName}
+                      </p>
+                      
+                      {hasLink && (
+                        <div className="flex items-center gap-2 text-white font-medium text-xs uppercase tracking-wider bg-gold/30 px-4 py-1.5 rounded-full border border-gold/40">
+                          <span>{isAr ? 'زيارة الموقع' : 'Visit Website'}</span>
+                          <ExternalLink size={14} className="text-gold" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes scroll-partners {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(${isAr ? '50%' : '-50%'}); }
+        }
+        .animate-scroll-partners {
+          animation: scroll-partners 35s linear infinite;
+        }
+        .hover:pause-animation:hover {
+          animation-play-state: paused;
+        }
+      `}</style>
+    </section>
   );
 };
