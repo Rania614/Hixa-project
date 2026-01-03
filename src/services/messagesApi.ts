@@ -45,6 +45,8 @@ export interface ChatRoom {
   participants: ChatRoomParticipant[];
   lastMessage?: LastMessage;
   status: 'active' | 'archived';
+  adminStartedChat?: boolean; // Admin has started the chat
+  adminObserver?: boolean; // Admin is observer only (for group chats)
   createdAt: string;
 }
 
@@ -330,6 +332,23 @@ export const messagesApi = {
       params: { roomId, query, page, limit },
     });
     return response.data || { data: [], meta: { total: 0, page: 1, limit: 20, pages: 1 } };
+  },
+
+  // Start chat - Admin initiates conversation
+  startChat: async (chatRoomId: string): Promise<ChatRoom> => {
+    const response = await http.post(`/chat-rooms/${chatRoomId}/start-chat`);
+    return response.data?.data || response.data;
+  },
+
+  // Assign engineer from chat room
+  assignEngineerFromChat: async (chatRoomId: string, engineerId?: string): Promise<{
+    project: any;
+    groupChatRoom: ChatRoom;
+  }> => {
+    const response = await http.post(`/chat-rooms/${chatRoomId}/assign-engineer`, {
+      engineerId,
+    });
+    return response.data?.data || response.data;
   },
 };
 

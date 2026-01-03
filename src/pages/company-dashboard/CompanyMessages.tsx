@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Search, Send, Paperclip, Loader2 } from "lucide-react";
+import { Search, Send, Paperclip, Loader2, MessageSquare } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/components/ui/sonner";
 import { messagesApi, ProjectRoom, ChatRoom, Message } from "@/services/messagesApi";
@@ -715,6 +715,19 @@ const CompanyMessages = () => {
                       </div>
                     </div>
                   </div>
+                  {/* Admin Observer Banner - Show for group chats */}
+                  {selectedChatRoom.type === 'group' && selectedChatRoom.adminObserver && (
+                    <div className="flex-shrink-0 bg-blue-500/10 border-b border-blue-500/20 px-4 py-2">
+                      <div className="flex items-center gap-2 text-blue-400 text-xs">
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        <span>
+                          {language === 'en' 
+                            ? 'This chat is monitored by admin to ensure both parties\' rights' 
+                            : 'يتم رؤية محتوى هذه الدردشة من قبل الإدارة لضمان حقوق الطرفين'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                   <ScrollArea className="flex-1 min-h-0" ref={messagesContainerRef}>
                     <div className="p-4 pb-6">
                       {loadingMessages && messages.length === 0 ? (
