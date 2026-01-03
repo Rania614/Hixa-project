@@ -70,6 +70,124 @@ const CompanyLanding = () => {
   const [loadingServiceItem4, setLoadingServiceItem4] = useState(false);
   const [loadingServiceItem3Detail4, setLoadingServiceItem3Detail4] = useState(false);
 
+  // Handle services structure - can be array or object with items array
+  // services can be:
+  // 1. Array directly: [service1, service2, ...]
+  // 2. Object with items: { items: [service1, service2, ...], title_en, title_ar, ... }
+  const safeServices = Array.isArray(services) 
+    ? services 
+    : (services && typeof services === 'object' && 'items' in services && Array.isArray((services as any).items))
+    ? (services as any).items
+    : [];
+  
+  // Extract services metadata (title, subtitle) if services is an object
+  const servicesMetadata = services && typeof services === 'object' && !Array.isArray(services)
+    ? services
+    : null;
+
+  // Calculate allServices using useMemo (must be before useEffect hooks)
+  const allServices = useMemo(() => {
+    const servicesList: any[] = [];
+    
+    // Helper function to extract details from a service
+    const extractDetails = (service: any): any[] => {
+      const details: any[] = [];
+      if (service?.details && typeof service.details === 'object') {
+        Object.keys(service.details).forEach((key) => {
+          const detail = service.details[key];
+          if (detail && typeof detail === 'object') {
+            details.push(detail);
+          }
+        });
+      }
+      return details;
+    };
+    
+    // Add item1 if available
+    if (serviceItem1) {
+      servicesList.push({ 
+        service: serviceItem1, 
+        details: extractDetails(serviceItem1), 
+        serviceId: 'item1' 
+      });
+    }
+    
+    // Add item2 if available
+    if (serviceItem2) {
+      servicesList.push({ 
+        service: serviceItem2, 
+        details: extractDetails(serviceItem2), 
+        serviceId: 'item2' 
+      });
+    }
+    
+    // Add item3 if available
+    if (serviceItem3) {
+      const item3Details = extractDetails(serviceItem3);
+      const detailKeys = new Set<string>();
+      
+      item3Details.forEach((detail: any, index: number) => {
+        if (detail.title_en || detail.title_ar) {
+          detailKeys.add(`detail${index + 1}`);
+        }
+      });
+      
+      if (serviceItem3Detail4 && !detailKeys.has('detail4')) {
+        item3Details.push(serviceItem3Detail4);
+      }
+      
+      servicesList.push({ 
+        service: serviceItem3, 
+        details: item3Details, 
+        serviceId: 'item3' 
+      });
+    }
+    
+    // Add item4 if available
+    if (serviceItem4) {
+      servicesList.push({ 
+        service: serviceItem4, 
+        details: extractDetails(serviceItem4), 
+        serviceId: 'item4' 
+      });
+    }
+    
+    // Add services from safeServices only if they're not already added from API
+    safeServices.forEach((service: any) => {
+      const serviceId = service._id || service.id;
+      const alreadyAdded = servicesList.some(item => {
+        const apiServiceId = item.service?._id || item.service?.id;
+        return apiServiceId === serviceId;
+      });
+      
+      if (!alreadyAdded) {
+        const serviceDetails = serviceId ? servicesDetailsMap[String(serviceId)] || [] : [];
+        servicesList.push({ service, details: serviceDetails, serviceId });
+      }
+    });
+    
+    // Sort by order if available, otherwise by serviceId
+    servicesList.sort((a: any, b: any) => {
+      const orderA = a.service?.order;
+      const orderB = b.service?.order;
+      
+      if (orderA !== undefined && orderB !== undefined) {
+        return orderA - orderB;
+      }
+      
+      const idA = a.serviceId || '';
+      const idB = b.serviceId || '';
+      const numA = idA.match(/\d+/)?.[0] || '999';
+      const numB = idB.match(/\d+/)?.[0] || '999';
+      
+      return parseInt(numA) - parseInt(numB);
+    });
+    
+    return servicesList;
+  }, [serviceItem1, serviceItem2, serviceItem3, serviceItem4, serviceItem3Detail4, safeServices, servicesDetailsMap]);
+
+  const isLoadingServices = loadingServiceItem1 || loadingServiceItem2 || loadingServiceItem3 || loadingServiceItem4 || loadingServiceItem3Detail4;
+
   useEffect(() => {
     // Fetch real data from API immediately
     console.log("🔄 CompanyLanding: Fetching landing data...");
@@ -121,21 +239,6 @@ const CompanyLanding = () => {
       projectsCount: Array.isArray(projects) ? projects.length : 0,
     });
   }, [hero, about, services, projects, loading]);
-
-  // Handle services structure - can be array or object with items array
-  // services can be:
-  // 1. Array directly: [service1, service2, ...]
-  // 2. Object with items: { items: [service1, service2, ...], title_en, title_ar, ... }
-  const safeServices = Array.isArray(services) 
-    ? services 
-    : (services && typeof services === 'object' && 'items' in services && Array.isArray((services as any).items))
-    ? (services as any).items
-    : [];
-  
-  // Extract services metadata (title, subtitle) if services is an object
-  const servicesMetadata = services && typeof services === 'object' && !Array.isArray(services)
-    ? services
-    : null;
   
   // Debug: Log services data
   useEffect(() => {
@@ -395,109 +498,6 @@ const CompanyLanding = () => {
   const handleGetStarted = () => {
     navigate("/platform");
   };
-
-  // Calculate allServices using useMemo
-  const allServices = useMemo(() => {
-    const services: any[] = [];
-    
-    // Helper function to extract details from a service
-    const extractDetails = (service: any): any[] => {
-      const details: any[] = [];
-      if (service?.details && typeof service.details === 'object') {
-        Object.keys(service.details).forEach((key) => {
-          const detail = service.details[key];
-          if (detail && typeof detail === 'object') {
-            details.push(detail);
-          }
-        });
-      }
-      return details;
-    };
-    
-    // Add item1 if available
-    if (serviceItem1) {
-      services.push({ 
-        service: serviceItem1, 
-        details: extractDetails(serviceItem1), 
-        serviceId: 'item1' 
-      });
-    }
-    
-    // Add item2 if available
-    if (serviceItem2) {
-      services.push({ 
-        service: serviceItem2, 
-        details: extractDetails(serviceItem2), 
-        serviceId: 'item2' 
-      });
-    }
-    
-    // Add item3 if available
-    if (serviceItem3) {
-      const item3Details = extractDetails(serviceItem3);
-      const detailKeys = new Set<string>();
-      
-      item3Details.forEach((detail: any, index: number) => {
-        if (detail.title_en || detail.title_ar) {
-          detailKeys.add(`detail${index + 1}`);
-        }
-      });
-      
-      if (serviceItem3Detail4 && !detailKeys.has('detail4')) {
-        item3Details.push(serviceItem3Detail4);
-      }
-      
-      services.push({ 
-        service: serviceItem3, 
-        details: item3Details, 
-        serviceId: 'item3' 
-      });
-    }
-    
-    // Add item4 if available
-    if (serviceItem4) {
-      services.push({ 
-        service: serviceItem4, 
-        details: extractDetails(serviceItem4), 
-        serviceId: 'item4' 
-      });
-    }
-    
-    // Add services from safeServices only if they're not already added from API
-    safeServices.forEach((service: any) => {
-      const serviceId = service._id || service.id;
-      const alreadyAdded = services.some(item => {
-        const apiServiceId = item.service?._id || item.service?.id;
-        return apiServiceId === serviceId;
-      });
-      
-      if (!alreadyAdded) {
-        const serviceDetails = serviceId ? servicesDetailsMap[String(serviceId)] || [] : [];
-        services.push({ service, details: serviceDetails, serviceId });
-      }
-    });
-    
-    // Sort by order if available, otherwise by serviceId
-    services.sort((a: any, b: any) => {
-      const orderA = a.service?.order;
-      const orderB = b.service?.order;
-      
-      if (orderA !== undefined && orderB !== undefined) {
-        return orderA - orderB;
-      }
-      
-      const idA = a.serviceId || '';
-      const idB = b.serviceId || '';
-      const numA = idA.match(/\d+/)?.[0] || '999';
-      const numB = idB.match(/\d+/)?.[0] || '999';
-      
-      return parseInt(numA) - parseInt(numB);
-    });
-    
-    return services;
-  }, [serviceItem1, serviceItem2, serviceItem3, serviceItem4, serviceItem3Detail4, safeServices, servicesDetailsMap]);
-
-  const isLoadingServices = loadingServiceItem1 || loadingServiceItem2 || loadingServiceItem3 || loadingServiceItem4 || loadingServiceItem3Detail4;
 
   // Helper function to render a service card
   const renderServiceCard = (service: any, index: number, serviceDetails: any[] = [], serviceId: string | null = null) => {
@@ -836,8 +836,8 @@ const CompanyLanding = () => {
         language={language}
         getFieldValue={getFieldValue}
         onProjectClick={(project) => {
-          setSelectedProject(project);
-          setProjectModalOpen(true);
+                  setSelectedProject(project);
+                  setProjectModalOpen(true);
         }}
       />
 
@@ -861,10 +861,10 @@ const CompanyLanding = () => {
         getFieldValue={getFieldValue}
         onOrderClick={(service) => {
           setSelectedService(service);
-          setServiceDetailsModalOpen(false);
-          setOrderModalOpen(true);
-          setEmail("");
-          setOrderDetails("");
+                            setServiceDetailsModalOpen(false);
+                            setOrderModalOpen(true);
+                            setEmail("");
+                            setOrderDetails("");
         }}
       />
 
