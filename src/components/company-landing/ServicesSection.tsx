@@ -23,7 +23,7 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
   isLoading,
 }) => {
   return (
-    <section id="services" className="py-16 sm:py-20 px-4 sm:px-6 bg-secondary/30">
+    <section id="services" className="py-16 sm:py-20 px-4 sm:px-6 bg-secondary/95">
       <div className="container mx-auto">
         <div className="text-center mb-12 sm:mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">

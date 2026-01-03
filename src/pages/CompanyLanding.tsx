@@ -21,6 +21,7 @@ import { ProjectDetailsModal } from "@/components/company-landing/modals/Project
 import { ImageModal } from "@/components/company-landing/modals/ImageModal";
 import { OrderModal } from "@/components/company-landing/modals/OrderModal";
 import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
 
 
 const CompanyLanding = () => {
@@ -542,52 +543,48 @@ const CompanyLanding = () => {
     const isExpanded = expandedServiceId === String(cardServiceId);
     const isLoading = cardServiceId ? loadingDetails[String(cardServiceId)] : false;
 
+    const handleReadMoreClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // Ensure service has the ID for modal to fetch details
+      const serviceWithId = {
+        ...service,
+        _id: service._id || service.id || cardServiceId,
+        id: service.id || service._id || cardServiceId,
+      };
+      setSelectedServiceForDetails(serviceWithId);
+      // Get the 4 sections for this service from servicesDetailsMap
+      const serviceDetailsToShow = cardServiceId && servicesDetailsMap[String(cardServiceId)]
+        ? servicesDetailsMap[String(cardServiceId)].slice(0, 4)
+        : serviceDetails.slice(0, 4);
+      setSelectedServiceDetails(serviceDetailsToShow);
+      setServiceDetailsModalOpen(true);
+    };
+
     return (
       <div 
         key={cardServiceId} 
-        className="bg-card text-card-foreground rounded-xl border border-border p-6 sm:p-8 transition-all duration-300 ease-in-out hover:shadow-xl hover:shadow-gold/20 hover:bg-card/80 group flex flex-col"
+        className="bg-card text-card-foreground hexagon border border-border p-6 sm:p-8 md:p-10 transition-all duration-300 ease-in-out hover:shadow-xl hover:shadow-gold/20 hover:bg-card/80 group flex flex-col items-center justify-center w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] md:w-[340px] md:h-[340px] mx-auto relative"
       >
-        {/* Hexagonal Icon/Code at Top Center */}
-        <div className="flex justify-center mb-6">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gold/10 group-hover:bg-gold/20 hexagon flex items-center justify-center transition-colors duration-300">
-            <span className="text-gold group-hover:text-gold-dark font-bold text-lg sm:text-xl transition-colors duration-300">
-              {serviceDisplay}
-            </span>
-          </div>
-        </div>
-
         {/* Service Title */}
-        <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-center text-card-foreground leading-tight">
+        <h3 className="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-center text-card-foreground leading-tight w-full">
           {serviceTitle}
         </h3>
 
         {/* Short Description (One line) */}
-        <p className="text-muted-foreground text-sm sm:text-base leading-relaxed line-clamp-1 text-center flex-grow mb-4">
+        <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed line-clamp-2 text-center mb-4 sm:mb-6 w-full">
           {shortDescription}
         </p>
 
-        {/* Read More Button */}
-        <Button
-          className="mt-auto w-full bg-gold hover:bg-gold-dark text-black font-semibold py-2"
-          onClick={(e) => {
-            e.stopPropagation();
-            // Ensure service has the ID for modal to fetch details
-            const serviceWithId = {
-              ...service,
-              _id: service._id || service.id || cardServiceId,
-              id: service.id || service._id || cardServiceId,
-            };
-            setSelectedServiceForDetails(serviceWithId);
-            // Get the 4 sections for this service from servicesDetailsMap
-            const serviceDetailsToShow = cardServiceId && servicesDetailsMap[String(cardServiceId)]
-              ? servicesDetailsMap[String(cardServiceId)].slice(0, 4)
-              : serviceDetails.slice(0, 4);
-            setSelectedServiceDetails(serviceDetailsToShow);
-            setServiceDetailsModalOpen(true);
-          }}
+        {/* Read More Link */}
+        <a
+          href="#"
+          onClick={handleReadMoreClick}
+          className="flex items-center justify-center gap-2 text-gold hover:text-gold-dark font-semibold text-sm sm:text-base transition-colors duration-300 group/link no-underline"
         >
-          {language === 'en' ? 'Read More' : 'اقرأ المزيد'}
-        </Button>
+          <span>{language === 'en' ? 'Read More' : 'اقرأ المزيد'}</span>
+          <ArrowRight className={`h-4 w-4 transition-transform duration-300 ${language === 'ar' ? 'rotate-180' : ''} group-hover/link:translate-x-1`} />
+        </a>
       </div>
     );
   };
