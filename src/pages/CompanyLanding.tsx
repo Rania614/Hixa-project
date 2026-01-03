@@ -402,14 +402,18 @@ const CompanyLanding = () => {
         setLoadingServiceItem4(false);
       }
 
-      // Fetch service item3 detail4 data
+      // Fetch service item3 detail4 data (optional - endpoint may not exist)
+      // This is handled silently if it doesn't exist
       setLoadingServiceItem3Detail4(true);
       try {
         const response = await http.get('/content/services/item3/details/detail4');
         setServiceItem3Detail4(response.data?.data || response.data);
       } catch (error: any) {
-        // Silently handle 404 (endpoint may not exist)
-        if (error.response?.status !== 404) {
+        // Silently handle 404 (endpoint may not exist) - don't log as error
+        if (error.response?.status === 404) {
+          // Endpoint doesn't exist, which is fine
+          console.log('ℹ️ Endpoint /content/services/item3/details/detail4 not found (this is optional)');
+        } else if (error.response?.status !== 404) {
           console.error('Error fetching service item3 detail4:', error);
         }
       } finally {
@@ -567,8 +571,18 @@ const CompanyLanding = () => {
           className="mt-auto w-full bg-gold hover:bg-gold-dark text-black font-semibold py-2"
           onClick={(e) => {
             e.stopPropagation();
-            setSelectedServiceForDetails(service);
-            setSelectedServiceDetails(serviceDetails);
+            // Ensure service has the ID for modal to fetch details
+            const serviceWithId = {
+              ...service,
+              _id: service._id || service.id || cardServiceId,
+              id: service.id || service._id || cardServiceId,
+            };
+            setSelectedServiceForDetails(serviceWithId);
+            // Get the 4 sections for this service from servicesDetailsMap
+            const serviceDetailsToShow = cardServiceId && servicesDetailsMap[String(cardServiceId)]
+              ? servicesDetailsMap[String(cardServiceId)].slice(0, 4)
+              : serviceDetails.slice(0, 4);
+            setSelectedServiceDetails(serviceDetailsToShow);
             setServiceDetailsModalOpen(true);
           }}
         >
