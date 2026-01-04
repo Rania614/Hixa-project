@@ -24,12 +24,14 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({
   const [serviceSections, setServiceSections] = useState<any[]>([]);
   const [loadingSections, setLoadingSections] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
       setServiceSections([]);
       setLoadingSections(false);
       setExpandedSections(new Set());
+      setSelectedImage(null);
     }
   }, [open]);
 
@@ -111,10 +113,10 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* Modal Container: خلفية داكنة مع حدود خفيفة */}
-      <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] bg-primary-dark border-accent-gold/30 text-text-light rounded-2xl p-6 overflow-hidden flex flex-col">
+      {/* تم تغيير bg-primary-dark إلى bg-[#0A0A0A] وجعل النصوص بيضاء صريحة */}
+      <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] bg-[#0A0A0A] border border-white/10 text-white rounded-2xl p-6 overflow-hidden flex flex-col shadow-2xl">
         <DialogHeader className={`mb-4 flex-shrink-0 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-          <DialogTitle className={`text-2xl font-bold uppercase tracking-wider text-text-light ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+          <DialogTitle className={`text-2xl font-bold uppercase tracking-wider text-white ${language === 'ar' ? 'text-right' : 'text-left'}`}>
             {serviceTitle}
           </DialogTitle>
           {serviceDescription && (
@@ -137,7 +139,6 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({
                   const sectionDetails = getFieldValue(section, "details", language) || section?.details_en || "";
                   const sectionImage = section?.image || section?.imageUrl || "";
                   
-                  // Parse details into array
                   const detailsArray = typeof sectionDetails === 'string' 
                     ? sectionDetails.split('\n').filter((line: string) => line.trim())
                     : Array.isArray(sectionDetails)
@@ -153,25 +154,29 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({
                       key={index} 
                       className="flex items-center gap-6 p-2 group transition-all"
                     >
-                      {/* 1. Image Left - Rounded corners like the image */}
                       <div className="w-32 h-32 flex-shrink-0">
-                        <img
-                          src={sectionImage}
-                          alt={sectionTitle}
-                          className="w-full h-full object-cover rounded-3xl border border-gray-700 shadow-lg"
-                        />
+                        {sectionImage ? (
+                          <img
+                            src={sectionImage}
+                            alt={sectionTitle}
+                            className="w-full h-full object-cover rounded-3xl border border-white/10 shadow-lg cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => setSelectedImage(sectionImage)}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-800 rounded-3xl border border-white/10 flex items-center justify-center">
+                            <span className="text-gray-500 text-xs">No Image</span>
+                          </div>
+                        )}
                       </div>
 
-                      {/* 2. Text Center */}
                       <div className="flex-1 space-y-3">
                         {detailsArray.length > 0 && (
                           <div>
                             <div 
-                              className="text-sm text-gray-300 leading-relaxed space-y-1 cursor-pointer"
+                              className="text-sm text-gray-200 leading-relaxed space-y-1 cursor-pointer"
                               onClick={() => hasMore && toggleSection(index)}
                             >
                               {visibleItems.map((item: string, itemIndex: number) => {
-                                // Remove any existing numbers or bullets from the item text
                                 const cleanItem = item.trim().replace(/^[\d•.\-\s]+/, '').trim();
                                 return (
                                   <div key={itemIndex} className="flex gap-2">
@@ -184,7 +189,7 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({
                             {hasMore && (
                               <button
                                 onClick={() => toggleSection(index)}
-                                className="text-accent-gold hover:text-accent-dark text-xs mt-2 underline cursor-pointer"
+                                className="text-gold hover:text-gold-dark text-xs mt-2 underline cursor-pointer"
                               >
                                 {isExpanded 
                                   ? (language === 'en' ? 'Show Less' : 'عرض أقل')
@@ -196,10 +201,8 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({
                         )}
                       </div>
 
-                      {/* 3. QR Code and Order Link Right */}
                       <div className="flex flex-col items-center gap-2 flex-shrink-0">
                         <div className="w-20 h-20 bg-white p-1 rounded-sm">
-                           {/* هنا يمكن وضع الـ QR Code الفعلي أو صورة ثابتة له */}
                           <div className="w-full h-full border border-black flex items-center justify-center">
                               <span className="text-[8px] text-black font-bold">QR CODE</span>
                           </div>
@@ -210,7 +213,7 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({
                             e.preventDefault();
                             onOrderClick(section);
                           }}
-                          className="text-accent-gold hover:text-accent-dark font-bold text-xs uppercase underline cursor-pointer text-center"
+                          className="text-gold hover:text-gold-dark font-bold text-xs uppercase underline cursor-pointer text-center"
                         >
                           {language === 'en' ? 'Order Now' : 'اطلب الآن'}
                         </a>
@@ -227,6 +230,40 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({
           </div>
         )}
       </DialogContent>
+      
+      {/* Image Modal for Full Size View */}
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] bg-[#0A0A0A] border border-white/10 p-0 overflow-hidden">
+          {selectedImage && (
+            <div className="relative w-full h-full flex items-center justify-center p-4">
+              <img
+                src={selectedImage}
+                alt="Full size"
+                className="max-w-full max-h-[90vh] object-contain rounded-lg"
+              />
+              <button
+                onClick={() => setSelectedImage(null)}
+                className="absolute top-4 right-4 text-white hover:text-gold transition-colors bg-black/50 rounded-full p-2"
+                aria-label={language === 'en' ? 'Close' : 'إغلاق'}
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };

@@ -110,9 +110,9 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
                     const cardsPerTab = 3;
                     const totalTabs = Math.ceil(aboutValues.length / 3);
                     
-                    // Reverse the order: tab 0 shows last 3, tab 1 shows first 3
+                    // Reverse the order: tab 0 shows first 3, tab 1 shows last 3
                     let startIndex, endIndex;
-                    if (activeTab === 1) {
+                    if (activeTab === 0) {
                       // First tab shows last 3 cards
                       const lastIndex = aboutValues.length;
                       endIndex = lastIndex;

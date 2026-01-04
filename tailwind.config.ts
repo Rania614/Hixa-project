@@ -23,34 +23,35 @@ export default {
           50: "#F8F9FA",   // بلاتينيوم ناعم جداً للخلفيات
           100: "#E5E4E2",  // لون البلاتينيوم الأصلي
           200: "#D3D3D3",  // فضي فاتح
-          300: "#B0BBC3",  // بلاتينيوم مائل للأزرق البارد (يعطي روح للموقع)
+          300: "#B0BBC3",  // بلاتينيوم مائل للأزرق البارد
           400: "#8A959E",
           500: "#6D7781",
         },
 
         // Base
-        background: "#050505", // أسود عميق جداً (أشيك من الأسود الصريح)
-        foreground: "#E5E4E2", // النص الأساسي بلاتيني فاتح مريح للعين
-        border: "#D4AF37",     // الذهب للحواف
+        background: "#050505", 
+        foreground: "#E5E4E2", 
+        // التعديل هنا: جعل الذهب شفافاً بنسبة 20% للحواف الأساسية
+        border: "rgba(212, 175, 55, 0.2)", 
         input: "#121212",
         ring: "#D4AF37",
 
         // Primary
         primary: {
-          DEFAULT: "#D4AF37",  // جعلت البرايمري هو الدهبي لإبراز الهوية
+          DEFAULT: "#D4AF37",  
           foreground: "#050505",
         },
 
-        // Secondary (استخدام البلاتينيوم هنا)
+        // Secondary
         secondary: {
-          DEFAULT: "#1B1B1B", // خلفية الكروت/الأقسام
-          foreground: "#B0BBC3", // نص بلاتيني بارد
+          DEFAULT: "#1B1B1B", 
+          foreground: "#B0BBC3", 
         },
 
         // Muted
         muted: {
           DEFAULT: "#121212",
-          foreground: "#8A959E", // نص بلاتيني مطفي
+          foreground: "#8A959E", 
         },
 
         // Accent / Brand Gold
@@ -60,11 +61,12 @@ export default {
           foreground: "#050505",
         },
 
-        // Cards (تطوير خلفية الكاردات)
+        // Cards
         card: {
-          DEFAULT: "#121212",  // رمادي فحمى داكن
-          foreground: "#F8F9FA", // نص بلاتيني مشرق
-          border: "#D4AF37",
+          DEFAULT: "#121212",  
+          foreground: "#F8F9FA", 
+          // التعديل هنا: جعل حدود الكروت باهتة وشفافة أيضاً
+          border: "rgba(212, 175, 55, 0.2)",
         },
 
         // Gold variations
@@ -74,7 +76,7 @@ export default {
           light: "#F9E79F",
         },
 
-        // Glass Overlay (بلاتيني شفاف)
+        // Glass Overlay
         "glass-platinum": "rgba(229, 228, 226, 0.05)",
       },
 

@@ -22,32 +22,41 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
   onOpenGeneralOrderModal,
   isLoading,
 }) => {
+  const isAr = language === 'ar';
+
   return (
-    <section id="services" className="py-16 sm:py-20 px-4 sm:px-6 bg-secondary/95">
+    // تم تغيير الخلفية لدرجة البيج الدافئة المطفأة #F5F2ED لتطابق سكشن الشركاء
+    <section id="services" className="py-20 px-4 sm:px-6 bg-[#F5F2ED]" dir={isAr ? "rtl" : "ltr"}>
       <div className="container mx-auto">
-        <div className="text-center mb-12 sm:mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+        <div className="text-center mb-16">
+          {/* عنوان السكشن بلون أسود دافئ */}
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-[#1A1A1A]">
             {servicesMetadata 
               ? (language === 'en' 
                   ? (servicesMetadata.title_en || servicesMetadata.title) 
                   : (servicesMetadata.title_ar || servicesMetadata.title))
               : getFieldValue(services, "title", language) || 
-             (language === 'en' ? 'Our Services' : 'خدماتنا')}
+               (language === 'en' ? 'Our Services' : 'خدماتنا')}
           </h2>
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl sm:max-w-3xl mx-auto">
+          {/* خط ذهبي صغير تحت العنوان لزيادة الفخامة */}
+          <div className="w-16 h-1 bg-gold mx-auto mb-6 opacity-80"></div>
+          
+          <p className="text-lg sm:text-xl text-[#5A5A5A] max-w-2xl sm:max-w-3xl mx-auto leading-relaxed">
             {servicesMetadata 
               ? (language === 'en' 
                   ? (servicesMetadata.subtitle_en || servicesMetadata.subtitle) 
                   : (servicesMetadata.subtitle_ar || servicesMetadata.subtitle))
               : getFieldValue(services, "subtitle", language) || 
-             (language === 'en' 
-              ? 'We provide cutting-edge solutions tailored to your business needs'
-              : 'نوفر حلولاً متطورة مصممة خصيصاً لاحتياجات عملك')}
+               (language === 'en' 
+               ? 'We provide cutting-edge solutions tailored to your business needs'
+               : 'نوفر حلولاً متطورة مصممة خصيصاً لاحتياجات عملك')}
           </p>
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
           {allServices.length > 0 ? (
             allServices.map((item: any, index: number) => {
+              // ملاحظة: تأكدي أن renderServiceCard بداخله كروت بخلفية بيضاء أو شفافة لتتناسب مع البيج
               return renderServiceCard(
                 item.service, 
                 index, 
@@ -56,14 +65,14 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
               );
             })
           ) : (
-            <div className="col-span-full text-center py-8">
-              <p className="text-muted-foreground">
+            <div className="col-span-full text-center py-12">
+              <p className="text-[#5A5A5A]">
                 {language === 'en' ? 'No services available' : 'لا توجد خدمات متاحة'}
               </p>
               {isLoading && (
-                <div className="mt-4">
-                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gold"></div>
-                  <p className="text-sm text-muted-foreground mt-2">
+                <div className="mt-6">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gold"></div>
+                  <p className="text-sm text-[#5A5A5A] mt-2">
                     {language === 'en' ? 'Loading services...' : 'جاري تحميل الخدمات...'}
                   </p>
                 </div>
@@ -72,11 +81,11 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
           )}
         </div>
         
-        {/* General Order Now Button - Centered below services */}
-        <div className="flex justify-center mt-8">
+        {/* زر "اطلب الآن" بتصميم متناسق مع البيج والذهبي */}
+        <div className="flex justify-center mt-16">
           <Button
             onClick={onOpenGeneralOrderModal}
-            className="bg-gold hover:bg-gold-dark text-black font-semibold py-3 px-8 text-lg"
+            className="bg-[#1A1A1A] hover:bg-gold text-gold hover:text-black font-bold py-6 px-12 text-lg rounded-full transition-all duration-300 shadow-lg hover:shadow-gold/20"
           >
             {language === 'en' ? 'Order Now' : 'اطلب الآن'}
           </Button>
@@ -85,4 +94,3 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
     </section>
   );
 };
-
