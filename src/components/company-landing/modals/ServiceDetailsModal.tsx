@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { http } from "@/services/http";
 
 interface ServiceDetailsModalProps {
@@ -24,16 +23,28 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({
 }) => {
   const [serviceSections, setServiceSections] = useState<any[]>([]);
   const [loadingSections, setLoadingSections] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
 
-  // Reset sections when modal closes
   useEffect(() => {
     if (!open) {
       setServiceSections([]);
       setLoadingSections(false);
+      setExpandedSections(new Set());
     }
   }, [open]);
 
-  // Fetch service details from API when modal opens
+  const toggleSection = (index: number) => {
+    setExpandedSections(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
+
   useEffect(() => {
     const fetchServiceDetails = async () => {
       if (!open || !selectedServiceForDetails) {
@@ -42,14 +53,9 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({
       }
 
       const serviceId = selectedServiceForDetails._id || selectedServiceForDetails.id;
-      console.log('🔍 ServiceDetailsModal: Service ID:', serviceId);
-      console.log('🔍 ServiceDetailsModal: Selected service:', selectedServiceForDetails);
       
       if (!serviceId) {
-        console.warn('⚠️ No service ID found for fetching details');
-        // Use passed selectedServiceDetails if available
         if (selectedServiceDetails && selectedServiceDetails.length > 0) {
-          console.log('📋 Using passed service details (no ID):', selectedServiceDetails);
           setServiceSections(selectedServiceDetails.slice(0, 4));
         } else {
           setServiceSections([]);
@@ -57,19 +63,14 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({
         return;
       }
 
-      // If we already have details passed, use them first
       if (selectedServiceDetails && selectedServiceDetails.length > 0) {
-        console.log('📋 Using passed service details:', selectedServiceDetails);
         setServiceSections(selectedServiceDetails.slice(0, 4));
         return;
       }
 
-      // Otherwise, fetch from API
       setLoadingSections(true);
       try {
-        console.log(`🔄 Fetching details for service ${serviceId} from API...`);
         const response = await http.get(`/content/services/items/${serviceId}/details`);
-        
         let details: any[] = [];
         if (Array.isArray(response.data)) {
           details = response.data;
@@ -79,30 +80,14 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({
           details = response.data.items;
         } else if (response.data?.details && Array.isArray(response.data.details)) {
           details = response.data.details;
-        } else {
-          const dataKeys = Object.keys(response.data || {});
-          for (const key of dataKeys) {
-            if (Array.isArray(response.data[key])) {
-              details = response.data[key];
-              break;
-            }
-          }
         }
         
-        // Sort by sectionKey and take first 4
         const sortedDetails = details
-          .sort((a: any, b: any) => {
-            const aKey = a.sectionKey || '';
-            const bKey = b.sectionKey || '';
-            return aKey.localeCompare(bKey);
-          })
+          .sort((a: any, b: any) => (a.sectionKey || '').localeCompare(b.sectionKey || ''))
           .slice(0, 4);
         
-        console.log(`✅ Fetched ${sortedDetails.length} sections for service ${serviceId}:`, sortedDetails);
         setServiceSections(sortedDetails);
       } catch (error: any) {
-        console.error(`❌ Error fetching service details for ${serviceId}:`, error);
-        // Use passed selectedServiceDetails as fallback
         if (selectedServiceDetails && selectedServiceDetails.length > 0) {
           setServiceSections(selectedServiceDetails.slice(0, 4));
         } else {
@@ -117,148 +102,126 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({
   }, [open, selectedServiceForDetails, selectedServiceDetails]);
 
   const serviceTitle = selectedServiceForDetails 
-    ? (getFieldValue(selectedServiceForDetails, "title", language) ||
-       selectedServiceForDetails?.name ||
-       "Service")
+    ? (getFieldValue(selectedServiceForDetails, "title", language) || selectedServiceForDetails?.name || "Service")
     : "";
 
   const serviceDescription = selectedServiceForDetails
-    ? (getFieldValue(selectedServiceForDetails, "description", language) ||
-       selectedServiceForDetails?.details ||
-       selectedServiceForDetails?.description_en ||
-       selectedServiceForDetails?.description_ar ||
-       "")
+    ? (getFieldValue(selectedServiceForDetails, "description", language) || selectedServiceForDetails?.details || "")
     : "";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto bg-secondary/95 border-border">
-        <DialogHeader className="sr-only">
-          <DialogTitle>{serviceTitle}</DialogTitle>
-          <DialogDescription>{serviceDescription}</DialogDescription>
+      {/* Modal Container: خلفية داكنة مع حدود خفيفة */}
+      <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] bg-primary-dark border-accent-gold/30 text-text-light rounded-2xl p-6 overflow-hidden flex flex-col">
+        <DialogHeader className={`mb-4 flex-shrink-0 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+          <DialogTitle className={`text-2xl font-bold uppercase tracking-wider text-text-light ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+            {serviceTitle}
+          </DialogTitle>
+          {serviceDescription && (
+            <DialogDescription className={`text-gray-300 text-base mt-3 leading-relaxed ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+              {serviceDescription}
+            </DialogDescription>
+          )}
         </DialogHeader>
-        {selectedServiceForDetails && (
-          <div className="space-y-6">
-            {/* Service Title and Description */}
-            <div className="text-center space-y-4 pb-6 border-b border-border">
-              <h2 className="text-3xl sm:text-4xl font-bold text-card-foreground">
-                {serviceTitle}
-              </h2>
-              {serviceDescription && (
-                <p className="text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-                  {serviceDescription}
-                </p>
-              )}
-            </div>
 
-            {/* Four Specializations Grid - 2x2 */}
+        {selectedServiceForDetails && (
+          <div className="space-y-6 overflow-y-auto flex-1 scrollbar-hide">
             {loadingSections ? (
               <div className="text-center py-12">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gold"></div>
-                <p className="text-muted-foreground mt-4">
-                  {language === 'en' ? 'Loading sections...' : 'جاري تحميل الأقسام...'}
-                </p>
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-accent-gold"></div>
               </div>
             ) : serviceSections && serviceSections.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-6">
                 {serviceSections.map((section: any, index: number) => {
-                  const sectionTitle = getFieldValue(section, "title", language) || 
-                                      section?.title_en || 
-                                      section?.title_ar || 
-                                      "";
-                  const sectionDetails = getFieldValue(section, "details", language) || 
-                                      section?.details_en || 
-                                      section?.details_ar || 
-                                      "";
+                  const sectionTitle = getFieldValue(section, "title", language) || section?.title_en || "";
+                  const sectionDetails = getFieldValue(section, "details", language) || section?.details_en || "";
                   const sectionImage = section?.image || section?.imageUrl || "";
                   
-                  // Parse details if it's a string with line breaks
-                  const detailsList = sectionDetails 
-                    ? (typeof sectionDetails === 'string' 
-                        ? sectionDetails.split('\n').filter((line: string) => line.trim())
-                        : [])
-                    : [];
+                  // Parse details into array
+                  const detailsArray = typeof sectionDetails === 'string' 
+                    ? sectionDetails.split('\n').filter((line: string) => line.trim())
+                    : Array.isArray(sectionDetails)
+                    ? sectionDetails
+                    : sectionDetails ? [String(sectionDetails)] : [];
+                  
+                  const isExpanded = expandedSections.has(index);
+                  const hasMore = detailsArray.length > 3;
+                  const visibleItems = isExpanded ? detailsArray : detailsArray.slice(0, 3);
 
                   return (
                     <div 
                       key={index} 
-                      className="bg-card rounded-xl border-2 border-gold/50 p-6 flex flex-col h-full relative overflow-hidden min-h-[400px]"
+                      className="flex items-center gap-6 p-2 group transition-all"
                     >
-                      {/* Content wrapper - free space, avoids image and button area */}
-                      <div className="flex-1 flex flex-col pb-52 sm:pb-56">
-                        {/* Section Title - Orange/Gold at top */}
-                        {sectionTitle && (
-                          <h3 className="text-xl sm:text-2xl font-bold text-gold mb-6 uppercase z-10 relative">
-                            {sectionTitle}
-                          </h3>
-                        )}
+                      {/* 1. Image Left - Rounded corners like the image */}
+                      <div className="w-32 h-32 flex-shrink-0">
+                        <img
+                          src={sectionImage}
+                          alt={sectionTitle}
+                          className="w-full h-full object-cover rounded-3xl border border-gray-700 shadow-lg"
+                        />
+                      </div>
 
-                        {/* Section Details List - White text, uppercase */}
-                        {detailsList.length > 0 && (
-                          <div className="mb-4 z-10 relative flex-1">
-                            <ul className="space-y-2.5">
-                              {detailsList.map((item: string, itemIndex: number) => (
-                                <li 
-                                  key={itemIndex} 
-                                  className="text-sm sm:text-base text-white uppercase font-medium leading-relaxed"
-                                >
-                                  {item.trim()}
-                                </li>
-                              ))}
-                            </ul>
+                      {/* 2. Text Center */}
+                      <div className="flex-1 space-y-3">
+                        {detailsArray.length > 0 && (
+                          <div>
+                            <div 
+                              className="text-sm text-gray-300 leading-relaxed space-y-1 cursor-pointer"
+                              onClick={() => hasMore && toggleSection(index)}
+                            >
+                              {visibleItems.map((item: string, itemIndex: number) => {
+                                // Remove any existing numbers or bullets from the item text
+                                const cleanItem = item.trim().replace(/^[\d•.\-\s]+/, '').trim();
+                                return (
+                                  <div key={itemIndex} className="flex gap-2">
+                                    <span className="text-accent-gold flex-shrink-0 font-semibold">{itemIndex + 1}.</span>
+                                    <span>{cleanItem || item.trim()}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {hasMore && (
+                              <button
+                                onClick={() => toggleSection(index)}
+                                className="text-accent-gold hover:text-accent-dark text-xs mt-2 underline cursor-pointer"
+                              >
+                                {isExpanded 
+                                  ? (language === 'en' ? 'Show Less' : 'عرض أقل')
+                                  : (language === 'en' ? 'Show More' : 'عرض المزيد')
+                                }
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
 
-                      {/* Order Now Button - Fixed position opposite to image */}
-                      <Button
-                        className="absolute bottom-6 left-6 w-auto bg-gold hover:bg-gold-dark text-black font-semibold py-1.5 px-4 text-sm z-10"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Create a service object for this specialization
-                          const specializationService = {
-                            ...selectedServiceForDetails,
-                            specializationTitle: sectionTitle,
-                            specializationDetails: sectionDetails,
-                          };
-                          onOrderClick(specializationService);
-                          onOpenChange(false);
-                        }}
-                      >
-                        {language === 'en' ? 'Order Now' : 'اطلب الآن'}
-                      </Button>
-
-                      {/* Image in bottom right with blue overlay */}
-                      {sectionImage && (
-                        <div className="absolute bottom-6 right-6 w-56 h-44 sm:w-64 sm:h-52 z-10">
-                          <div className="relative w-full h-full rounded-lg overflow-hidden border border-cyan/30">
-                            <img
-                              src={sectionImage}
-                              alt={sectionTitle || `Section ${index + 1}`}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                              }}
-                            />
-                            <div className="absolute inset-0 bg-cyan/30"></div>
-                            {/* Optional text overlay */}
-                            <div className="absolute bottom-2 left-2 right-2">
-                              <p className="text-xs text-white/80 font-medium uppercase truncate">
-                                {sectionTitle || ''}
-                              </p>
-                            </div>
+                      {/* 3. QR Code and Order Link Right */}
+                      <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                        <div className="w-20 h-20 bg-white p-1 rounded-sm">
+                           {/* هنا يمكن وضع الـ QR Code الفعلي أو صورة ثابتة له */}
+                          <div className="w-full h-full border border-black flex items-center justify-center">
+                              <span className="text-[8px] text-black font-bold">QR CODE</span>
                           </div>
                         </div>
-                      )}
+                        <a
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            onOrderClick(section);
+                          }}
+                          className="text-accent-gold hover:text-accent-dark font-bold text-xs uppercase underline cursor-pointer text-center"
+                        >
+                          {language === 'en' ? 'Order Now' : 'اطلب الآن'}
+                        </a>
+                      </div>
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">
-                  {language === 'en' ? 'No specializations available' : 'لا توجد تخصصات متاحة'}
-                </p>
+              <div className="text-center py-12 text-gray-500">
+                {language === 'en' ? 'No services available' : 'لا توجد خدمات متاحة'}
               </div>
             )}
           </div>
@@ -267,4 +230,3 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({
     </Dialog>
   );
 };
-

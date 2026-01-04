@@ -2,8 +2,12 @@ import type { Config } from "tailwindcss";
 
 export default {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
-  prefix: "",
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
+  ],
   theme: {
     container: {
       center: true,
@@ -14,84 +18,88 @@ export default {
     },
     extend: {
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        // --- مجموعة البلاتينيوم الجديدة ---
+        platinum: {
+          50: "#F8F9FA",   // بلاتينيوم ناعم جداً للخلفيات
+          100: "#E5E4E2",  // لون البلاتينيوم الأصلي
+          200: "#D3D3D3",  // فضي فاتح
+          300: "#B0BBC3",  // بلاتينيوم مائل للأزرق البارد (يعطي روح للموقع)
+          400: "#8A959E",
+          500: "#6D7781",
+        },
+
+        // Base
+        background: "#050505", // أسود عميق جداً (أشيك من الأسود الصريح)
+        foreground: "#E5E4E2", // النص الأساسي بلاتيني فاتح مريح للعين
+        border: "#D4AF37",     // الذهب للحواف
+        input: "#121212",
+        ring: "#D4AF37",
+
+        // Primary
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          DEFAULT: "#D4AF37",  // جعلت البرايمري هو الدهبي لإبراز الهوية
+          foreground: "#050505",
         },
+
+        // Secondary (استخدام البلاتينيوم هنا)
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+          DEFAULT: "#1B1B1B", // خلفية الكروت/الأقسام
+          foreground: "#B0BBC3", // نص بلاتيني بارد
         },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
-        },
+
+        // Muted
         muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+          DEFAULT: "#121212",
+          foreground: "#8A959E", // نص بلاتيني مطفي
         },
+
+        // Accent / Brand Gold
         accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
+          DEFAULT: "#D4AF37",
+          dark: "#B8963E",
+          foreground: "#050505",
         },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
-        },
+
+        // Cards (تطوير خلفية الكاردات)
         card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+          DEFAULT: "#121212",  // رمادي فحمى داكن
+          foreground: "#F8F9FA", // نص بلاتيني مشرق
+          border: "#D4AF37",
         },
-        sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
-          primary: "hsl(var(--sidebar-primary))",
-          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-          accent: "hsl(var(--sidebar-accent))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
-          border: "hsl(var(--sidebar-border))",
-          ring: "hsl(var(--sidebar-ring))",
-        },
+
+        // Gold variations
         gold: {
-          DEFAULT: "hsl(var(--gold))",
-          dark: "hsl(var(--gold-dark))",
-          light: "hsl(var(--gold-light))",
+          DEFAULT: "#D4AF37",
+          dark: "#B8963E",
+          light: "#F9E79F",
         },
-        "dark-bg": "hsl(var(--dark-bg))",
-        "dark-card": "hsl(var(--dark-card))",
-        "glass-bg": "hsl(var(--glass-bg))",
+
+        // Glass Overlay (بلاتيني شفاف)
+        "glass-platinum": "rgba(229, 228, 226, 0.05)",
       },
+
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
+        arabic: ["Cairo", "sans-serif"],
       },
+
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
         },
       },
+
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",

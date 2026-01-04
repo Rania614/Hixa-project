@@ -2,7 +2,7 @@ import { useApp } from '@/context/AppContext';
 import { Instagram, MessageCircle, Twitter, Send, Facebook, Linkedin } from 'lucide-react';
 
 export const Footer = () => {
-  const { content, language } = useApp();
+  const { language } = useApp();
   
   const socialLinks = {
     instagram: 'https://www.instagram.com/hixa_groups?utm_source=qr&igsh=MWo1MG03Z3c0NmF4cQ==',
@@ -14,91 +14,55 @@ export const Footer = () => {
   };
 
   return (
-    <footer className="bg-[#0B0B0EB2] text-white py-12 px-6" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
-            <img 
-              src="/images/updateLogo.png " 
-              alt="HIXA Logo" 
-              className="h-8 md:h-10 w-auto"
-            />
+    <footer className="bg-[#1a1a1a] text-[#888] py-10 px-6 md:px-12 border-t border-gray-800" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
+        
+        {/* الجزء الأول: اللوجو واسم الشركة */}
+        <div className="flex items-center gap-3 min-w-fit">
+          <img 
+            src="/images/updateLogo.png" 
+            alt="HIXA Logo" 
+            className="h-8 w-auto grayscale opacity-80" 
+          />
+          <h2 className="text-white text-xl font-bold tracking-tight">
             HIXA
           </h2>
-          <p className="text-[#cfcfd6] text-base md:text-lg max-w-2xl mx-auto leading-relaxed mb-8">
-            {language === 'en'
-              ? 'Professional engineering services platform connecting experts with clients for innovative solutions.'
-              : 'منصة خدمات هندسية احترافية تربط الخبراء بالعملاء لتقديم حلول مبتكرة.'}
-          </p>
-          
-          <nav className="mb-10" aria-label="Footer navigation">
-            <ul className="flex flex-wrap justify-center gap-6 md:gap-8 lg:gap-12">
-              <li><a href="/" className="text-white text-base md:text-lg font-medium hover:text-[#D4AC35] transition-colors duration-200 focus:outline focus:outline-2 focus:outline-[#D4AC35] focus:rounded">{language === 'en' ? 'Home' : 'الرئيسية'}</a></li>
-              <li><a href="#about" className="text-white text-base md:text-lg font-medium hover:text-[#D4AC35] transition-colors duration-200 focus:outline focus:outline-2 focus:outline-[#D4AC35] focus:rounded">{language === 'en' ? 'About Us' : 'عنا'}</a></li>
-              <li><a href="#services" className="text-white text-base md:text-lg font-medium hover:text-[#D4AC35] transition-colors duration-200 focus:outline focus:outline-2 focus:outline-[#D4AC35] focus:rounded">{language === 'en' ? 'Services' : 'الخدمات'}</a></li>
-              <li><a href="#contact" className="text-white text-base md:text-lg font-medium hover:text-[#D4AC35] transition-colors duration-200 focus:outline focus:outline-2 focus:outline-[#D4AC35] focus:rounded">{language === 'en' ? 'Contact Us' : 'اتصل بنا'}</a></li>
+        </div>
+
+        {/* الخط الفاصل الرأسي (يختفي في الموبايل) */}
+        <div className="hidden md:block w-[1px] h-12 bg-gray-700 mx-2"></div>
+
+        {/* الجزء الثاني: الروابط وحقوق النشر */}
+        <div className="flex-1 flex flex-col items-center md:items-start gap-2">
+          <nav aria-label="Footer navigation">
+            <ul className="flex flex-wrap justify-center md:justify-start gap-6 text-sm font-medium">
+              <li><a href="/" className="hover:text-white transition-colors">{language === 'en' ? 'Home' : 'الرئيسية'}</a></li>
+              <li><a href="#about" className="hover:text-white transition-colors">{language === 'en' ? 'About' : 'عنا'}</a></li>
+              <li><a href="#services" className="hover:text-white transition-colors">{language === 'en' ? 'Services' : 'الخدمات'}</a></li>
+              <li><a href="#contact" className="hover:text-white transition-colors">{language === 'en' ? 'Contact' : 'اتصل بنا'}</a></li>
             </ul>
           </nav>
-          
-          <div className="flex justify-center gap-4 md:gap-6 mb-12">
-            <a 
-              href={socialLinks.facebook}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
-              aria-label="Facebook"
-            >
-              <Facebook className="w-5 h-5" />
-            </a>
-            <a 
-              href={socialLinks.telegram}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
-              aria-label="Telegram"
-            >
-              <Send className="w-5 h-5" />
-            </a>
-            <a 
-              href={socialLinks.whatsapp}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
-              aria-label="WhatsApp"
-            >
-              <MessageCircle className="w-5 h-5" />
-            </a>
-            <a 
-              href={socialLinks.instagram}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
-              aria-label="Instagram"
-            >
-              <Instagram className="w-5 h-5" />
-            </a>
-            <a 
-              href={socialLinks.twitter}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
-              aria-label="Twitter/X"
-            >
-              <Twitter className="w-5 h-5" />
-            </a>
-            <a 
-              href={socialLinks.linkedin}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
-              aria-label="LinkedIn"
-            >
-              <Linkedin className="w-5 h-5" />
-            </a>
-          </div>
+          <p className="text-[11px] text-gray-500 uppercase tracking-widest">
+            © 2026 HIXA. All rights reserved.
+          </p>
         </div>
-        
-        
+
+        {/* الجزء الثالث: أيقوناتك الأصلية والدعم */}
+        <div className="flex flex-col items-center md:items-end gap-3">
+          <div className="flex gap-4">
+            <a href={socialLinks.facebook} className="hover:text-white transition-colors opacity-70 hover:opacity-100"><Facebook size={18} /></a>
+            <a href={socialLinks.linkedin} className="hover:text-white transition-colors opacity-70 hover:opacity-100"><Linkedin size={18} /></a>
+            <a href={socialLinks.telegram} className="hover:text-white transition-colors opacity-70 hover:opacity-100"><Send size={18} /></a>
+            <a href={socialLinks.instagram} className="hover:text-white transition-colors opacity-70 hover:opacity-100"><Instagram size={18} /></a>
+            <a href={socialLinks.twitter} className="hover:text-white transition-colors opacity-70 hover:opacity-100"><Twitter size={18} /></a>
+            <a href={socialLinks.whatsapp} className="hover:text-white transition-colors opacity-70 hover:opacity-100"><MessageCircle size={18} /></a>
+          </div>
+          {/* <div className="text-sm">
+            <span className="text-gray-600">Support: </span>
+            <a href="mailto:support@hixa.com" className="hover:text-white transition-colors font-light">support@hixa.com</a>
+          </div> */}
+        </div>
+
       </div>
     </footer>
   );
