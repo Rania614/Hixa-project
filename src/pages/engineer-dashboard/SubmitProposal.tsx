@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, FileText, Save } from "lucide-react";
+import { ArrowLeft, FileText, Save, Plus, Trash2, UploadCloud } from "lucide-react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -32,6 +32,8 @@ const SubmitProposal = () => {
   const [project, setProject] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [authChecking, setAuthChecking] = useState(true);
+
+  // الحالة الموسعة لتشمل البنود والملفات
   const [formData, setFormData] = useState({
     description: "",
     estimatedTimeline: "",
@@ -40,504 +42,139 @@ const SubmitProposal = () => {
       amount: "",
       currency: "SAR",
     },
+    milestones: [
+      { label: "", percentage: "", amount: "" }
+    ],
+    attachments: [] as File[],
   });
 
-  // ✅ التحقق من Authentication وRole عند تحميل الصفحة
   useEffect(() => {
     const checkAuthAndRole = async () => {
       const token = localStorage.getItem("token");
       const userDataStr = localStorage.getItem("user");
       
       if (!token) {
-        toast.error(
-          language === "en" 
-            ? "You must be logged in to submit a proposal" 
-            : "يجب تسجيل الدخول لتقديم عرض"
-        );
+        toast.error(language === "en" ? "You must be logged in" : "يجب تسجيل الدخول");
         navigate("/engineer/login");
         return;
       }
 
       try {
-        // محاولة جلب بيانات المستخدم من localStorage أو من API
-        let userData = null;
-        if (userDataStr) {
-          try {
-            userData = JSON.parse(userDataStr);
-          } catch (e) {
-            console.error("Error parsing user data:", e);
-          }
-        }
-
-        // إذا لم يكن userData موجوداً، جلب البيانات من API
+        let userData = userDataStr ? JSON.parse(userDataStr) : null;
         if (!userData) {
-          try {
-            const response = await http.get("/auth/me");
-            userData = response.data?.user || response.data?.data || response.data;
-            if (userData) {
-              localStorage.setItem("user", JSON.stringify(userData));
-            }
-          } catch (error: any) {
-            // إذا فشل جلب البيانات، نستخدم بيانات الـ token
-            console.warn("Could not fetch user data:", error);
-          }
+          const response = await http.get("/auth/me");
+          userData = response.data?.user || response.data;
+          localStorage.setItem("user", JSON.stringify(userData));
         }
-
-        // ✅ التحقق من Role
-        const userRole = userData?.role || "";
-        if (userRole !== "engineer" && userRole !== "partner") {
-          toast.error(
-            language === "en" 
-              ? "This page is for engineers only" 
-              : "هذه الصفحة للمهندسين فقط"
-          );
-          navigate("/");
-          return;
-        }
-
-        // ✅ التحقق من حالة الحساب (isActive)
-        if (userData?.isActive === false || userData?.status === "inactive") {
-          toast.error(
-            language === "en" 
-              ? "Your account is not activated. Please contact the administration." 
-              : "حسابك غير مفعّل. يرجى التواصل مع الإدارة."
-          );
-          navigate("/engineer/dashboard");
-          return;
-        }
-
         setUser(userData);
-      } catch (error: any) {
-        console.error("Error checking authentication:", error);
-        if (error.response?.status === 401) {
-          localStorage.removeItem("token");
-          localStorage.removeItem("user");
-          navigate("/engineer/login");
-        }
+      } catch (error) {
+        console.error("Auth error", error);
       } finally {
         setAuthChecking(false);
       }
     };
-
     checkAuthAndRole();
   }, [navigate, language]);
 
-  // Fetch project data with status validation
   useEffect(() => {
     const fetchProject = async () => {
       if (!id || authChecking) return;
-      
       try {
         setProjectLoading(true);
         const response = await http.get(`/projects/${id}`);
-        
-        // Handle different response structures
-        let projectData = response.data;
-        if (projectData && typeof projectData === 'object' && !Array.isArray(projectData)) {
-          if (projectData.data && typeof projectData.data === 'object') {
-            projectData = projectData.data;
-          } else if (projectData.project && typeof projectData.project === 'object') {
-            projectData = projectData.project;
-          }
-        }
-        
-        // ✅ التحقق من حالة المشروع قبل السماح بالإرسال
-        const projectStatus = projectData.status?.toLowerCase() || "";
-        const isWaitingForEngineers = 
-          projectStatus === "waiting for engineers" || 
-          projectStatus === "waiting_for_engineers" ||
-          projectStatus === "waitingforengineers" ||
-          projectStatus === "published";
-        
-        const adminApprovalStatus = projectData.adminApproval?.status?.toLowerCase() || 
-          projectData.adminApproval?.toLowerCase() || "";
-        const isApproved = adminApprovalStatus === "approved" || adminApprovalStatus === "accept";
-        
-        // إذا لم يكن المشروع في الحالة المناسبة، عرض تحذير وإعادة التوجيه
-        if (!isWaitingForEngineers) {
-          toast.error(
-            language === "en" 
-              ? "This project is not accepting proposals. The project must be in 'Waiting for Engineers' status." 
-              : "هذا المشروع لا يقبل العروض. يجب أن يكون المشروع في حالة 'في انتظار المهندسين'."
-          );
-          navigate("/engineer/projects");
-          return;
-        }
-
-        if (!isApproved) {
-          toast.error(
-            language === "en" 
-              ? "This project is not approved by the administration yet." 
-              : "هذا المشروع غير موافق عليه من الإدارة بعد."
-          );
-          navigate("/engineer/projects");
-          return;
-        }
-        
+        let projectData = response.data?.data || response.data;
         setProject({
-          id: projectData._id || projectData.id || id,
-          title: projectData.title || projectData.name || "Unknown Project",
-          category: projectData.category || projectData.projectType || "N/A",
-          location: projectData.location || "N/A",
-          status: projectData.status,
-          adminApproval: projectData.adminApproval,
+          id: projectData._id || id,
+          title: projectData.title || "Unknown Project",
         });
-      } catch (error: any) {
-        console.error("Error fetching project:", error);
-        toast.error(
-          language === "en" ? "Failed to load project details" : "فشل تحميل تفاصيل المشروع"
-        );
+      } catch (error) {
+        toast.error(language === "en" ? "Failed to load project" : "فشل تحميل المشروع");
         navigate("/engineer/projects");
       } finally {
         setProjectLoading(false);
       }
     };
-    
-    if (!authChecking) {
-      fetchProject();
-    }
-  }, [id, language, navigate, authChecking]);
-
-  // Check if proposal already exists for this project
-  useEffect(() => {
-    const checkExistingProposal = async () => {
-      if (!id || authChecking) return;
-      try {
-        // Use GET /api/proposals/project/:projectId to get engineer's proposal for this project
-        const response = await http.get(`/proposals/project/${id}`);
-        
-        // Handle different response structures
-        let proposalsData = response.data;
-        if (proposalsData && typeof proposalsData === 'object' && !Array.isArray(proposalsData)) {
-          if (proposalsData.data && Array.isArray(proposalsData.data)) {
-            proposalsData = proposalsData.data;
-          } else if (proposalsData.proposals && Array.isArray(proposalsData.proposals)) {
-            proposalsData = proposalsData.proposals;
-          } else if (proposalsData.items && Array.isArray(proposalsData.items)) {
-            proposalsData = proposalsData.items;
-          } else {
-            proposalsData = [];
-          }
-        }
-        
-        // Engineer sees only their proposal, so it should be a single proposal or empty array
-        const existingProposal = Array.isArray(proposalsData) && proposalsData.length > 0 
-          ? proposalsData[0] 
-          : null;
-        
-        if (existingProposal) {
-          setIsEditMode(true);
-          setProposalId(existingProposal._id || existingProposal.id);
-          
-          // Check if proposal can be edited (within 1 hour of creation)
-          if (existingProposal.createdAt) {
-            const createdAt = new Date(existingProposal.createdAt);
-            const now = new Date();
-            const hoursDiff = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-            setCanEdit(hoursDiff < 1);
-          } else {
-            // If createdAt is not available, allow edit (backend will handle validation)
-            setCanEdit(true);
-          }
-          
-          setFormData({
-            description: existingProposal.description || "",
-            estimatedTimeline: existingProposal.estimatedTimeline || "",
-            relevantExperience: existingProposal.relevantExperience || "",
-            proposedBudget: {
-              amount: existingProposal.proposedBudget?.amount?.toString() || "",
-              currency: existingProposal.proposedBudget?.currency || "SAR",
-            },
-          });
-        }
-      } catch (error: any) {
-        // 404 is expected if no proposal exists yet
-        if (error.response?.status !== 404) {
-          console.error("Error checking existing proposal:", error);
-        }
-      }
-    };
-    if (!authChecking) {
-      checkExistingProposal();
-    }
+    fetchProject();
   }, [id, authChecking]);
+
+  // دالة إضافة بند دفع جديد
+  const addMilestone = () => {
+    setFormData({
+      ...formData,
+      milestones: [...formData.milestones, { label: "", percentage: "", amount: "" }]
+    });
+  };
+
+  // دالة حذف بند دفع
+  const removeMilestone = (index: number) => {
+    const updated = [...formData.milestones];
+    updated.splice(index, 1);
+    setFormData({ ...formData, milestones: updated });
+  };
+
+  // تحديث بيانات البند وحساب المبلغ تلقائياً
+  const updateMilestone = (index: number, field: string, value: string) => {
+    const updated = [...formData.milestones];
+    updated[index] = { ...updated[index], [field]: value };
+    
+    if (field === "percentage") {
+      const total = parseFloat(formData.proposedBudget.amount) || 0;
+      const calculatedAmount = ((total * parseFloat(value)) / 100).toFixed(2);
+      updated[index].amount = isNaN(parseFloat(calculatedAmount)) ? "" : calculatedAmount;
+    }
+    setFormData({ ...formData, milestones: updated });
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     if (name === "amount") {
       setFormData((prev) => ({
         ...prev,
-        proposedBudget: {
-          ...prev.proposedBudget,
-          amount: value,
-        },
+        proposedBudget: { ...prev.proposedBudget, amount: value },
       }));
     } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
+      setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
     try {
-      // ✅ التحقق النهائي قبل الإرسال
-      const token = localStorage.getItem("token");
-      if (!token) {
-        toast.error(
-          language === "en" 
-            ? "You must be logged in to submit a proposal" 
-            : "يجب تسجيل الدخول لتقديم عرض"
-        );
-        navigate("/engineer/login");
-        setLoading(false);
-        return;
-      }
-
-      // ✅ التحقق من Role
-      if (!user || (user.role !== "engineer" && user.role !== "partner")) {
-        toast.error(
-          language === "en" 
-            ? "This action is for engineers only. Please ensure you are logged in as an engineer." 
-            : "هذه العملية للمهندسين فقط. يرجى التأكد من تسجيل الدخول كمهندس."
-        );
-        setLoading(false);
-        return;
-      }
-
-      // ✅ التحقق من حالة الحساب
-      if (user.isActive === false || user.status === "inactive") {
-        toast.error(
-          language === "en" 
-            ? "Your account is not activated. Please contact the administration." 
-            : "حسابك غير مفعّل. يرجى التواصل مع الإدارة."
-        );
-        setLoading(false);
-        return;
-      }
-
-      // ✅ التحقق من حالة المشروع
-      if (!project || !id) {
-        toast.error(
-          language === "en" 
-            ? "Project information is not available. Please refresh the page." 
-            : "معلومات المشروع غير متوفرة. يرجى تحديث الصفحة."
-        );
-        setLoading(false);
-        return;
-      }
-
-      const proposalData = {
-        description: formData.description,
-        estimatedTimeline: formData.estimatedTimeline,
-        relevantExperience: formData.relevantExperience,
-        proposedBudget: {
-          amount: parseFloat(formData.proposedBudget.amount),
-          currency: formData.proposedBudget.currency,
-        },
-      };
-
-      console.log("📤 Submitting proposal:", {
-        projectId: id,
-        isEditMode,
-        proposalId,
-        endpoint: isEditMode ? `PUT /proposals/${proposalId}` : `POST /proposals/project/${id}`,
-        hasToken: !!token,
-        tokenLength: token?.length,
-        userRole: user?.role,
-        isActive: user?.isActive,
-        userId: user?._id || user?.id,
-        userEmail: user?.email,
-        proposalData,
+      // استخدام FormData لدعم رفع الملفات
+      const submissionData = new FormData();
+      submissionData.append("description", formData.description);
+      submissionData.append("estimatedTimeline", formData.estimatedTimeline);
+      submissionData.append("relevantExperience", formData.relevantExperience);
+      submissionData.append("proposedBudget[amount]", formData.proposedBudget.amount);
+      submissionData.append("proposedBudget[currency]", formData.proposedBudget.currency);
+      submissionData.append("milestones", JSON.stringify(formData.milestones));
+      
+      formData.attachments.forEach((file) => {
+        submissionData.append("attachments", file);
       });
-      
-      // Double-check user role before submitting
-      if (user?.role !== "engineer" && user?.role !== "partner") {
-        toast.error(
-          language === "en" 
-            ? "Only engineers can submit proposals. Please log in as an engineer." 
-            : "فقط المهندسين يمكنهم تقديم العروض. يرجى تسجيل الدخول كمهندس."
-        );
-        setLoading(false);
-        setTimeout(() => {
-          localStorage.removeItem("token");
-          localStorage.removeItem("user");
-          navigate("/engineer/login");
-        }, 2000);
-        return;
-      }
-      
-      // Check if account is active
-      if (user?.isActive === false || user?.status === "inactive") {
-        toast.error(
-          language === "en" 
-            ? "Your account is not activated. Please contact the administration." 
-            : "حسابك غير مفعّل. يرجى التواصل مع الإدارة."
-        );
-        setLoading(false);
-        return;
-      }
 
       if (isEditMode && proposalId) {
-        // Check if still within 1 hour (client-side validation)
-        if (!canEdit) {
-          toast.error(
-            language === "en" 
-              ? "You can only edit proposals within 1 hour of creation" 
-              : "يمكنك تعديل العروض خلال ساعة واحدة فقط من وقت الإنشاء"
-          );
-          setLoading(false);
-          return;
-        }
-        
-        // Update existing proposal using PUT /api/proposals/:id
-        await http.put(`/proposals/${proposalId}`, proposalData);
-        toast.success(language === "en" ? "Proposal updated successfully" : "تم تحديث العرض بنجاح");
+        await http.put(`/proposals/${proposalId}`, submissionData);
       } else {
-        // Create new proposal using POST /api/proposals/project/:projectId
-        await http.post(`/proposals/project/${id}`, proposalData);
-        toast.success(language === "en" ? "Proposal submitted successfully" : "تم إرسال العرض بنجاح");
+        await http.post(`/proposals/project/${id}`, submissionData);
       }
-      // Redirect to My Proposals page
+
+      toast.success(language === "en" ? "Submitted successfully" : "تم التقديم بنجاح");
       navigate("/engineer/projects");
     } catch (error: any) {
-      console.error("❌ Error submitting proposal:", {
-        error,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        message: error.message,
-        url: error.config?.url,
-        method: error.config?.method,
-      });
-
-      // ✅ Handle different error types with specific messages
-      let errorMessage = "";
-      
-      if (error.response?.status === 401) {
-        // Unauthorized - token is invalid or expired
-        errorMessage = language === "en" 
-          ? "Your session has expired. Please log in again." 
-          : "انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.";
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        setTimeout(() => navigate("/engineer/login"), 2000);
-      } else if (error.response?.status === 403) {
-        // ✅ Forbidden - user doesn't have permission - معالجة مفصلة
-        const backendMessage = error.response?.data?.message || "";
-        
-        // Log detailed error for debugging
-        console.error("🔍 403 Error Details:", {
-          backendMessage,
-          userRole: user?.role,
-          isActive: user?.isActive,
-          userId: user?._id || user?.id,
-          projectId: id,
-        });
-        
-        if (backendMessage.toLowerCase().includes("engineer") || 
-            backendMessage.toLowerCase().includes("مهندسين") ||
-            backendMessage.toLowerCase().includes("role") ||
-            backendMessage.toLowerCase().includes("دور")) {
-          errorMessage = language === "en" 
-            ? "This action is for engineers only. Please ensure you are logged in as an engineer." 
-            : "هذه العملية للمهندسين فقط. يرجى التأكد من تسجيل الدخول كمهندس.";
-          toast.error(errorMessage);
-          setTimeout(() => {
-            localStorage.removeItem("token");
-            localStorage.removeItem("user");
-            navigate("/engineer/login");
-          }, 2000);
-        } else if (backendMessage.toLowerCase().includes("active") || 
-                   backendMessage.toLowerCase().includes("مفعّل") ||
-                   backendMessage.toLowerCase().includes("activated")) {
-          errorMessage = language === "en" 
-            ? "Your account is not activated. Please contact the administration." 
-            : "حسابك غير مفعّل. يرجى التواصل مع الإدارة.";
-        } else if (backendMessage.toLowerCase().includes("status") || 
-                   backendMessage.toLowerCase().includes("حالة")) {
-          errorMessage = language === "en" 
-            ? "This project is not accepting proposals at this time. Please check the project status." 
-            : "هذا المشروع لا يقبل العروض في الوقت الحالي. يرجى التحقق من حالة المشروع.";
-        } else if (backendMessage.toLowerCase().includes("duplicate") || 
-                   backendMessage.toLowerCase().includes("موجود") ||
-                   backendMessage.toLowerCase().includes("already")) {
-          errorMessage = language === "en" 
-            ? "You have already submitted a proposal for this project." 
-            : "لقد قمت بتقديم عرض لهذا المشروع بالفعل.";
-        } else {
-          // Use backend message if available, otherwise show generic message
-          errorMessage = backendMessage || 
-            (language === "en" 
-              ? "You are not authorized to perform this action. Please check your account status and role." 
-              : "غير مصرح لك بتنفيذ هذا الإجراء. يرجى التحقق من حالة حسابك ودورك.");
-          
-          // If user is company, suggest using company dashboard
-          if (user?.role === "company") {
-            errorMessage = language === "en"
-              ? "Companies cannot submit proposals. Please use the company dashboard to manage your projects."
-              : "الشركات لا يمكنها تقديم عروض. يرجى استخدام لوحة تحكم الشركة لإدارة مشاريعك.";
-            setTimeout(() => navigate("/company/dashboard"), 3000);
-          } else if (!user?.role || (user?.role !== "engineer" && user?.role !== "partner")) {
-            errorMessage = language === "en"
-              ? "Only engineers can submit proposals. Please log in as an engineer."
-              : "فقط المهندسين يمكنهم تقديم العروض. يرجى تسجيل الدخول كمهندس.";
-            setTimeout(() => {
-              localStorage.removeItem("token");
-              localStorage.removeItem("user");
-              navigate("/engineer/login");
-            }, 2000);
-          }
-        }
-      } else if (error.response?.status === 400) {
-        // Bad Request - usually validation error or project status issue
-        errorMessage = error.response?.data?.message || 
-          error.response?.data?.error ||
-          (language === "en" 
-            ? "Invalid request. Please check the project status and your proposal data." 
-            : "طلب غير صحيح. يرجى التحقق من حالة المشروع وبيانات العرض.");
-      } else if (error.response?.status === 404) {
-        errorMessage = language === "en" 
-          ? "Project not found. Please check the project ID." 
-          : "المشروع غير موجود. يرجى التحقق من معرف المشروع.";
-      } else if (error.response?.status >= 500) {
-        errorMessage = language === "en" 
-          ? "Server error. Please try again later." 
-          : "خطأ في الخادم. يرجى المحاولة مرة أخرى لاحقاً.";
-      } else {
-        // Try to get error message from response
-        errorMessage = error.response?.data?.message || 
-          error.response?.data?.error ||
-          error.message ||
-          (language === "en" ? "Failed to submit proposal" : "فشل تقديم العرض");
-      }
-      
-      toast.error(errorMessage);
+      toast.error(error.response?.data?.message || "Error");
     } finally {
       setLoading(false);
     }
   };
 
-  // Show loading while checking authentication
-  if (authChecking) {
+  if (authChecking || projectLoading) {
     return (
       <DashboardLayout userType="engineer">
-        <div className="text-center py-12 text-hexa-text-light">
-          {language === "en" ? "Checking authentication..." : "جاري التحقق من المصادقة..."}
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  // Show loading while fetching project
-  if (projectLoading || !project) {
-    return (
-      <DashboardLayout userType="engineer">
-        <div className="text-center py-12 text-hexa-text-light">
-          {language === "en" ? "Loading project details..." : "جاري تحميل تفاصيل المشروع..."}
+        <div className="flex justify-center items-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-hexa-secondary"></div>
         </div>
       </DashboardLayout>
     );
@@ -545,203 +182,195 @@ const SubmitProposal = () => {
 
   return (
     <DashboardLayout userType="engineer">
-      <div className="space-y-6 max-w-5xl mx-auto">
-        {/* Breadcrumb */}
+      <div className="space-y-6 max-w-5xl mx-auto pb-20">
+        {/* Breadcrumb - (نفس الكود السابق) */}
         <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink
-                href="/engineer/dashboard"
-                className="text-hexa-text-light hover:text-hexa-secondary transition-colors"
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigate("/engineer/dashboard");
-                }}
-              >
-                {getDashboardText("dashboard", language)}
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator className="text-hexa-text-light" />
-            <BreadcrumbItem>
-              <BreadcrumbLink
-                href="/engineer/available-projects"
-                className="text-hexa-text-light hover:text-hexa-secondary transition-colors"
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigate("/engineer/available-projects");
-                }}
-              >
-                {getDashboardText("browseProjects", language)}
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator className="text-hexa-text-light" />
-            <BreadcrumbItem>
-              <BreadcrumbLink
-                href={`/engineer/projects/${project.id}`}
-                className="text-hexa-text-light hover:text-hexa-secondary transition-colors"
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigate(`/engineer/projects/${project.id}`);
-                }}
-              >
-                {project.title}
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator className="text-hexa-text-light" />
-            <BreadcrumbItem>
-              <BreadcrumbPage className="text-hexa-secondary font-semibold">
-                {getDashboardText("submitProposal", language)}
-              </BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
+           <BreadcrumbList>
+             <BreadcrumbItem>
+               <BreadcrumbLink onClick={() => navigate("/engineer/dashboard")} className="cursor-pointer">
+                 {getDashboardText("dashboard", language)}
+               </BreadcrumbLink>
+             </BreadcrumbItem>
+             <BreadcrumbSeparator />
+             <BreadcrumbItem>
+               <BreadcrumbPage className="text-hexa-secondary font-semibold">
+                 {getDashboardText("submitProposal", language)}
+               </BreadcrumbPage>
+             </BreadcrumbItem>
+           </BreadcrumbList>
         </Breadcrumb>
 
-        {/* Header */}
         <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(`/engineer/projects/${project.id}`)}
-            className="hover:bg-hexa-secondary/20 text-hexa-text-light hover:text-hexa-secondary transition-colors"
-          >
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div className="flex-1">
+          <div>
             <h1 className="text-3xl font-bold text-hexa-text-dark">
               {getDashboardText("submitProposal", language)}
             </h1>
-            <p className="text-hexa-text-light mt-1">
-              {language === "en" ? `Submit your proposal for: ${project.title}` : `قدم عرضك لمشروع: ${project.title}`}
-            </p>
+            <p className="text-hexa-text-light">{project?.title}</p>
           </div>
         </div>
 
-        {/* Edit Mode Warning */}
-        {isEditMode && !canEdit && (
-          <Card className="bg-yellow-500/10 border-yellow-500/20">
-            <CardContent className="pt-6">
-              <p className="text-yellow-600 dark:text-yellow-400">
-                {language === "en" 
-                  ? "⚠️ You can only edit proposals within 1 hour of creation. This proposal can no longer be edited." 
-                  : "⚠️ يمكنك تعديل العروض خلال ساعة واحدة فقط من وقت الإنشاء. لا يمكن تعديل هذا العرض بعد الآن."}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Form Card */}
-        <Card className="bg-hexa-card border-hexa-border p-8">
-          <CardHeader className="pb-6">
-            <CardTitle className="text-hexa-text-dark text-2xl">
-              {language === "en" ? "Proposal Details" : "تفاصيل العرض"}
-            </CardTitle>
-            <CardDescription className="text-hexa-text-light">
-              {language === "en" ? "Provide all necessary information about your proposal" : "قدم جميع المعلومات اللازمة عن عرضك"}
-            </CardDescription>
+        <Card className="bg-hexa-card border-hexa-border">
+          <CardHeader>
+            <CardTitle>{language === "en" ? "Proposal Details" : "تفاصيل العرض الهندسي"}</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Proposal Description */}
-              <div className="space-y-2.5">
-                <Label htmlFor="description" className="text-hexa-text-dark text-base font-medium">
-                  {language === "en" ? "Proposal Description" : "وصف العرض"} *
-                </Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  required
-                  rows={8}
-                  className="min-h-[160px] bg-hexa-bg border-hexa-border text-hexa-text-dark placeholder:text-hexa-text-light resize-none"
-                  placeholder={language === "en" ? "Describe your approach, experience, and why you're the best fit for this project..." : "اوصف نهجك وخبرتك ولماذا أنت الأنسب لهذا المشروع..."}
-                />
-              </div>
-
-              {/* Timeline */}
-              <div className="space-y-2.5">
-                <Label htmlFor="estimatedTimeline" className="text-hexa-text-dark text-base font-medium">
-                  {language === "en" ? "Estimated Timeline" : "الجدول الزمني المتوقع"} *
-                </Label>
-                <Input
-                  id="estimatedTimeline"
-                  name="estimatedTimeline"
-                  value={formData.estimatedTimeline}
-                  onChange={handleInputChange}
-                  required
-                  className="bg-hexa-bg border-hexa-border text-hexa-text-dark placeholder:text-hexa-text-light h-11"
-                  placeholder={language === "en" ? "e.g., 3 months, 6 months" : "مثل: 3 أشهر، 6 أشهر"}
-                />
-              </div>
-
-              {/* Relevant Experience */}
-              <div className="space-y-2.5">
-                <Label htmlFor="relevantExperience" className="text-hexa-text-dark text-base font-medium">
-                  {language === "en" ? "Relevant Experience" : "الخبرة ذات الصلة"}
-                </Label>
-                <Textarea
-                  id="relevantExperience"
-                  name="relevantExperience"
-                  value={formData.relevantExperience}
-                  onChange={handleInputChange}
-                  rows={5}
-                  className="min-h-[100px] bg-hexa-bg border-hexa-border text-hexa-text-dark placeholder:text-hexa-text-light resize-none"
-                  placeholder={language === "en" ? "Describe your relevant experience and similar projects you've completed..." : "اوصف خبرتك ذات الصلة والمشاريع المشابهة التي أكملتها..."}
-                />
-              </div>
-
-              {/* Proposed Budget */}
-              <div className="space-y-2.5">
-                <Label htmlFor="amount" className="text-hexa-text-dark text-base font-medium">
-                  {language === "en" ? "Proposed Budget" : "الميزانية المقترحة"} *
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="amount"
-                    name="amount"
-                    type="number"
-                    value={formData.proposedBudget.amount}
-                    onChange={handleInputChange}
-                    required
-                    className="bg-hexa-bg border-hexa-border text-hexa-text-dark placeholder:text-hexa-text-light h-11 flex-1"
-                    placeholder={language === "en" ? "Amount" : "المبلغ"}
+            <form onSubmit={handleSubmit} className="space-y-8">
+              
+              {/* القسم الأساسي */}
+              <div className="grid gap-6">
+                <div className="space-y-2">
+                  <Label>{language === "en" ? "Description" : "وصف العرض التنفيذي"}</Label>
+                  <Textarea 
+                    name="description" 
+                    value={formData.description} 
+                    onChange={handleInputChange} 
+                    required 
+                    className="min-h-[120px] bg-hexa-bg"
                   />
-                  <Input
-                    id="currency"
-                    name="currency"
-                    value={formData.proposedBudget.currency}
-                    onChange={handleInputChange}
-                    readOnly
-                    className="bg-hexa-bg border-hexa-border text-hexa-text-dark w-20 h-11"
-                  />
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{language === "en" ? "Total Budget" : "إجمالي الميزانية المقترحة"}</Label>
+                    <div className="flex gap-2">
+                      <Input name="amount" type="number" value={formData.proposedBudget.amount} onChange={handleInputChange} required className="bg-hexa-bg" />
+                      <Input value="SAR" readOnly className="w-20 bg-muted" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{language === "en" ? "Timeline" : "الجدول الزمني (مثلاً: 4 أشهر)"}</Label>
+                    <Input name="estimatedTimeline" value={formData.estimatedTimeline} onChange={handleInputChange} required className="bg-hexa-bg" />
+                  </div>
                 </div>
               </div>
 
-              {/* Form Actions */}
-              <div className="flex items-center justify-end gap-4 pt-6 mt-6 border-t border-hexa-border">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate(`/engineer/projects/${project.id}`)}
-                  className="border-hexa-border bg-hexa-card text-hexa-text-light hover:bg-hexa-secondary/20 hover:text-hexa-secondary hover:border-hexa-secondary h-11 px-6"
-                >
+              {/* قسم بنود الدفع (Milestones) */}
+              <div className="space-y-4 pt-6 border-t border-hexa-border">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-lg font-bold">{language === "en" ? "Payment Milestones" : "هيكلة دفعات المشروع"}</Label>
+                    <span className="text-xs bg-hexa-secondary/10 text-hexa-secondary px-2 py-1 rounded">
+                      {language === "en" ? "Recommended: 3-5 stages" : "يفضل: 3-5 مراحل"}
+                    </span>
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={addMilestone} className="border-hexa-secondary text-hexa-secondary hover:bg-hexa-secondary/10">
+                    <Plus className="w-4 h-4 mr-1" /> {language === "en" ? "Add Milestone" : "إضافة مرحلة دفع"}
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  {formData.milestones.map((milestone, index) => (
+                    <div key={index} className="flex flex-col md:flex-row gap-3 p-4 bg-hexa-bg/40 rounded-xl border border-hexa-border group relative">
+                      <div className="flex-1 space-y-1">
+                        <Label className="text-[10px] uppercase text-hexa-text-light">{language === "en" ? "Milestone Label" : "وصف المرحلة"}</Label>
+                        <Input 
+                          placeholder={language === "en" ? "e.g. Initial Submission" : "مثلاً: التصاميم المعمارية"} 
+                          value={milestone.label} 
+                          onChange={(e) => updateMilestone(index, "label", e.target.value)}
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="w-full md:w-32 space-y-1">
+                        <Label className="text-[10px] uppercase text-hexa-text-light">{language === "en" ? "Percentage (%)" : "النسبة (%)"}</Label>
+                        <Input 
+                          type="number" 
+                          placeholder="25" 
+                          value={milestone.percentage} 
+                          onChange={(e) => updateMilestone(index, "percentage", e.target.value)}
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="w-full md:w-40 space-y-1">
+                        <Label className="text-[10px] uppercase text-hexa-text-light">{language === "en" ? "Amount" : "المبلغ التقريبي"}</Label>
+                        <Input value={milestone.amount} readOnly className="h-9 bg-muted/50 border-none font-mono text-hexa-secondary" />
+                      </div>
+                      {formData.milestones.length > 1 && (
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => removeMilestone(index)}
+                          className="text-destructive hover:bg-destructive/10 mt-5"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* قسم المرفقات (File Upload) */}
+              <div className="space-y-4 pt-6 border-t border-hexa-border">
+                <Label className="text-lg font-bold">{language === "en" ? "Attachments" : "المرفقات الفنية"}</Label>
+                <div className="relative group">
+                  <div className="border-2 border-dashed border-hexa-border group-hover:border-hexa-secondary rounded-2xl p-8 transition-all bg-hexa-bg/20 flex flex-col items-center justify-center text-center">
+                    <UploadCloud className="w-12 h-12 text-hexa-text-light group-hover:text-hexa-secondary mb-4 transition-colors" />
+                    <div className="space-y-1">
+                      <p className="text-base font-medium">{language === "en" ? "Click to upload project files" : "اضغط لرفع ملفات سابقة الأعمال أو ملفات توضيحية"}</p>
+                      <p className="text-xs text-hexa-text-light">PDF, DOCX, JPG (Max 10MB each)</p>
+                    </div>
+                    <Input 
+                      type="file" 
+                      multiple 
+                      className="absolute inset-0 opacity-0 cursor-pointer" 
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          setFormData({ ...formData, attachments: [...formData.attachments, ...Array.from(e.target.files)] });
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* قائمة الملفات المرفوعة */}
+                {formData.attachments.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+                    {formData.attachments.map((file, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 bg-hexa-secondary/5 border border-hexa-secondary/20 rounded-lg">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <FileText className="w-5 h-5 text-hexa-secondary shrink-0" />
+                          <span className="text-sm truncate font-medium">{file.name}</span>
+                        </div>
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            const updated = [...formData.attachments];
+                            updated.splice(i, 1);
+                            setFormData({...formData, attachments: updated});
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* أزرار التحكم */}
+              <div className="flex items-center justify-end gap-4 pt-10 mt-10 border-t border-hexa-border">
+                <Button type="button" variant="outline" onClick={() => navigate(-1)} className="h-12 px-8">
                   {language === "en" ? "Cancel" : "إلغاء"}
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={loading || (isEditMode && !canEdit)}
-                  className="bg-hexa-secondary hover:bg-hexa-secondary/90 text-black font-semibold h-11 px-6 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Save className={`w-4 h-4 ${language === "ar" ? "ml-2" : "mr-2"}`} />
-                  {loading
-                    ? language === "en"
-                      ? "Submitting..."
-                      : "جاري التقديم..."
-                    : isEditMode
-                    ? language === "en"
-                      ? "Update Proposal"
-                      : "تحديث العرض"
-                    : getDashboardText("submitProposal", language)}
+                <Button type="submit" disabled={loading} className="bg-hexa-secondary hover:bg-hexa-secondary/90 text-black font-bold h-12 px-10 min-w-[160px]">
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent"></div>
+                      {language === "en" ? "Sending..." : "جاري الإرسال..."}
+                    </span>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      {isEditMode ? (language === "en" ? "Update Proposal" : "تحديث العرض") : (language === "en" ? "Submit Proposal" : "إرسال العرض النهائي")}
+                    </>
+                  )}
                 </Button>
               </div>
             </form>
@@ -753,4 +382,3 @@ const SubmitProposal = () => {
 };
 
 export default SubmitProposal;
-

@@ -739,7 +739,7 @@ const CompanyProfile = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-4 p-4 bg-hexa-bg rounded-lg border border-hexa-border">
+            {/* <div className="flex items-center gap-4 p-4 bg-hexa-bg rounded-lg border border-hexa-border">
               <div className="flex items-center gap-2">
                 <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
                 <span className="text-2xl font-bold text-hexa-text-dark">
@@ -756,7 +756,7 @@ const CompanyProfile = () => {
                     : `بناءً على ${profileData.reviewsCount || 0} تقييم`}
                 </p>
               </div>
-            </div>
+            </div> */}
 
             <div className="flex items-center justify-end gap-4 pt-6 border-t border-hexa-border">
               <Button

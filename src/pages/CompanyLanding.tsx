@@ -36,6 +36,7 @@ const CompanyLanding = () => {
   const [selectedServiceDetails, setSelectedServiceDetails] = useState<any[]>([]);
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [orderDetails, setOrderDetails] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [expandedCardIndex, setExpandedCardIndex] = useState<number | null>(null);
@@ -595,6 +596,7 @@ const CompanyLanding = () => {
     setOrderModalOpen(true);
     // Reset form
     setEmail("");
+    setPhone("");
     setOrderDetails("");
     
     // Fetch service details by serviceId
@@ -671,6 +673,7 @@ const CompanyLanding = () => {
     setOrderModalOpen(false);
     setSelectedService(null);
     setEmail("");
+    setPhone("");
     setOrderDetails("");
   };
 
@@ -678,6 +681,7 @@ const CompanyLanding = () => {
     setSelectedService(null); // No specific service
     setOrderModalOpen(true);
     setEmail("");
+    setPhone("");
     setOrderDetails("");
   };
 
@@ -687,6 +691,11 @@ const CompanyLanding = () => {
     
     if (!email || !email.includes('@')) {
       toast.error(language === 'en' ? 'Please enter a valid email address' : 'يرجى إدخال عنوان بريد إلكتروني صحيح');
+      return;
+    }
+
+    if (!phone || !phone.trim()) {
+      toast.error(language === 'en' ? 'Please enter your phone number' : 'يرجى إدخال رقم التليفون');
       return;
     }
 
@@ -704,6 +713,7 @@ const CompanyLanding = () => {
       // Use JSON instead of FormData since we're only sending text
       const payload: any = {
         email: email.trim(),
+        phone: phone.trim(),
         orderDetails: orderDetails.trim(),
       };
       
@@ -907,6 +917,8 @@ const CompanyLanding = () => {
         servicesDetailsMap={servicesDetailsMap}
         email={email}
         setEmail={setEmail}
+        phone={phone}
+        setPhone={setPhone}
         orderDetails={orderDetails}
         setOrderDetails={setOrderDetails}
         submitting={submitting}

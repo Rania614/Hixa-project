@@ -11,6 +11,8 @@ interface OrderModalProps {
   servicesDetailsMap: { [serviceId: string]: any[] };
   email: string;
   setEmail: (email: string) => void;
+  phone: string;
+  setPhone: (phone: string) => void;
   orderDetails: string;
   setOrderDetails: (details: string) => void;
   submitting: boolean;
@@ -26,6 +28,8 @@ export const OrderModal: React.FC<OrderModalProps> = ({
   servicesDetailsMap,
   email,
   setEmail,
+  phone,
+  setPhone,
   orderDetails,
   setOrderDetails,
   submitting,
@@ -154,6 +158,21 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                 required
                 className="w-full px-3 py-2 bg-background border border-border rounded-lg text-card-foreground focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
                 placeholder={language === 'en' ? 'your.email@example.com' : 'بريدك.الإلكتروني@example.com'}
+              />
+            </div>
+
+            {/* Phone Field */}
+            <div>
+              <label className="block text-sm font-medium text-card-foreground mb-2">
+                {language === 'en' ? 'Phone Number' : 'رقم التليفون'} <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-card-foreground focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
+                placeholder={language === 'en' ? '+1234567890' : '+201234567890'}
               />
             </div>
 
