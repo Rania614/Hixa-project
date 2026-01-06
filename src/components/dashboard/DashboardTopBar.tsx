@@ -27,7 +27,7 @@ export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({ userType }) =>
   const { language, setLanguage } = useApp();
   const navigate = useNavigate();
   const { unreadCount, refetch: refetchCount } = useUnreadNotificationsCount({ autoRefresh: true });
-  const { unreadCount: unreadMessagesCount, refetch: refetchMessagesCount } = useUnreadMessagesCount(30000);
+  const { unreadCount: unreadMessagesCount, refetch: refetchMessagesCount } = useUnreadMessagesCount(60000); // Refresh every 60 seconds / 1 minute
   const [userName, setUserName] = useState<string>("");
   const [userInitials, setUserInitials] = useState<string>("");
 

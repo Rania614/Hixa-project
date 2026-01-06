@@ -138,6 +138,7 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({
                   const sectionTitle = getFieldValue(section, "title", language) || section?.title_en || "";
                   const sectionDetails = getFieldValue(section, "details", language) || section?.details_en || "";
                   const sectionImage = section?.image || section?.imageUrl || "";
+                  const qrCodeImage = section?.qrCodeImage || section?.qrCode || "";
                   
                   const detailsArray = typeof sectionDetails === 'string' 
                     ? sectionDetails.split('\n').filter((line: string) => line.trim())
@@ -203,8 +204,23 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({
 
                       <div className="flex flex-col items-center gap-2 flex-shrink-0">
                         <div className="w-20 h-20 bg-white p-1 rounded-sm">
-                          <div className="w-full h-full border border-black flex items-center justify-center">
-                              <span className="text-[8px] text-black font-bold">QR CODE</span>
+                          {qrCodeImage ? (
+                            <img
+                              src={qrCodeImage}
+                              alt="QR Code"
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                // Fallback to placeholder if image fails to load
+                                e.currentTarget.style.display = 'none';
+                                const placeholder = e.currentTarget.parentElement?.querySelector('.qr-placeholder');
+                                if (placeholder) {
+                                  (placeholder as HTMLElement).style.display = 'flex';
+                                }
+                              }}
+                            />
+                          ) : null}
+                          <div className={`w-full h-full border border-black flex items-center justify-center ${qrCodeImage ? 'hidden' : ''} qr-placeholder`}>
+                            <span className="text-[8px] text-black font-bold">QR CODE</span>
                           </div>
                         </div>
                         <a

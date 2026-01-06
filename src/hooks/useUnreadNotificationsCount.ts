@@ -19,7 +19,7 @@ export const useUnreadNotificationsCount = (
 ) => {
   const {
     autoRefresh = true,
-    refreshInterval = 30000, // 30 seconds
+    refreshInterval = 60000, // 60 seconds / 1 minute
   } = options;
 
   const [unreadCount, setUnreadCount] = useState<number>(0);

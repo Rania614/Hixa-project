@@ -4,7 +4,7 @@ import { AdminTopBar } from '@/components/AdminTopBar';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Mail, Calendar, Package, RefreshCw, Trash2, Edit2, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Mail, Calendar, Package, RefreshCw, Trash2, Edit2, AlertTriangle, ChevronDown, ChevronUp, Phone } from 'lucide-react';
 import { http } from '@/services/http';
 import { toast } from '@/components/ui/sonner';
 import {
@@ -23,6 +23,7 @@ interface Order {
   _id?: string;
   id?: string;
   email: string;
+  phone?: string;
   serviceId?: string;
   serviceType?: string;
   title: string;
@@ -254,6 +255,26 @@ const Orders = () => {
                           </a>
                         </div>
                       </div>
+
+                      {/* Phone */}
+                      {order.phone && (
+                        <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors">
+                          <div className="w-10 h-10 bg-gold/20 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Phone className="h-5 w-5 text-gold" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-muted-foreground mb-1">
+                              {language === 'en' ? 'Phone Number' : 'رقم التليفون'}
+                            </p>
+                            <a 
+                              href={`tel:${order.phone}`}
+                              className="text-base font-semibold text-card-foreground hover:text-gold transition-colors"
+                            >
+                              {order.phone}
+                            </a>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Service - Only show if serviceType exists */}
                       {order.serviceType && (

@@ -12,7 +12,7 @@ export const AdminTopBar = () => {
   const { language } = useApp();
   const navigate = useNavigate();
   const { unreadCount, refetch: refetchNotificationsCount } = useUnreadNotificationsCount();
-  const { unreadCount: unreadMessagesCount } = useUnreadMessagesCount(30000);
+  const { unreadCount: unreadMessagesCount } = useUnreadMessagesCount(60000); // Refresh every 60 seconds / 1 minute
 
   // Listen for new notifications to update the badge in real-time
   useNotificationWebSocket({

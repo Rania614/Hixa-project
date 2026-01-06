@@ -2598,7 +2598,7 @@ const ContentManagement = () => {
                             );
 
                             const response = await http.post(
-                              `/content/services/${selectedDetail.itemId}/details/${selectedDetail.detailId}/qr-code`,
+                              `/content/services/${selectedDetail.itemId}/details/${selectedDetail.detailId}/qrcode`,
                               formData,
                               { 
                                 headers: { 'Content-Type': 'multipart/form-data' },
@@ -2616,9 +2616,9 @@ const ContentManagement = () => {
                             // Dismiss loading toast
                             toast.dismiss(loadingToast);
                             
-                            const qrCodeUrl = response.data?.data?.qrCode || response.data?.qrCode || response.data?.data?.detail?.qrCode || '';
-                            if (qrCodeUrl) {
-                              setSelectedDetail({ ...selectedDetail, qrCode: qrCodeUrl });
+                            const qrCodeImageUrl = response.data?.data?.qrCodeImage || response.data?.data?.qrCodeUrl || response.data?.data?.detail?.qrCodeImage || '';
+                            if (qrCodeImageUrl) {
+                              setSelectedDetail({ ...selectedDetail, qrCodeImage: qrCodeImageUrl });
                               
                               // Update local state immediately
                               setContent({
@@ -2630,7 +2630,7 @@ const ContentManagement = () => {
                                       ...(servicesData[selectedDetail.itemId]?.details || {}),
                                       [selectedDetail.detailId]: {
                                         ...selectedDetail,
-                                        qrCode: qrCodeUrl,
+                                        qrCodeImage: qrCodeImageUrl,
                                       },
                                     },
                                   },
@@ -2665,15 +2665,15 @@ const ContentManagement = () => {
                         <span className="text-sm">
                           {loading 
                             ? (language === 'en' ? 'Uploading...' : 'جاري الرفع...')
-                            : selectedDetail.qrCode
+                            : selectedDetail.qrCodeImage
                             ? (language === 'en' ? 'Change QR Code...' : 'تغيير QR Code...')
                             : (language === 'en' ? 'Choose QR Code...' : 'اختر QR Code...')}
                         </span>
                       </label>
-                      {selectedDetail.qrCode && (
+                      {selectedDetail.qrCodeImage && (
                         <div className="mt-2 relative">
                           <img
-                            src={selectedDetail.qrCode}
+                            src={selectedDetail.qrCodeImage}
                             alt="QR Code"
                             className="w-full h-48 object-cover rounded-md border border-border"
                             onError={(e) => {
@@ -2688,11 +2688,11 @@ const ContentManagement = () => {
                               className="absolute top-2 right-2"
                               onClick={async () => {
                                 try {
-                                  setSelectedDetail({ ...selectedDetail, qrCode: '' });
+                                  setSelectedDetail({ ...selectedDetail, qrCodeImage: '' });
                                   // Update in backend by sending empty string
                                   await http.put(
                                     `/content/services/${selectedDetail.itemId}/details/${selectedDetail.detailId}`,
-                                    { ...selectedDetail, qrCode: '' }
+                                    { ...selectedDetail, qrCodeImage: '' }
                                   );
                                   toast.success(language === 'en' ? 'QR Code removed' : 'تم حذف QR Code');
                                 } catch (error) {
@@ -2713,10 +2713,10 @@ const ContentManagement = () => {
                       </p>
                     </div>
                   ) : (
-                    selectedDetail.qrCode ? (
+                    selectedDetail.qrCodeImage ? (
                       <div className="mt-2">
                         <img
-                          src={selectedDetail.qrCode}
+                          src={selectedDetail.qrCodeImage}
                           alt="QR Code"
                           className="w-full h-64 object-cover rounded-md border border-border"
                           onError={(e) => {
@@ -2789,7 +2789,7 @@ const ContentManagement = () => {
                     // Validate that at least one field has content
                     if (!selectedDetail.title_en && !selectedDetail.title_ar && 
                         !selectedDetail.details_en && !selectedDetail.details_ar && 
-                        !selectedDetail.image && !selectedDetail.qrCode) {
+                        !selectedDetail.image && !selectedDetail.qrCodeImage) {
                       toast.warning(
                         language === 'en' 
                           ? 'Please fill at least one field' 
@@ -2804,7 +2804,7 @@ const ContentManagement = () => {
                       details_en: selectedDetail.details_en || '',
                       details_ar: selectedDetail.details_ar || '',
                       image: selectedDetail.image || '',
-                      qrCode: selectedDetail.qrCode || '',
+                      qrCodeImage: selectedDetail.qrCodeImage || '',
                     };
                     
                     try {

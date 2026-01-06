@@ -29,7 +29,7 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
     limit = 20,
     unreadOnly = false,
     autoRefresh = false,
-    refreshInterval = 30000, // 30 seconds
+    refreshInterval = 60000, // 60 seconds / 1 minute
   } = options;
 
   const [notifications, setNotifications] = useState<Notification[]>([]);

@@ -53,7 +53,7 @@ const AdminMessages = () => {
   const [startingChat, setStartingChat] = useState(false);
   
   // Unread messages count
-  const { unreadCount } = useUnreadMessagesCount(30000); // Refresh every 30 seconds
+  const { unreadCount } = useUnreadMessagesCount(60000); // Refresh every 60 seconds / 1 minute
   
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);

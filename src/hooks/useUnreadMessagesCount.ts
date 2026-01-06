@@ -17,7 +17,7 @@ interface UnreadCount {
  * - Auto-refreshes at specified interval
  * - Returns loading and error states
  */
-export const useUnreadMessagesCount = (refreshInterval: number = 30000) => {
+export const useUnreadMessagesCount = (refreshInterval: number = 60000) => {
   const [unreadCount, setUnreadCount] = useState<UnreadCount | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +70,7 @@ export const useUnreadMessagesCount = (refreshInterval: number = 30000) => {
   useEffect(() => {
     fetchUnreadCount();
     
-    // Auto-refresh every refreshInterval (default: 30 seconds)
+    // Auto-refresh every refreshInterval (default: 60 seconds / 1 minute)
     const interval = setInterval(fetchUnreadCount, refreshInterval);
     
     return () => clearInterval(interval);

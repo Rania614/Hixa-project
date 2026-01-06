@@ -2,6 +2,7 @@ import { http } from "./http";
 
 export interface Proposal {
   _id: string;
+  id?: string;
   project: string | {
     _id: string;
     name?: string;
@@ -13,7 +14,9 @@ export interface Proposal {
     _id: string;
     name?: string;
     email?: string;
-    avatar?: string;
+    avatar?: {
+      url?: string;
+    };
   };
   description: string;
   estimatedTimeline?: string;
@@ -22,6 +25,16 @@ export interface Proposal {
     amount: number;
     currency: string;
   };
+  milestones?: Array<{
+    label: string;
+    percentage: number;
+    amount: number;
+  }>;
+  attachments?: Array<{
+    name: string;
+    url: string;
+    type: string;
+  }>;
   status: "pending" | "accepted" | "rejected" | "reviewed";
   createdAt: string;
   updatedAt?: string;

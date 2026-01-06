@@ -39,12 +39,12 @@ const CompanySubmitProposal = () => {
     estimatedTimeline: "",
     relevantExperience: "",
     proposedBudget: {
-      amount: "",
+      amount: 0, // سيُحسب تلقائياً من البنود
       currency: "SAR",
+      items: [
+        { description: "", amount: "" }
+      ],
     },
-    milestones: [
-      { label: "", percentage: "", amount: "" }
-    ],
     attachments: [] as File[],
   });
 
@@ -97,42 +97,52 @@ const CompanySubmitProposal = () => {
     fetchProject();
   }, [id, authChecking]);
 
-  // Milestone Handlers
-  const addMilestone = () => {
+  // Budget Item Handlers
+  const addBudgetItem = () => {
     setFormData({
       ...formData,
-      milestones: [...formData.milestones, { label: "", percentage: "", amount: "" }]
+      proposedBudget: {
+        ...formData.proposedBudget,
+        items: [...formData.proposedBudget.items, { description: "", amount: "" }]
+      }
     });
   };
 
-  const removeMilestone = (index: number) => {
-    const updated = [...formData.milestones];
+  const removeBudgetItem = (index: number) => {
+    const updated = [...formData.proposedBudget.items];
     updated.splice(index, 1);
-    setFormData({ ...formData, milestones: updated });
+    const newItems = updated;
+    const total = newItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+    setFormData({ 
+      ...formData, 
+      proposedBudget: {
+        ...formData.proposedBudget,
+        items: newItems,
+        amount: total,
+      }
+    });
   };
 
-  const updateMilestone = (index: number, field: string, value: string) => {
-    const updated = [...formData.milestones];
+  const updateBudgetItem = (index: number, field: string, value: string) => {
+    const updated = [...formData.proposedBudget.items];
     updated[index] = { ...updated[index], [field]: value };
     
-    if (field === "percentage") {
-      const total = parseFloat(formData.proposedBudget.amount) || 0;
-      const calculatedAmount = ((total * parseFloat(value)) / 100).toFixed(2);
-      updated[index].amount = isNaN(parseFloat(calculatedAmount)) ? "" : calculatedAmount;
-    }
-    setFormData({ ...formData, milestones: updated });
+    // حساب الإجمالي من جميع البنود
+    const total = updated.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+    
+    setFormData({ 
+      ...formData, 
+      proposedBudget: {
+        ...formData.proposedBudget,
+        items: updated,
+        amount: total,
+      }
+    });
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    if (name === "amount") {
-      setFormData((prev) => ({
-        ...prev,
-        proposedBudget: { ...prev.proposedBudget, amount: value },
-      }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -144,9 +154,14 @@ const CompanySubmitProposal = () => {
       submissionData.append("description", formData.description);
       submissionData.append("estimatedTimeline", formData.estimatedTimeline);
       submissionData.append("relevantExperience", formData.relevantExperience);
-      submissionData.append("proposedBudget[amount]", formData.proposedBudget.amount);
-      submissionData.append("proposedBudget[currency]", formData.proposedBudget.currency);
-      submissionData.append("milestones", JSON.stringify(formData.milestones));
+      submissionData.append("proposedBudget", JSON.stringify({
+        amount: formData.proposedBudget.amount,
+        currency: formData.proposedBudget.currency,
+        items: formData.proposedBudget.items.map(item => ({
+          description: item.description,
+          amount: parseFloat(item.amount) || 0,
+        })),
+      }));
       
       formData.attachments.forEach((file) => {
         submissionData.append("attachments", file);
@@ -231,18 +246,9 @@ const CompanySubmitProposal = () => {
                   />
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-2.5">
-                    <Label className="text-base font-semibold">{language === "en" ? "Proposed Budget (Total)" : "إجمالي الميزانية المقترحة"}</Label>
-                    <div className="flex gap-2">
-                      <Input name="amount" type="number" value={formData.proposedBudget.amount} onChange={handleInputChange} required className="bg-hexa-bg/50" />
-                      <Input value="SAR" readOnly className="w-24 bg-muted font-bold text-center" />
-                    </div>
-                  </div>
-                  <div className="space-y-2.5">
-                    <Label className="text-base font-semibold">{language === "en" ? "Completion Timeline" : "مدة التنفيذ المتوقعة"}</Label>
-                    <Input name="estimatedTimeline" value={formData.estimatedTimeline} onChange={handleInputChange} required placeholder="e.g. 90 Days" className="bg-hexa-bg/50" />
-                  </div>
+                <div className="space-y-2.5">
+                  <Label className="text-base font-semibold">{language === "en" ? "Completion Timeline" : "مدة التنفيذ المتوقعة"}</Label>
+                  <Input name="estimatedTimeline" value={formData.estimatedTimeline} onChange={handleInputChange} required placeholder="e.g. 90 Days" className="bg-hexa-bg/50" />
                 </div>
 
                 <div className="space-y-2.5">
@@ -256,52 +262,50 @@ const CompanySubmitProposal = () => {
                 </div>
               </div>
 
-              {/* القسم الثاني: بنود الدفع */}
+              {/* القسم الثاني: بنود الميزانية */}
               <div className="space-y-6 pt-6 border-t border-hexa-border">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h3 className="text-lg font-bold text-hexa-text-dark">{language === "en" ? "Financial Milestones" : "خطة الدفعات المالية"}</h3>
-                    <p className="text-xs text-hexa-text-light mt-1">{language === "en" ? "Define how payments should be released" : "حدد كيفية صرف الدفعات بناءً على إنجاز المراحل"}</p>
+                    <h3 className="text-lg font-bold text-hexa-text-dark">{language === "en" ? "Budget Items" : "بنود الميزانية"}</h3>
+                    <p className="text-xs text-hexa-text-light mt-1">{language === "en" ? "Add items with prices" : "أضف البنود مع الأسعار"}</p>
                   </div>
-                  <Button type="button" variant="outline" size="sm" onClick={addMilestone} className="border-hexa-secondary text-hexa-secondary hover:bg-hexa-secondary/10">
-                    <Plus className="w-4 h-4 mr-1" /> {language === "en" ? "Add Milestone" : "إضافة دفعة"}
+                  <Button type="button" variant="outline" size="sm" onClick={addBudgetItem} className="border-hexa-secondary text-hexa-secondary hover:bg-hexa-secondary/10">
+                    <Plus className="w-4 h-4 mr-1" /> {language === "en" ? "Add Item" : "إضافة بند"}
                   </Button>
                 </div>
 
                 <div className="space-y-4">
-                  {formData.milestones.map((milestone, index) => (
+                  {formData.proposedBudget.items.map((item, index) => (
                     <div key={index} className="flex flex-col md:flex-row gap-4 p-5 bg-hexa-bg/30 rounded-2xl border border-hexa-border hover:border-hexa-secondary/30 transition-colors relative group">
                       <div className="flex-1 space-y-2">
-                        <Label className="text-xs text-hexa-text-light">{language === "en" ? "Milestone Name" : "اسم المرحلة / الدفعة"}</Label>
+                        <Label className="text-xs text-hexa-text-light">{language === "en" ? "Item Description" : "وصف البند"}</Label>
                         <Input 
-                          placeholder={language === "en" ? "e.g. Design Completion" : "مثلاً: عند تسليم التصاميم"} 
-                          value={milestone.label} 
-                          onChange={(e) => updateMilestone(index, "label", e.target.value)}
+                          placeholder={language === "en" ? "e.g. Architectural Designs" : "مثلاً: التصاميم المعمارية"} 
+                          value={item.description} 
+                          onChange={(e) => updateBudgetItem(index, "description", e.target.value)}
                           className="h-10 bg-white"
-                        />
-                      </div>
-                      <div className="w-full md:w-32 space-y-2">
-                        <Label className="text-xs text-hexa-text-light">{language === "en" ? "Percentage (%)" : "النسبة (%)"}</Label>
-                        <Input 
-                          type="number" 
-                          placeholder="0" 
-                          value={milestone.percentage} 
-                          onChange={(e) => updateMilestone(index, "percentage", e.target.value)}
-                          className="h-10 bg-white"
+                          required
                         />
                       </div>
                       <div className="w-full md:w-44 space-y-2">
-                        <Label className="text-xs text-hexa-text-light">{language === "en" ? "Value" : "القيمة التقديرية"}</Label>
-                        <div className="h-10 flex items-center px-3 bg-muted/40 rounded-md font-mono text-hexa-secondary text-sm border border-transparent">
-                          {milestone.amount || "0.00"} <span className="mx-1 text-[10px]">SAR</span>
-                        </div>
+                        <Label className="text-xs text-hexa-text-light">{language === "en" ? "Amount (SAR)" : "المبلغ (ريال)"}</Label>
+                        <Input 
+                          type="number" 
+                          placeholder="0.00" 
+                          value={item.amount} 
+                          onChange={(e) => updateBudgetItem(index, "amount", e.target.value)}
+                          className="h-10 bg-white"
+                          required
+                          min="0"
+                          step="0.01"
+                        />
                       </div>
-                      {formData.milestones.length > 1 && (
+                      {formData.proposedBudget.items.length > 1 && (
                         <Button 
                           type="button" 
                           variant="ghost" 
                           size="icon" 
-                          onClick={() => removeMilestone(index)}
+                          onClick={() => removeBudgetItem(index)}
                           className="text-destructive hover:bg-destructive/10 md:mt-8"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -309,6 +313,19 @@ const CompanySubmitProposal = () => {
                       )}
                     </div>
                   ))}
+                </div>
+
+                {/* عرض الإجمالي */}
+                <div className="mt-4 p-5 bg-hexa-secondary/10 rounded-2xl border border-hexa-secondary/20">
+                  <div className="flex justify-between items-center">
+                    <Label className="text-lg font-bold">{language === "en" ? "Total Budget" : "إجمالي الميزانية"}</Label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl font-bold text-hexa-secondary">
+                        {formData.proposedBudget.amount.toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                      <span className="text-lg text-hexa-text-light">SAR</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
