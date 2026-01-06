@@ -2372,11 +2372,13 @@ const ContentManagement = () => {
                 </div>
               </div>
 
-              {/* Image */}
-              <div>
-                <label className="text-sm font-medium mb-1 block">
-                  {language === 'en' ? 'Image' : 'الصورة'}
-                </label>
+              {/* Image and QR Code */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Image */}
+                <div>
+                  <label className="text-sm font-medium mb-1 block">
+                    {language === 'en' ? 'Image' : 'الصورة'}
+                  </label>
                 {isDetailEditMode ? (
                   <div className="space-y-2">
                     <input
@@ -2548,6 +2550,185 @@ const ContentManagement = () => {
                     <p className="text-sm p-2 bg-muted rounded-md">{language === 'en' ? 'No image' : 'لا توجد صورة'}</p>
                   )
                 )}
+                </div>
+
+                {/* QR Code Image */}
+                <div>
+                  <label className="text-sm font-medium mb-1 block">
+                    {language === 'en' ? 'QR Code Image' : 'صورة QR Code'}
+                  </label>
+                  {isDetailEditMode ? (
+                    <div className="space-y-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+
+                          // Validate file size (max 5MB)
+                          if (file.size > 5 * 1024 * 1024) {
+                            toast.error(
+                              language === 'en' 
+                                ? 'Image size must be less than 5MB' 
+                                : 'يجب أن يكون حجم الصورة أقل من 5MB'
+                            );
+                            e.target.value = '';
+                            return;
+                          }
+
+                          // Validate file type
+                          if (!file.type.startsWith('image/')) {
+                            toast.error(
+                              language === 'en' 
+                                ? 'Please select an image file' 
+                                : 'يرجى اختيار ملف صورة'
+                            );
+                            e.target.value = '';
+                            return;
+                          }
+
+                          const formData = new FormData();
+                          formData.append('qrCode', file);
+
+                          try {
+                            // Show loading toast
+                            const loadingToast = toast.loading(
+                              language === 'en' ? 'Uploading QR Code...' : 'جاري رفع QR Code...'
+                            );
+
+                            const response = await http.post(
+                              `/content/services/${selectedDetail.itemId}/details/${selectedDetail.detailId}/qr-code`,
+                              formData,
+                              { 
+                                headers: { 'Content-Type': 'multipart/form-data' },
+                                onUploadProgress: (progressEvent) => {
+                                  if (progressEvent.total) {
+                                    const percentCompleted = Math.round(
+                                      (progressEvent.loaded * 100) / progressEvent.total
+                                    );
+                                    console.log(`Upload progress: ${percentCompleted}%`);
+                                  }
+                                }
+                              }
+                            );
+                            
+                            // Dismiss loading toast
+                            toast.dismiss(loadingToast);
+                            
+                            const qrCodeUrl = response.data?.data?.qrCode || response.data?.qrCode || response.data?.data?.detail?.qrCode || '';
+                            if (qrCodeUrl) {
+                              setSelectedDetail({ ...selectedDetail, qrCode: qrCodeUrl });
+                              
+                              // Update local state immediately
+                              setContent({
+                                services: {
+                                  ...servicesData,
+                                  [selectedDetail.itemId]: {
+                                    ...(servicesData[selectedDetail.itemId] || {}),
+                                    details: {
+                                      ...(servicesData[selectedDetail.itemId]?.details || {}),
+                                      [selectedDetail.detailId]: {
+                                        ...selectedDetail,
+                                        qrCode: qrCodeUrl,
+                                      },
+                                    },
+                                  },
+                                } as any,
+                              });
+                              
+                              toast.success(language === 'en' ? 'QR Code uploaded successfully' : 'تم رفع QR Code بنجاح');
+                            } else {
+                              throw new Error('No QR Code URL returned from server');
+                            }
+                          } catch (error: any) {
+                            console.error('Error uploading QR Code:', error);
+                            const errorMessage = error.response?.data?.message || error.message || 
+                              (language === 'en' ? 'Failed to upload QR Code' : 'فشل رفع QR Code');
+                            toast.error(errorMessage);
+                          } finally {
+                            // Reset file input
+                            e.target.value = '';
+                          }
+                        }}
+                        className="hidden"
+                        id="detail-qrcode-upload"
+                        disabled={loading}
+                      />
+                      <label
+                        htmlFor="detail-qrcode-upload"
+                        className={`flex items-center justify-center w-full px-4 py-2 bg-background border border-border rounded-lg transition-colors ${
+                          loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-muted'
+                        }`}
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        <span className="text-sm">
+                          {loading 
+                            ? (language === 'en' ? 'Uploading...' : 'جاري الرفع...')
+                            : selectedDetail.qrCode
+                            ? (language === 'en' ? 'Change QR Code...' : 'تغيير QR Code...')
+                            : (language === 'en' ? 'Choose QR Code...' : 'اختر QR Code...')}
+                        </span>
+                      </label>
+                      {selectedDetail.qrCode && (
+                        <div className="mt-2 relative">
+                          <img
+                            src={selectedDetail.qrCode}
+                            alt="QR Code"
+                            className="w-full h-48 object-cover rounded-md border border-border"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              toast.error(language === 'en' ? 'Failed to load QR Code' : 'فشل تحميل QR Code');
+                            }}
+                          />
+                          {isDetailEditMode && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="absolute top-2 right-2"
+                              onClick={async () => {
+                                try {
+                                  setSelectedDetail({ ...selectedDetail, qrCode: '' });
+                                  // Update in backend by sending empty string
+                                  await http.put(
+                                    `/content/services/${selectedDetail.itemId}/details/${selectedDetail.detailId}`,
+                                    { ...selectedDetail, qrCode: '' }
+                                  );
+                                  toast.success(language === 'en' ? 'QR Code removed' : 'تم حذف QR Code');
+                                } catch (error) {
+                                  console.error('Error removing QR Code:', error);
+                                  toast.error(language === 'en' ? 'Failed to remove QR Code' : 'فشل حذف QR Code');
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        {language === 'en' 
+                          ? 'JPG, PNG or GIF. Max size 5MB. QR Code will be uploaded to Cloudinary.'
+                          : 'JPG أو PNG أو GIF. الحد الأقصى للحجم 5MB. سيتم رفع QR Code إلى Cloudinary.'}
+                      </p>
+                    </div>
+                  ) : (
+                    selectedDetail.qrCode ? (
+                      <div className="mt-2">
+                        <img
+                          src={selectedDetail.qrCode}
+                          alt="QR Code"
+                          className="w-full h-64 object-cover rounded-md border border-border"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-sm p-2 bg-muted rounded-md">{language === 'en' ? 'No QR Code' : 'لا يوجد QR Code'}</p>
+                    )
+                  )}
+                </div>
               </div>
 
               {/* Details Row - English and Arabic */}
@@ -2608,7 +2789,7 @@ const ContentManagement = () => {
                     // Validate that at least one field has content
                     if (!selectedDetail.title_en && !selectedDetail.title_ar && 
                         !selectedDetail.details_en && !selectedDetail.details_ar && 
-                        !selectedDetail.image) {
+                        !selectedDetail.image && !selectedDetail.qrCode) {
                       toast.warning(
                         language === 'en' 
                           ? 'Please fill at least one field' 
@@ -2623,6 +2804,7 @@ const ContentManagement = () => {
                       details_en: selectedDetail.details_en || '',
                       details_ar: selectedDetail.details_ar || '',
                       image: selectedDetail.image || '',
+                      qrCode: selectedDetail.qrCode || '',
                     };
                     
                     try {

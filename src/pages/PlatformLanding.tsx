@@ -334,7 +334,7 @@ const Landing = () => {
                 {language === 'en' 
                   ? 'We send one email per month only – no spam.'
                   : 'نرسل بريدًا واحدًا شهريًا فقط – بدون سبام.'}
-              </p> */}
+              </p> */}ش
               
               <button 
                 type="submit"
