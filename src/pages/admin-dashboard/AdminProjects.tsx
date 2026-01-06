@@ -489,16 +489,16 @@ const AdminProjects = () => {
   };
 
   // Open cancel dialog
-  const openCancelDialog = (project: Project) => {
-    const projectId = getProjectId(project);
-    if (!projectId) {
-      toast.error(language === 'en' ? 'Invalid project ID' : 'معرف المشروع غير صحيح');
-      return;
-    }
-    const projectName = project.name || project.title || '';
-    setProjectToCancel({ id: projectId, name: projectName });
-    setCancelDialogOpen(true);
-  };
+  // const openCancelDialog = (project: Project) => {
+  //   const projectId = getProjectId(project);
+  //   if (!projectId) {
+  //     toast.error(language === 'en' ? 'Invalid project ID' : 'معرف المشروع غير صحيح');
+  //     return;
+  //   }
+  //   const projectName = project.name || project.title || '';
+  //   setProjectToCancel({ id: projectId, name: projectName });
+  //   setCancelDialogOpen(true);
+  // };
 
   // Duplicate project
   const handleDuplicate = async (projectId: string) => {
@@ -526,6 +526,39 @@ const AdminProjects = () => {
       setDuplicating(null);
     }
   };
+
+  // Open cancel dialog
+  // const openCancelDialog = (project: Project) => {
+  //   const projectId = getProjectId(project);
+  //   if (!projectId) {
+  //     toast.error(language === 'en' ? 'Invalid project ID' : 'معرف المشروع غير صحيح');
+  //     return;
+  //   }
+  //   const projectName = project.name || project.title || '';
+  //   setProjectToCancel({ id: projectId, name: projectName });
+  //   setCancelDialogOpen(true);
+  // };
+
+  // Cancel project
+  // const handleCancelProject = async () => {
+  //   if (!projectToCancel) return;
+    
+  //   try {
+  //     setCancelling(true);
+  //     await http.patch(`/projects/${projectToCancel.id}/cancel`);
+  //     toast.success(language === 'en' ? 'Project cancelled successfully' : 'تم إلغاء المشروع بنجاح');
+  //     setCancelDialogOpen(false);
+  //     setProjectToCancel(null);
+  //     fetchProjects();
+  //     fetchStatistics();
+  //   } catch (error: any) {
+  //     console.error('Error cancelling project:', error);
+  //     const errorMessage = error.response?.data?.message || (language === 'en' ? 'Failed to cancel project' : 'فشل إلغاء المشروع');
+  //     toast.error(errorMessage);
+  //   } finally {
+  //     setCancelling(false);
+  //   }
+  // };
 
   useEffect(() => {
     fetchProjects();

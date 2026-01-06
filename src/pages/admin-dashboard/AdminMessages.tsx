@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Search, Send, Paperclip, Loader2, Briefcase, User, UserCheck, CheckCircle, Clock, X } from "lucide-react";
+import { Search, Send, Paperclip, Loader2, Briefcase, User, UserCheck, CheckCircle, Clock, X, MessageSquare } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/components/ui/sonner";
 import { messagesApi, ProjectRoom, ChatRoom, Message } from "@/services/messagesApi";
@@ -50,6 +50,7 @@ const AdminMessages = () => {
   const [rejectReason, setRejectReason] = useState("");
   const [filter, setFilter] = useState<'all' | 'client' | 'engineer'>('all');
   const [viewMode, setViewMode] = useState<'all' | 'project'>('all'); // 'all' = show all chat rooms, 'project' = show by project
+  const [startingChat, setStartingChat] = useState(false);
   
   // Unread messages count
   const { unreadCount } = useUnreadMessagesCount(30000); // Refresh every 30 seconds
@@ -480,6 +481,16 @@ const AdminMessages = () => {
   const handleSendMessage = async () => {
     if (!selectedChatRoom || (!message.trim() && attachments.length === 0)) return;
     
+    // Prevent admin from sending messages in observer mode
+    if (selectedChatRoom.type === 'group' && selectedChatRoom.adminObserver) {
+      toast.error(
+        language === 'en' 
+          ? 'You are in observer mode and cannot send messages in this chat' 
+          : 'أنت في وضع المراقبة ولا يمكنك إرسال رسائل في هذه الدردشة'
+      );
+      return;
+    }
+    
     // Validate attachments before sending
     const maxSize = 50 * 1024 * 1024; // 50MB
     const invalidFiles = attachments.filter(file => file.size > maxSize);
@@ -593,6 +604,43 @@ const AdminMessages = () => {
     setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // Start chat - Admin initiates conversation
+  const handleStartChat = async () => {
+    if (!selectedChatRoom) return;
+    try {
+      setStartingChat(true);
+      const updatedChatRoom = await messagesApi.startChat(selectedChatRoom._id);
+      
+      // Update chat room in state
+      setChatRooms((prev) =>
+        prev.map((room) =>
+          room._id === selectedChatRoom._id
+            ? { ...room, ...updatedChatRoom, adminStartedChat: true }
+            : room
+        )
+      );
+      
+      // Update selected chat room
+      setSelectedChatRoom({ ...selectedChatRoom, ...updatedChatRoom, adminStartedChat: true });
+      
+      toast.success(
+        language === 'en' 
+          ? 'Chat started successfully' 
+          : 'تم بدء الدردشة بنجاح'
+      );
+    } catch (error: any) {
+      console.error('Error starting chat:', error);
+      toast.error(
+        language === 'en' 
+          ? 'Failed to start chat' 
+          : 'فشل بدء الدردشة'
+      );
+    } finally {
+      setStartingChat(false);
+    }
+  };
+
+  // Assign engineer from chat
   const handleAssignEngineer = async () => {
     if (!selectedChatRoom || !selectedProjectRoom || selectedChatRoom.type !== 'admin-engineer') return;
     try {
@@ -803,18 +851,24 @@ const AdminMessages = () => {
         setTimeout(() => scrollToBottom(), 100);
       }
       setChatRooms((prev) =>
-        prev.map((room) =>
-          room._id === data.chatRoomId
-            ? {
-                ...room,
-                lastMessage: {
-                  content: data.message.content,
-                  sender: data.message.sender,
-                  createdAt: data.message.createdAt,
-                },
-              }
-            : room
-        )
+        prev.map((room) => {
+          if (room._id === data.chatRoomId) {
+            const senderId = typeof data.message.sender === 'string' 
+              ? data.message.sender 
+              : (typeof data.message.sender === 'object' && data.message.sender !== null
+                ? (data.message.sender._id || String(data.message.sender))
+                : String(data.message.sender));
+            return {
+              ...room,
+              lastMessage: {
+                content: data.message.content,
+                sender: senderId,
+                createdAt: data.message.createdAt,
+              },
+            } as ChatRoom;
+          }
+          return room;
+        })
       );
     };
     socketService.on('new_message', handleNewMessage);
@@ -959,9 +1013,9 @@ const AdminMessages = () => {
                       {language === "en" ? "All Chats" : "جميع المحادثات"}
                     </Button>
                     <Button
-                      variant={viewMode === 'project' ? 'default' : 'outline'}
+                      variant={(viewMode as string) === 'project' ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => setViewMode('project')}
+                      onClick={() => setViewMode('project' as 'all' | 'project')}
                       className="h-7 text-xs justify-start"
                     >
                       {language === "en" ? "By Project" : "حسب المشروع"}
@@ -1124,27 +1178,53 @@ const AdminMessages = () => {
                      <div className="flex-shrink-0 border-b border-gray-800 bg-gray-900/50 px-4 py-3">
                        <div className="flex items-center justify-between">
                          {/* Left Side - Action Buttons */}
-                         {selectedChatRoom.type === 'admin-engineer' && (
-                           <div className="flex gap-2">
+                         <div className="flex gap-2">
+                           {/* Start Chat Button - Show if chat hasn't started yet */}
+                           {!selectedChatRoom.adminStartedChat && selectedChatRoom.type !== 'group' && (
                              <Button
-                               onClick={() => setShowRejectModal(true)}
-                               className="bg-red-500 hover:bg-red-600 text-white h-7 px-3 text-xs font-medium rounded"
+                               onClick={handleStartChat}
+                               disabled={startingChat}
+                               className="bg-green-500 hover:bg-green-600 text-white h-7 px-3 text-xs font-medium rounded"
                                size="sm"
                              >
-                               <X className="h-3.5 w-3.5 mr-1.5" />
-                               {language === 'en' ? 'Reject' : 'رفض'}
+                               {startingChat ? (
+                                 <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                               ) : (
+                                 <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+                               )}
+                               {language === 'en' ? 'Start Chat' : 'بدء الدردشة'}
                              </Button>
-                             <Button
-                               onClick={() => setShowAssignModal(true)}
-                               className="bg-yellow-400 hover:bg-yellow-500 text-black h-7 px-3 text-xs font-medium rounded"
-                               size="sm"
-                             >
-                               <UserCheck className="h-3.5 w-3.5 mr-1.5" />
-                               {language === 'en' ? 'Assign' : 'تعيين'}
-                             </Button>
-                           </div>
-                         )}
-                         {selectedChatRoom.type !== 'admin-engineer' && <div />}
+                           )}
+                           
+                           {/* Assign/Reject Buttons - Show only for admin-engineer/admin-company chats after chat started */}
+                           {selectedChatRoom.adminStartedChat && (selectedChatRoom.type === 'admin-engineer' || selectedChatRoom.type === 'admin-company') && (
+                             <>
+                               <Button
+                                 onClick={() => setShowRejectModal(true)}
+                                 className="bg-red-500 hover:bg-red-600 text-white h-7 px-3 text-xs font-medium rounded"
+                                 size="sm"
+                               >
+                                 <X className="h-3.5 w-3.5 mr-1.5" />
+                                 {language === 'en' ? 'Reject' : 'رفض'}
+                               </Button>
+                               <Button
+                                 onClick={() => setShowAssignModal(true)}
+                                 disabled={assigning}
+                                 className="bg-yellow-400 hover:bg-yellow-500 text-black h-7 px-3 text-xs font-medium rounded"
+                                 size="sm"
+                               >
+                                 {assigning ? (
+                                   <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                 ) : (
+                                   <UserCheck className="h-3.5 w-3.5 mr-1.5" />
+                                 )}
+                                 {language === 'en' ? 'Assign' : 'تعيين'}
+                               </Button>
+                             </>
+                           )}
+                           
+                           {selectedChatRoom.type === 'admin-client' && <div />}
+                         </div>
                          
                          {/* Right Side - Participant Info */}
                          <div className="flex items-center gap-3">
