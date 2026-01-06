@@ -640,28 +640,44 @@ const AdminMessages = () => {
     }
   };
 
-  // Assign engineer from chat
+  // Assign engineer from chat - Direct assignment
   const handleAssignEngineer = async () => {
-    if (!selectedChatRoom || !selectedProjectRoom || selectedChatRoom.type !== 'admin-engineer') return;
+    if (!selectedChatRoom || !selectedProjectRoom || (selectedChatRoom.type !== 'admin-engineer' && selectedChatRoom.type !== 'admin-company')) return;
     try {
       setAssigning(true);
-      const engineerId = selectedChatRoom.engineer || selectedChatRoom.participants.find(p => p.role === 'engineer')?.user;
+      const engineerId = selectedChatRoom.engineer || 
+                        selectedChatRoom.participants.find(p => p.role === 'engineer' || p.role === 'company')?.user;
+      
       if (!engineerId) {
         toast.error(language === 'en' ? 'Engineer ID not found' : 'لم يتم العثور على معرف المهندس');
         return;
       }
-      navigate(`/admin/projects/${selectedProjectRoom.project}`, {
-        state: { 
-          assignEngineer: true, 
-          engineerId: engineerId,
-          chatRoomId: selectedChatRoom._id
-        }
-      });
-      toast.success(language === 'en' ? 'Redirecting to assign engineer...' : 'جاري التوجيه لتعيين المهندس...');
+
+      // Get engineer ID as string
+      const engineerIdStr = typeof engineerId === 'string' ? engineerId : 
+                           (typeof engineerId === 'object' && engineerId !== null ? (engineerId as any)._id || String(engineerId) : String(engineerId));
+
+      // Call API directly
+      const result = await messagesApi.assignEngineerFromChat(selectedChatRoom._id, engineerIdStr);
+      
+      toast.success(language === 'en' ? 'Engineer assigned successfully' : 'تم تعيين المهندس بنجاح');
+      
+      // Reload chat rooms to show the new group chat
+      if (selectedProjectRoom) {
+        await loadChatRooms(selectedProjectRoom._id);
+      }
+      
+      // Optionally select the new group chat
+      if (result.groupChatRoom) {
+        setSelectedChatRoom(result.groupChatRoom as ChatRoom);
+      }
+      
       setShowAssignModal(false);
     } catch (error: any) {
       console.error('Error assigning engineer:', error);
-      toast.error(language === 'en' ? 'Failed to assign engineer' : 'فشل تعيين المهندس');
+      const errorMessage = error.response?.data?.message || 
+                          (language === 'en' ? 'Failed to assign engineer' : 'فشل تعيين المهندس');
+      toast.error(errorMessage);
     } finally {
       setAssigning(false);
     }
@@ -1208,7 +1224,7 @@ const AdminMessages = () => {
                                  {language === 'en' ? 'Reject' : 'رفض'}
                                </Button>
                                <Button
-                                 onClick={() => setShowAssignModal(true)}
+                                 onClick={handleAssignEngineer}
                                  disabled={assigning}
                                  className="bg-yellow-400 hover:bg-yellow-500 text-black h-7 px-3 text-xs font-medium rounded"
                                  size="sm"
@@ -1264,6 +1280,20 @@ const AdminMessages = () => {
                          </div>
                        </div>
                      </div>
+
+                     {/* Admin Observer Banner - Show for group chats */}
+                     {selectedChatRoom.type === 'group' && selectedChatRoom.adminObserver && (
+                       <div className="flex-shrink-0 bg-blue-500/10 border-b border-blue-500/20 px-4 py-2.5">
+                         <div className="flex items-center gap-2 text-blue-400 text-xs">
+                           <MessageSquare className="h-3.5 w-3.5 flex-shrink-0" />
+                           <span>
+                             {language === 'en' 
+                               ? 'This chat is monitored by admin to ensure both parties\' rights' 
+                               : 'يتم رؤية محتوى هذه الدردشة من قبل الإدارة لضمان حقوق الطرفين'}
+                           </span>
+                         </div>
+                       </div>
+                     )}
 
                      {/* Messages */}
                      <div className="flex-1 overflow-hidden flex flex-col bg-black min-h-0">
