@@ -20,7 +20,11 @@ import {
   Calendar,
   AlertCircle,
   FileText,
-  CheckCircle2
+  CheckCircle2,
+  Phone,
+  Download,
+  List,
+  Paperclip
 } from 'lucide-react';
 import { HexagonIcon } from '@/components/ui/hexagon-icon';
 import { http } from '@/services/http';
@@ -533,6 +537,124 @@ const AdminProjectProposals = () => {
                                   {language === 'en' ? 'Relevant Experience' : 'الخبرة ذات الصلة'}
                                 </p>
                                 <p className="text-sm">{proposal.relevantExperience}</p>
+                              </div>
+                            )}
+
+                            {/* Client Phone Number */}
+                            {project?.client?.phone && (
+                              <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                <div className="flex items-center gap-2">
+                                  <Phone className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                  <div>
+                                    <p className="text-xs text-muted-foreground mb-1">
+                                      {language === 'en' ? 'Client Phone Number' : 'رقم تليفون العميل'}
+                                    </p>
+                                    <p className="font-semibold text-blue-600 dark:text-blue-400">
+                                      {project.client.phone}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Budget Items */}
+                            {proposal.proposedBudget?.items && Array.isArray(proposal.proposedBudget.items) && proposal.proposedBudget.items.length > 0 && (
+                              <div>
+                                <div className="flex items-center gap-2 mb-3">
+                                  <List className="h-4 w-4 text-muted-foreground" />
+                                  <p className="text-sm font-medium text-muted-foreground">
+                                    {language === 'en' ? 'Budget Items' : 'بنود الميزانية'}
+                                  </p>
+                                </div>
+                                <div className="border rounded-lg overflow-hidden">
+                                  <table className="w-full">
+                                    <thead className="bg-muted/50">
+                                      <tr>
+                                        <th className="text-left p-3 text-xs font-medium text-muted-foreground">
+                                          {language === 'en' ? 'Description' : 'الوصف'}
+                                        </th>
+                                        <th className="text-right p-3 text-xs font-medium text-muted-foreground">
+                                          {language === 'en' ? 'Amount' : 'المبلغ'}
+                                        </th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {proposal.proposedBudget.items.map((item: any, idx: number) => (
+                                        <tr key={idx} className="border-t">
+                                          <td className="p-3 text-sm">
+                                            {item.description || language === 'en' ? 'N/A' : 'غير متوفر'}
+                                          </td>
+                                          <td className="p-3 text-sm text-right font-medium">
+                                            {item.amount?.toLocaleString() || '0'} {proposal.proposedBudget?.currency || 'SAR'}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                      <tr className="border-t bg-muted/30 font-semibold">
+                                        <td className="p-3 text-sm">
+                                          {language === 'en' ? 'Total' : 'الإجمالي'}
+                                        </td>
+                                        <td className="p-3 text-sm text-right">
+                                          {proposal.proposedBudget?.amount?.toLocaleString() || '0'} {proposal.proposedBudget?.currency || 'SAR'}
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Attachments/Files */}
+                            {proposal.attachments && Array.isArray(proposal.attachments) && proposal.attachments.length > 0 && (
+                              <div>
+                                <div className="flex items-center gap-2 mb-3">
+                                  <Paperclip className="h-4 w-4 text-muted-foreground" />
+                                  <p className="text-sm font-medium text-muted-foreground">
+                                    {language === 'en' ? 'Attachments' : 'الملفات المرفوعة'}
+                                  </p>
+                                  <Badge variant="outline" className="ml-2">
+                                    {proposal.attachments.length}
+                                  </Badge>
+                                </div>
+                                <div className="space-y-2">
+                                  {proposal.attachments.map((attachment: any, idx: number) => {
+                                    const fileUrl = attachment.url || attachment.path || attachment.fileUrl || '';
+                                    const fileName = attachment.name || attachment.filename || `File ${idx + 1}`;
+                                    const fileSize = attachment.size 
+                                      ? (attachment.size > 1024 * 1024 
+                                          ? `${(attachment.size / (1024 * 1024)).toFixed(2)} MB`
+                                          : `${(attachment.size / 1024).toFixed(2)} KB`)
+                                      : '';
+                                    const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(fileName);
+                                    const isPDF = /\.pdf$/i.test(fileName);
+                                    const isDocument = /\.(doc|docx|xls|xlsx|ppt|pptx)$/i.test(fileName);
+
+                                    return (
+                                      <a
+                                        key={idx}
+                                        href={fileUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors group"
+                                      >
+                                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                                          <div className="p-2 bg-muted rounded-lg flex-shrink-0">
+                                            {isImage && <FileText className="h-4 w-4 text-blue-500" />}
+                                            {isPDF && <FileText className="h-4 w-4 text-red-500" />}
+                                            {isDocument && <FileText className="h-4 w-4 text-green-500" />}
+                                            {!isImage && !isPDF && !isDocument && <FileText className="h-4 w-4 text-muted-foreground" />}
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate">{fileName}</p>
+                                            {fileSize && (
+                                              <p className="text-xs text-muted-foreground">{fileSize}</p>
+                                            )}
+                                          </div>
+                                        </div>
+                                        <Download className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 ml-2" />
+                                      </a>
+                                    );
+                                  })}
+                                </div>
                               </div>
                             )}
 
