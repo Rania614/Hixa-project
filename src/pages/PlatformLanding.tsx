@@ -1,25 +1,21 @@
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Chatbot } from '@/components/Chatbot';
-import { Hero } from '@/components/Hero';
 import { About } from '@/components/About';
 import { FeaturedProjects } from '@/components/FeaturedProjects';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { Instagram, MessageCircle, Twitter, Send, X, Facebook, Linkedin } from 'lucide-react';
+import { Instagram, MessageCircle, Twitter, X, Linkedin, Handshake, User, ChevronDown, Send, Facebook } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { http } from '@/services/http';
 import { toast } from '@/components/ui/sonner';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
 const Landing = () => {
   const { language } = useApp();
   const navigate = useNavigate();
-  const [subscribeHover, setSubscribeHover] = useState(false);
-  const [getStartedHover, setGetStartedHover] = useState(false);
-  const [subscribeFormHover, setSubscribeFormHover] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
   const [subscribeModalOpen, setSubscribeModalOpen] = useState(false);
@@ -36,387 +32,149 @@ const Landing = () => {
     facebook: 'https://www.facebook.com/share/1FpuCgzK8y/'
   };
 
-  const handleSubscribe = async (name?: string, email?: string, phone?: string) => {
-    // At least one contact method (email or phone) must be provided
-    if ((!email || !email.trim()) && (!phone || !phone.trim())) {
-      toast.error(language === 'en' 
-        ? 'Please provide at least an email address or phone number' 
-        : 'يرجى إدخال بريد إلكتروني أو رقم هاتف على الأقل');
+  const handleSubscribeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subscribeEmail.trim()) {
+      toast.error(language === 'en' ? 'Please provide an email' : 'يرجى إدخال البريد الإلكتروني');
       return;
     }
-
-    // Validate email format if provided
-    if (email && email.trim()) {
-      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailPattern.test(email.trim())) {
-        toast.error(language === 'en' 
-          ? 'Please enter a valid email address' 
-          : 'يرجى إدخال بريد إلكتروني صحيح');
-        return;
-      }
-    }
-
     setSubscribing(true);
     try {
-      const payload: { 
-        name?: string;
-        email?: string; 
-        phone?: string;
-      } = {};
-      
-      // Add name if provided
-      if (name && name.trim()) {
-        payload.name = name.trim();
-      }
-      
-      // Add email if provided
-      if (email && email.trim()) {
-        payload.email = email.trim();
-      }
-      
-      // Add phone if provided
-      if (phone && phone.trim()) {
-        const phonePattern = /^[\d\s\-\+\(\)]{8,}$/;
-        if (phonePattern.test(phone.trim())) {
-          payload.phone = phone.trim();
-        }
-      }
-
-      const response = await http.post('/subscribers/subscribe', payload);
-      
-      // Check if backend response indicates email was sent
-      const responseMessage = response?.data?.message || '';
-      const emailSent = responseMessage.toLowerCase().includes('email') || 
-                       responseMessage.toLowerCase().includes('sent') ||
-                       responseMessage.toLowerCase().includes('إرسال');
-      
-      if (emailSent) {
-        toast.success(
-          language === 'en' 
-            ? 'Thank you for subscribing! A confirmation email has been sent to your inbox.' 
-            : 'شكراً لك على الاشتراك! تم إرسال إيميل تأكيد إلى بريدك الإلكتروني.'
-        );
-      } else {
-        toast.success(language === 'en' ? 'Thank you for subscribing!' : 'شكراً لك على الاشتراك!');
-      }
-      
+      await http.post('/subscribers/subscribe', { name: subscribeName, email: subscribeEmail });
+      toast.success(language === 'en' ? 'Subscribed!' : 'تم الاشتراك بنجاح!');
       setSubscribeModalOpen(false);
-      setSubscribeName('');
-      setSubscribeEmail('');
-      setSubscribePhone('');
-    } catch (error: any) {
-      console.error('Error subscribing:', error);
-      console.error('Error response:', error.response?.data);
-      
-      // Handle 409 Conflict (already subscribed)
-      if (error.response?.status === 409) {
-        // Check if backend message indicates email was sent
-        const backendMessage = error.response?.data?.message || error.response?.data?.error || '';
-        const emailSent = backendMessage.toLowerCase().includes('email') || 
-                         backendMessage.toLowerCase().includes('sent') ||
-                         backendMessage.toLowerCase().includes('إرسال');
-        
-        if (emailSent) {
-          toast.success(
-            language === 'en' 
-              ? 'You are already subscribed! A confirmation email has been sent to your inbox.' 
-              : 'أنت مشترك بالفعل! تم إرسال إيميل تأكيد إلى بريدك الإلكتروني.'
-          );
-        } else {
-          toast.success(
-            language === 'en' 
-              ? 'You are already subscribed! Thank you for your interest.' 
-              : 'أنت مشترك بالفعل! شكراً لاهتمامك.'
-          );
-        }
-        setSubscribeModalOpen(false);
-        setSubscribeName('');
-        setSubscribeEmail('');
-        setSubscribePhone('');
-      } else {
-        // For successful subscription (200/201), check if email was sent
-        const backendMessage = error.response?.data?.message || error.response?.data?.error || '';
-        const errorMessage = backendMessage || 
-                            (language === 'en' 
-                              ? 'Failed to subscribe. Please try again.' 
-                              : 'فشل الاشتراك. يرجى المحاولة مرة أخرى.');
-        toast.error(errorMessage);
-      }
+    } catch (error) {
+      toast.error('Error');
     } finally {
       setSubscribing(false);
     }
   };
 
-  const handleSubscribeSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // At least email or phone must be provided
-    const email = subscribeEmail.trim() || undefined;
-    const phone = subscribePhone.trim() || undefined;
-    
-    if (email || phone) {
-      handleSubscribe(subscribeName.trim() || undefined, email, phone);
-    } else {
-      toast.error(language === 'en' 
-        ? 'Please provide at least an email address or phone number' 
-        : 'يرجى إدخال بريد إلكتروني أو رقم هاتف على الأقل');
-    }
-  };
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!(event.target as HTMLElement).closest('.hero-dropdown-container')) setDropdownOpen(false);
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   return (
     <div className="min-h-screen">
       <Header />
       
-      {/* Hero Section with Animated Geometric Shapes */}
-      <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
-        {/* Animated Geometric Background Shapes */}
+      {/* 1. Hero Section (DARK) */}
+      <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20 bg-[#050505] text-white">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-20 left-10 w-64 h-64 bg-gold/10 rounded-full blur-3xl animate-float" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-gold/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
-          <div className="absolute top-1/2 left-1/3 w-32 h-32 border border-gold/20 rotate-45 animate-float" style={{ animationDelay: '1s' }} />
-          <div className="absolute top-1/3 right-1/4 w-24 h-24 bg-gold/5 rotate-12 animate-float" style={{ animationDelay: '0.5s' }} />
-          <div className="absolute bottom-1/3 left-1/4 w-40 h-40 border-2 border-gold/10 rounded-full animate-float" style={{ animationDelay: '3s' }} />
         </div>
 
         <div className="container mx-auto px-6 text-center relative z-10">
-          <div className="mb-8 animate-slide-up">
-            <h1 className="text-6xl md:text-8xl font-bold mb-2">
-              <span className="block text-gold">{language === 'en' ? 'HIXA' : 'هيكسا'}</span>
-            </h1>
-          </div>
-          
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-slide-up">
-            {language === 'en' ? 'High Xpert ARTBUILD' : 'لكل مشروع لا ينسى'}
+          <h1 className="text-6xl md:text-8xl font-bold mb-4 animate-slide-up">
+            <span className="text-gold uppercase tracking-tighter">{language === 'en' ? 'HIXA' : 'هيكسا'}</span>
           </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto animate-slide-up" style={{ animationDelay: '0.2s' }}>
+          <h2 className="text-4xl md:text-6xl font-bold mb-8 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+            {language === 'en' ? 'High Xpert ARTBUILD' : 'لكل مشروع لا ينسى'}
+          </h2>
+          <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto mb-12 animate-slide-up" style={{ animationDelay: '0.2s' }}>
             {language === 'en' 
-              ? 'Connecting clients with professional engineers to execute engineering projects seamlessly'
-              : 'ربط العملاء مع المهندسين المحترفين لتنفيذ المشاريع الهندسية بسلاسة'}
+              ? 'Premium engineering solutions connecting visionaries with expert creators.'
+              : 'حلول هندسية متميزة تربط أصحاب الرؤى مع الخبراء المبدعين.'}
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-stretch sm:items-center w-full sm:w-auto px-4 sm:px-0 animate-slide-up" style={{ animationDelay: '0.4s' }}>
+
+          <div className="flex flex-wrap gap-4 justify-center animate-slide-up" style={{ animationDelay: '0.3s' }}>
             <button 
-              onMouseEnter={() => setSubscribeHover(true)}
-              onMouseLeave={() => setSubscribeHover(false)}
               onClick={() => setSubscribeModalOpen(true)}
-              disabled={subscribing}
-              className="hexagon bg-transparent border-2 border-gold text-gold hover:bg-gold hover:text-black font-semibold px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base flex items-center justify-center gap-2 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+              className="hexagon border-2 border-gold text-gold hover:bg-gold hover:text-black font-bold px-10 py-4 transition-all"
             >
-              <span>{subscribing ? (language === 'en' ? 'Subscribing...' : 'جاري الاشتراك...') : (language === 'en' ? 'Subscribe' : 'اشترك')}</span>
+              {language === 'en' ? 'SUBSCRIBE' : 'اشترك الآن'}
             </button>
-            <div className="dropdown-container relative w-full sm:w-auto">
+
+            <div className="hero-dropdown-container relative">
               <button 
-                onMouseEnter={() => setGetStartedHover(true)}
-                onMouseLeave={() => {
-                  setGetStartedHover(false);
-                  // Delay closing dropdown to allow hover on menu items
-                  setTimeout(() => {
-                    if (!dropdownOpen) return;
-                    const dropdown = document.querySelector('.dropdown-menu');
-                    if (dropdown && !dropdown.matches(':hover')) {
-                      setDropdownOpen(false);
-                    }
-                  }, 200);
-                }}
-                onClick={(e) => {
-                  e.preventDefault();
-                  setDropdownOpen(!dropdownOpen);
-                }}
-                className="hexagon bg-gold hover:bg-gold-dark text-black font-semibold px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base flex items-center justify-center gap-2 relative w-full sm:w-auto"
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="hexagon bg-gold text-black font-bold px-10 py-4 flex items-center gap-2"
               >
-                <span>{getStartedHover ? (language === 'en' ? 'Coming Soon' : 'قريباً') : (language === 'en' ? 'Get Started' : 'ابدأ الآن')}</span>
-                {dropdownOpen && (
-                  <div 
-                    className="dropdown-menu absolute top-full left-0 mt-2 w-48 bg-background/95 backdrop-blur-sm border border-gold/20 rounded-lg shadow-lg z-50 py-2 opacity-0 animate-in fade-in slide-in-from-top-2 duration-200"
-                    onMouseEnter={() => setDropdownOpen(true)}
-                    onMouseLeave={() => setDropdownOpen(false)}
-                    style={{ opacity: 1 }}
-                  >
-                    <button
-                      onClick={() => {
-                        navigate('/client/dashboard');
-                        setDropdownOpen(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-muted-foreground hover:text-gold hover:bg-gold/10 transition-colors duration-200 opacity-60 hover:opacity-100"
-                      title={language === 'en' ? 'Client Dashboard' : 'لوحة تحكم العميل'}
-                    >
-                      {language === 'en' ? 'Client Dashboard' : 'لوحة تحكم العميل'}
-                    </button>
-                    <button
-                      onClick={() => {
-                        navigate('/engineer/dashboard');
-                        setDropdownOpen(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-muted-foreground hover:text-gold hover:bg-gold/10 transition-colors duration-200 opacity-60 hover:opacity-100"
-                      title={language === 'en' ? 'Engineer Dashboard' : 'لوحة تحكم المهندس'}
-                    >
-                      {language === 'en' ? 'Engineer Dashboard' : 'لوحة تحكم المهندس'}
-                    </button>
-                  </div>
-                )}
+                <span>{language === 'en' ? 'GET STARTED' : 'ابدأ الآن'}</span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
               </button>
+              {dropdownOpen && (
+                <div className="absolute top-full mt-3 w-64 bg-[#121212] border border-gold/20 rounded-xl shadow-2xl z-50 p-2 overflow-hidden animate-in fade-in zoom-in-95">
+                  <button onClick={() => navigate('/auth/partner')} className="w-full text-left px-4 py-4 text-white hover:bg-gold hover:text-black rounded-lg transition-all flex items-center gap-3">
+                    <Handshake size={18} /> {language === 'en' ? 'Join as Partner' : 'انضم كشريك'}
+                  </button>
+                  <button onClick={() => navigate('/client/login')} className="w-full text-left px-4 py-4 text-white hover:bg-gold hover:text-black rounded-lg transition-all flex items-center gap-3">
+                    <User size={18} /> {language === 'en' ? 'Client Access' : 'دخول العملاء'}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </section>
 
-      {/* About Section */}
-      <section id="about">
-        <About />
+      {/* 2. About Section (LIGHT BEIGE) */}
+      <section id="about" className="bg-[#FDF9F0] py-20 text-black">
+        <div className="container mx-auto px-6 prose-headings:text-black prose-p:text-black">
+          <About />
+        </div>
       </section>
 
-      {/* Featured Projects Section */}
-      <section id="featured-projects">
+      {/* 3. Featured Projects (DARK) */}
+      <section id="featured-projects" className="bg-[#050505] py-20">
         <FeaturedProjects />
       </section>
 
-      {/* Subscription Section */}
-      <section id="subscription" className="py-20 bg-secondary/30">
+      {/* 4. Subscription Section (LIGHT BEIGE) */}
+      <section id="subscription" className="py-24 bg-[#FDF9F0] text-black">
         <div className="container mx-auto px-6">
-          <div className="max-w-2xl mx-auto text-center">
-            <h2 className="text-4xl font-bold mb-4">
-              {language === 'en' ? 'Subscribe to Our Newsletter' : 'اشترك في نشرتنا الإخبارية'}
-            </h2>
-            <div className="text-xl text-muted-foreground mb-2 space-y-2">
-              <p className={language === 'ar' ? 'text-right' : ''}>
-                {language === 'en' 
-                  ? 'Get engineering reports, tenders, project opportunities, and case studies delivered to your inbox.'
-                  : 'احصل على تقارير هندسية، مناقصات، فرص مشاريع، ودراسات حالة مباشرة إلى بريدك.'}
-              </p>
-              <p className={language === 'ar' ? 'text-right' : ''}>
-                {language === 'en' 
-                  ? 'We send you: tech news, job opportunities, and engineering analyses.'
-                  : ' أخبار تقنية، فرص عمل، وتحليلات هندسية.'}
-              </p>
-            </div>
-            <form onSubmit={handleSubscribeSubmit} className="max-w-md mx-auto mb-6 space-y-4 mt-8">
+          <div className="max-w-4xl mx-auto bg-black text-white p-12 rounded-[3rem] shadow-2xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gold/20 rounded-full blur-3xl -mr-10 -mt-10" />
+            
+            <div className="relative z-10 grid md:grid-cols-2 gap-12 items-center">
               <div>
-                <label htmlFor="subscription-name" className="block text-sm font-medium mb-2 text-foreground text-left">
-                  {language === 'en' ? 'Name ' : 'الاسم '}
-                </label>
+                <h2 className="text-4xl font-bold mb-4 leading-tight">
+                  {language === 'en' ? 'Stay in the Loop' : 'كن على اطلاع دائم'}
+                </h2>
+                <p className="text-gray-400">
+                  {language === 'en' 
+                    ? 'Get exclusive updates on our latest projects and architectural innovations.' 
+                    : 'احصل على تحديثات حصرية حول أحدث مشاريعنا وابتكاراتنا المعمارية.'}
+                </p>
+              </div>
+
+              <form onSubmit={handleSubscribeSubmit} className="space-y-4">
                 <Input
-                  id="subscription-name"
-                  type="text"
                   value={subscribeName}
                   onChange={(e) => setSubscribeName(e.target.value)}
-                  placeholder={language === 'en' ? 'Your name' : 'اسمك'}
-                  className="w-full px-4 py-3 rounded-lg bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-gold"
+                  placeholder={language === 'en' ? 'Name' : 'الاسم'}
+                  className="bg-white/10 border-white/20 text-white placeholder:text-gray-500 h-14 rounded-2xl"
                 />
-              </div>
-              
-              <div>
-                <label htmlFor="subscription-email" className="block text-sm font-medium mb-2 text-foreground text-left">
-                  {language === 'en' ? 'Email (Optional)' : 'البريد الإلكتروني (اختياري)'}
-                </label>
                 <Input
-                  id="subscription-email"
                   type="email"
                   value={subscribeEmail}
                   onChange={(e) => setSubscribeEmail(e.target.value)}
-                  placeholder={language === 'en' ? 'your.email@example.com' : 'بريدك@example.com'}
-                  className="w-full px-4 py-3 rounded-lg bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-gold"
+                  placeholder={language === 'en' ? 'Email Address' : 'البريد الإلكتروني'}
+                  className="bg-white/10 border-white/20 text-white placeholder:text-gray-500 h-14 rounded-2xl"
                 />
-              </div>
-              
-              <div>
-                <label htmlFor="subscription-phone" className="block text-sm font-medium mb-2 text-foreground text-left">
-                  {language === 'en' ? 'Phone Number (Optional)' : 'رقم الهاتف (اختياري)'}
-                </label>
-                <Input
-                  id="subscription-phone"
-                  type="tel"
-                  value={subscribePhone}
-                  onChange={(e) => setSubscribePhone(e.target.value)}
-                  placeholder={language === 'en' ? '+1234567890' : '+966501234567'}
-                  className="w-full px-4 py-3 rounded-lg bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-gold"
-                />
-              </div>
-{/*               
-              <p className="text-sm text-muted-foreground text-left">
-                {language === 'en' 
-                  ? 'We send one email per month only – no spam.'
-                  : 'نرسل بريدًا واحدًا شهريًا فقط – بدون سبام.'}
-              </p> */}ش
-              
-              <button 
-                type="submit"
-                onMouseEnter={() => setSubscribeFormHover(true)}
-                onMouseLeave={() => setSubscribeFormHover(false)}
-                disabled={subscribing || !subscribeEmail.trim()}
-                className="w-full rounded-lg bg-[#D4AC35] hover:bg-[#B8941F] text-[#071025] font-semibold px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 shadow-md hover:shadow-lg"
-              >
-                {subscribing 
-                  ? (language === 'en' ? 'Subscribing...' : 'جاري الاشتراك...') 
-                  : (language === 'en' ? 'Subscribe to Follow Our Work' : 'اشترك لمتابعة أعمالنا')}
-              </button>
-              
-              <p className="text-xs text-muted-foreground text-left mt-2">
-                {language === 'en' 
-                  ? 'We will not share your data with any third party.'
-                  : 'لن نشارك بياناتك مع أي طرف ثالث.'}
-              </p>
-            </form>
-            
-            {/* Social Media Icons */}
-            <div className="mt-12">
-              <p className="text-lg font-medium text-foreground mb-4">
-                {language === 'en' ? 'Follow us for daily engineering content' : 'تابعنا للمحتوى الهندسي اليومي'}
-              </p>
-              <div className="flex justify-center gap-4 md:gap-6">
-                <a 
-                  href={socialLinks.linkedin}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
-                  aria-label="LinkedIn"
+                <button 
+                  type="submit"
+                  disabled={subscribing}
+                  className="w-full bg-gold hover:bg-white text-black font-black h-14 rounded-2xl transition-all shadow-lg"
                 >
-                  <Linkedin className="w-5 h-5" />
-                </a>
-                <a 
-                  href={socialLinks.twitter}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
-                  aria-label="Twitter/X"
-                >
-                  <Twitter className="w-5 h-5" />
-                </a>
-                <a 
-                  href={socialLinks.instagram}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
-                  aria-label="Instagram"
-                >
-                  <Instagram className="w-5 h-5" />
-                </a>
-                <a 
-                  href={socialLinks.whatsapp}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
-                  aria-label="WhatsApp"
-                >
-                  <MessageCircle className="w-5 h-5" />
-                </a>
-                <a 
-                  href={socialLinks.telegram}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
-                  aria-label="Telegram"
-                >
-                  <Send className="w-5 h-5" />
-                </a>
-                <a 
-                  href={socialLinks.facebook}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-10 h-10 border-2 border-[#D4AC35] rounded-full flex items-center justify-center text-[#D4AC35] hover:bg-[#D4AC35] hover:text-white transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#D4AC35] focus:ring-offset-2 focus:ring-offset-[#071025]"
-                  aria-label="Facebook"
-                >
-                  <Facebook className="w-5 h-5" />
-                </a>
-              </div>
+                  {subscribing ? '...' : (language === 'en' ? 'SUBSCRIBE NOW' : 'اشترك الآن')}
+                </button>
+              </form>
             </div>
+          </div>
+
+          {/* All Social Icons Returned */}
+          <div className="flex flex-wrap justify-center gap-8 mt-16">
+            <a href={socialLinks.linkedin} target="_blank" className="text-black hover:text-gold transition-all transform hover:scale-125"><Linkedin size={28} /></a>
+            <a href={socialLinks.twitter} target="_blank" className="text-black hover:text-gold transition-all transform hover:scale-125"><Twitter size={28} /></a>
+            <a href={socialLinks.instagram} target="_blank" className="text-black hover:text-gold transition-all transform hover:scale-125"><Instagram size={28} /></a>
+            <a href={socialLinks.facebook} target="_blank" className="text-black hover:text-gold transition-all transform hover:scale-125"><Facebook size={28} /></a>
+            <a href={socialLinks.whatsapp} target="_blank" className="text-black hover:text-gold transition-all transform hover:scale-125"><MessageCircle size={28} /></a>
+            <a href={socialLinks.telegram} target="_blank" className="text-black hover:text-gold transition-all transform hover:scale-125"><Send size={28} /></a>
           </div>
         </div>
       </section>
@@ -426,133 +184,22 @@ const Landing = () => {
 
       {/* Subscribe Modal */}
       {subscribeModalOpen && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setSubscribeModalOpen(false);
-              setSubscribeName('');
-              setSubscribeEmail('');
-              setSubscribePhone('');
-            }
-          }}
-        >
-          <Card className="w-full max-w-md max-h-[90vh] glass-card relative border-2 border-gold/20 rounded-2xl flex flex-col">
-            <Button
-              onClick={() => {
-                setSubscribeModalOpen(false);
-                setSubscribeName('');
-                setSubscribeEmail('');
-                setSubscribePhone('');
-              }}
-              variant="ghost"
-              size="icon"
-              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground z-10"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-            
-            <CardHeader className="text-center pb-4 flex-shrink-0">
-              <CardTitle className="text-2xl font-bold text-gold">
-                {language === 'en' ? 'Subscribe' : 'اشترك'}
-              </CardTitle>
-              <div className="text-muted-foreground mt-2 space-y-1">
-                <p className={language === 'ar' ? 'text-right' : ''}>
-                  {language === 'en' 
-                    ? 'Get engineering reports, tenders, project opportunities, and case studies delivered to your inbox.'
-                    : 'احصل على تقارير هندسية، مناقصات، فرص مشاريع، ودراسات حالة مباشرة إلى بريدك.'}
-                </p>
-                <p className={language === 'ar' ? 'text-right' : ''}>
-                  {language === 'en' 
-                    ? 'We send you: ech news, job opportunities, and engineering analyses.'
-                    : 'نرسل لك: أخبار تقنية، فرص عمل، وتحليلات هندسية.'}
-                </p>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl">
+          <Card className="w-full max-w-md bg-[#0A0A0A] border border-gold/30 text-white rounded-[2.5rem]">
+            <div className="p-10 relative">
+              <button onClick={() => setSubscribeModalOpen(false)} className="absolute top-6 right-6 text-gray-500 hover:text-white"><X size={24} /></button>
+              <div className="text-center mb-8">
+                <CardTitle className="text-3xl font-black text-gold tracking-widest mb-2 uppercase">HIXA INSIDER</CardTitle>
+                <p className="text-gray-400 text-sm">{language === 'en' ? 'Join our elite newsletter' : 'انضم لنشرتنا البريدية المتميزة'}</p>
               </div>
-            </CardHeader>
-            
-            <CardContent className="overflow-y-auto flex-1">
               <form onSubmit={handleSubscribeSubmit} className="space-y-4">
-                <div>
-                  <label htmlFor="subscribe-name" className="block text-sm font-medium mb-2 text-foreground">
-                    {language === 'en' ? 'Name ' : 'الاسم '}
-                  </label>
-                  <Input
-                    id="subscribe-name"
-                    type="text"
-                    value={subscribeName}
-                    onChange={(e) => setSubscribeName(e.target.value)}
-                    placeholder={language === 'en' ? 'Your name' : 'اسمك'}
-                    className="w-full px-4 py-3 rounded-lg bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-gold"
-                    autoFocus
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="subscribe-email" className="block text-sm font-medium mb-2 text-foreground">
-                    {language === 'en' ? 'Email (Optional)' : 'البريد الإلكتروني (اختياري)'}
-                  </label>
-                  <Input
-                    id="subscribe-email"
-                    type="email"
-                    value={subscribeEmail}
-                    onChange={(e) => setSubscribeEmail(e.target.value)}
-                    placeholder={language === 'en' ? 'your.email@example.com' : 'بريدك@example.com'}
-                    className="w-full px-4 py-3 rounded-lg bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-gold"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="subscribe-phone" className="block text-sm font-medium mb-2 text-foreground">
-                    {language === 'en' ? 'Phone Number (Optional)' : 'رقم الهاتف (اختياري)'}
-                  </label>
-                  <Input
-                    id="subscribe-phone"
-                    type="tel"
-                    value={subscribePhone}
-                    onChange={(e) => setSubscribePhone(e.target.value)}
-                    placeholder={language === 'en' ? '+1234567890' : '+966501234567'}
-                    className="w-full px-4 py-3 rounded-lg bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-gold"
-                  />
-                </div>
-                
-                {/* <p className="text-sm text-muted-foreground">
-                  {language === 'en' 
-                    ? 'We send one email per month only – no spam.'
-                    : 'نرسل بريدًا واحدًا شهريًا فقط – بدون سبام.'}
-                </p> */}
-                
-                <div className="flex gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setSubscribeModalOpen(false);
-                      setSubscribeName('');
-                      setSubscribeEmail('');
-                      setSubscribePhone('');
-                    }}
-                    className="flex-1"
-                  >
-                    {language === 'en' ? 'Cancel' : 'إلغاء'}
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={subscribing || !subscribeEmail.trim()}
-                    className="flex-1 rounded-lg bg-[#D4AC35] hover:bg-[#B8941F] text-[#071025] font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 shadow-md hover:shadow-lg"
-                  >
-                    {subscribing 
-                      ? (language === 'en' ? 'Subscribing...' : 'جاري الاشتراك...') 
-                      : (language === 'en' ? 'Subscribe to Follow Our Work' : 'اشترك لمتابعة أعمالنا')}
-                  </Button>
-                </div>
-                
-                <p className="text-xs text-muted-foreground text-center mt-2">
-                  {language === 'en' 
-                    ? 'We will not share your data with any third party.'
-                    : 'لن نشارك بياناتك مع أي طرف ثالث.'}
-                </p>
+                <Input value={subscribeName} onChange={(e) => setSubscribeName(e.target.value)} className="bg-white/5 border-white/10 h-12 rounded-xl" placeholder="Full Name" />
+                <Input value={subscribeEmail} onChange={(e) => setSubscribeEmail(e.target.value)} className="bg-white/5 border-white/10 h-12 rounded-xl" placeholder="Email Address" />
+                <Button type="submit" className="w-full bg-gold text-black hover:bg-white font-bold h-12 rounded-xl mt-4">
+                   {subscribing ? '...' : 'CONFIRM SUBSCRIPTION'}
+                </Button>
               </form>
-            </CardContent>
+            </div>
           </Card>
         </div>
       )}
