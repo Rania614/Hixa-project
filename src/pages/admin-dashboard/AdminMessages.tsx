@@ -3,13 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { AdminTopBar } from "@/components/AdminTopBar";
 import { useApp } from "@/context/AppContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Search, Send, Paperclip, Loader2, Briefcase, User, UserCheck, CheckCircle, Clock, X, MessageSquare } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2, CheckCircle, User, Briefcase, UserCheck } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { messagesApi, ProjectRoom, ChatRoom, Message } from "@/services/messagesApi";
 import { socketService, SocketMessageEvent } from "@/services/socketService";
@@ -24,6 +20,13 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { http } from "@/services/http";
+import { ChatHeader } from "@/components/admin-messages/ChatHeader";
+import { MessagesList } from "@/components/admin-messages/MessagesList";
+import { MessageInput } from "@/components/admin-messages/MessageInput";
+import { ChatRoomsList } from "@/components/admin-messages/ChatRoomsList";
+import { ProjectRoomsList } from "@/components/admin-messages/ProjectRoomsList";
+import { ViewModeToggle } from "@/components/admin-messages/ViewModeToggle";
+import { ObserverBanner } from "@/components/admin-messages/ObserverBanner";
 
 const AdminMessages = () => {
   const { language } = useApp();
@@ -931,18 +934,6 @@ const AdminMessages = () => {
     }
   }, [selectedChatRoom?._id]); // Remove loadMessages from dependencies
 
-  const filteredChatRooms = chatRooms.filter((room) => {
-    // Filter by type
-    if (filter === 'client' && room.type !== 'admin-client') return false;
-    if (filter === 'engineer' && room.type !== 'admin-engineer') return false;
-    if (room.type === 'group') return false;
-    
-    // Filter by search term
-    const title = getChatRoomTitle(room);
-    if (!title || typeof title !== 'string') return true; // Include if title is invalid
-    return title.toLowerCase().includes(searchTerm.toLowerCase());
-  });
-
   return (
     <div className="flex h-screen bg-background overflow-hidden">
       <AdminSidebar />
@@ -965,575 +956,92 @@ const AdminMessages = () => {
            <div className="flex-1 flex gap-2 overflow-hidden min-h-0">
              {/* Left Sidebar - Projects or View Mode Toggle */}
              {viewMode === 'project' ? (
-               <Card className="w-48 flex-shrink-0 flex flex-col overflow-hidden glass-card h-full">
-                 <CardHeader className="flex-shrink-0 pb-2 px-3 pt-3">
-                   <CardTitle className="text-sm font-semibold">
-                     {language === "en" ? "Projects" : "المشاريع"}
-                   </CardTitle>
-                 <div className="relative mt-2">
-                   <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                         <Input
-                     placeholder={language === "en" ? "Search..." : "بحث..."}
-                     className="pl-7 h-7 text-xs"
-                         />
-                       </div>
-               </CardHeader>
-               <CardContent className="flex-1 overflow-hidden p-0 min-h-0">
-                 <ScrollArea className="h-full">
-                   <div className="p-2">
-                  {loading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-4 w-4 animate-spin text-yellow-400/70" />
-                    </div>
-                  ) : projectRooms.length === 0 ? (
-                    <p className="text-xs text-muted-foreground/70 text-center py-8">
-                      {language === "en" ? "No projects" : "لا توجد مشاريع"}
-                    </p>
-                  ) : (
-                     projectRooms.map((room) => (
-                       <div
-                         key={room._id}
-                         onClick={() => setSelectedProjectRoom(room)}
-                         className={`p-1 rounded-md cursor-pointer transition-all mb-0.5 ${
-                           selectedProjectRoom?._id === room._id
-                             ? "bg-yellow-400/8 border-l-2 border-yellow-400/50"
-                             : "hover:bg-muted/40"
-                         }`}
-                       >
-                         <p className="font-medium text-sm text-foreground/90 truncate leading-tight">
-                           {room.projectTitle}
-                         </p>
-                         <p className="text-xs text-muted-foreground/60 mt-0.5">
-                           {formatTime(room.lastActivityAt)}
-                         </p>
-                       </div>
-                     ))
-                  )}
-                  </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-            ) : (
-              <Card className="w-48 flex-shrink-0 flex flex-col overflow-hidden glass-card h-full">
-                <CardHeader className="flex-shrink-0 pb-2 px-3 pt-3">
-                  <CardTitle className="text-sm font-semibold mb-2">
-                    {language === "en" ? "View Mode" : "وضع العرض"}
-                  </CardTitle>
-                  <div className="flex flex-col gap-1.5">
-                    <Button
-                      variant={viewMode === 'all' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setViewMode('all')}
-                      className="h-7 text-xs justify-start"
-                    >
-                      {language === "en" ? "All Chats" : "جميع المحادثات"}
-                    </Button>
-                    <Button
-                      variant={(viewMode as string) === 'project' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setViewMode('project' as 'all' | 'project')}
-                      className="h-7 text-xs justify-start"
-                    >
-                      {language === "en" ? "By Project" : "حسب المشروع"}
-                    </Button>
-                  </div>
-                </CardHeader>
-              </Card>
-            )}
+               <ProjectRoomsList
+                 projectRooms={projectRooms}
+                 selectedProjectRoom={selectedProjectRoom}
+                 loading={loading}
+                 language={language}
+                 onSelectProjectRoom={setSelectedProjectRoom}
+                 formatTime={formatTime}
+               />
+             ) : (
+               <ViewModeToggle
+                 viewMode={viewMode}
+                 language={language}
+                 onViewModeChange={setViewMode}
+               />
+             )}
 
              {/* Main Area - Chats & Messages */}
              <div className="flex-1 flex gap-2 overflow-hidden min-h-0">
                {/* Chat Rooms List */}
-               <Card className="w-56 flex-shrink-0 flex flex-col overflow-hidden glass-card h-full">
-                 <CardHeader className="flex-shrink-0 pb-2 px-3 pt-3">
-                   <div className="flex items-center justify-between mb-2">
-                     <CardTitle className="text-sm font-semibold truncate">
-                       {viewMode === 'all' 
-                         ? (language === "en" ? "All Chats" : "جميع المحادثات")
-                         : (selectedProjectRoom ? selectedProjectRoom.projectTitle : (language === "en" ? "Chats" : "المحادثات"))}
-                     </CardTitle>
-                     <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
-                       {filteredChatRooms.length}
-                     </Badge>
-                   </div>
-                   {/* Filter Buttons */}
-                   <div className="flex gap-1 mb-2">
-                     <Button
-                       variant={filter === 'all' ? 'default' : 'outline'}
-                       size="sm"
-                       onClick={() => setFilter('all')}
-                       className="h-6 text-[10px] px-2 flex-1"
-                     >
-                       {language === "en" ? "All" : "الكل"}
-                     </Button>
-                     <Button
-                       variant={filter === 'client' ? 'default' : 'outline'}
-                       size="sm"
-                       onClick={() => setFilter('client')}
-                       className="h-6 text-[10px] px-2 flex-1"
-                     >
-                       {language === "en" ? "Clients" : "العملاء"}
-                     </Button>
-                     <Button
-                       variant={filter === 'engineer' ? 'default' : 'outline'}
-                       size="sm"
-                       onClick={() => setFilter('engineer')}
-                       className="h-6 text-[10px] px-2 flex-1"
-                     >
-                       {language === "en" ? "Engineers" : "المهندسين"}
-                     </Button>
-                   </div>
-                      <div className="relative">
-                     <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                        <Input
-                       placeholder={language === "en" ? "Search chats..." : "البحث..."}
-                       className="pl-7 h-7 text-xs"
-                       value={searchTerm}
-                       onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                      </div>
-                 </CardHeader>
-                 <CardContent className="flex-1 overflow-hidden p-0 min-h-0">
-                   <ScrollArea className="h-full">
-                      <div className="p-2">
-                    {viewMode === 'project' && !selectedProjectRoom ? (
-                      <p className="text-xs text-muted-foreground/70 text-center py-8">
-                        {language === "en" ? "Select a project" : "اختر مشروع"}
-                      </p>
-                    ) : filteredChatRooms.length === 0 ? (
-                      <p className="text-xs text-muted-foreground/70 text-center py-8">
-                        {language === "en" ? "No chats" : "لا توجد محادثات"}
-                      </p>
-                    ) : (
-                      filteredChatRooms.map((room) => {
-                        const Icon = getChatRoomIcon(room);
-                        const unread = getUnreadCount(room);
-                        const typeBadge = getChatRoomTypeBadge(room);
-                        const subtitle = getChatRoomSubtitle(room);
-                        const status = getChatRoomStatus(room);
-                        return (
-                           <div
-                             key={room._id}
-                             className={`p-1 rounded-md transition-all mb-0.5 ${
-                               selectedChatRoom?._id === room._id
-                                 ? "bg-yellow-400/8 border-l-2 border-yellow-400/50"
-                                 : "hover:bg-muted/40"
-                             }`}
-                           >
-                             <div 
-                               onClick={() => setSelectedChatRoom(room)}
-                               className="flex items-start gap-1.5 cursor-pointer"
-                             >
-                               <div className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${
-                                 room.type === 'admin-client' ? 'bg-muted/50' :
-                                 'bg-yellow-400/10'
-                               }`}>
-                                 <Icon className={`h-2.5 w-2.5 ${
-                                   room.type === 'admin-client' ? 'text-foreground/60' :
-                                   'text-yellow-400/80'
-                                 }`} />
-                               </div>
-                               <div className="flex-1 min-w-0">
-                                 <div className="flex items-center gap-1 mb-0.5">
-                                   <p className="font-medium text-sm text-foreground/90 truncate">
-                                     {getChatRoomTitle(room)}
-                                   </p>
-                                   {typeBadge && (
-                                     <Badge className={typeBadge.className}>
-                                       {typeBadge.label}
-                                     </Badge>
-                                   )}
-                                   {unread > 0 && (
-                                     <span className="bg-yellow-400/80 text-foreground text-[10px] rounded-full min-w-[14px] h-3.5 px-1 flex items-center justify-center font-medium flex-shrink-0">
-                                       {unread}
-                                    </span>
-                                  )}
-                                </div>
-                                 {subtitle && (
-                                   <p className="text-xs text-muted-foreground/60 mb-0.5">
-                                     {subtitle}
-                                   </p>
-                                 )}
-                                 {viewMode === 'all' && (
-                                   <p className="text-xs text-muted-foreground/50 mb-0.5 truncate">
-                                     {getProjectTitle(room)}
-                                   </p>
-                                 )}
-                                 {room.lastMessage && (
-                                   <>
-                                     <p className="text-xs text-muted-foreground/70 truncate line-clamp-1 mb-0.5 leading-tight">
-                                       {room.lastMessage.content}
-                                     </p>
-                                     <div className="flex items-center gap-1">
-                                       <p className="text-[10px] text-muted-foreground/50">
-                                         {formatTime(room.lastMessage.createdAt)}
-                                       </p>
-                                       <span className="text-[9px] text-muted-foreground/40">•</span>
-                                       <p className={`text-[10px] ${status.className}`}>
-                                         {status.label}
-                                       </p>
-                                     </div>
-                                   </>
-                                 )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                      </div>
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
+               <ChatRoomsList
+                 chatRooms={chatRooms}
+                 selectedChatRoom={selectedChatRoom}
+                 selectedProjectRoom={selectedProjectRoom}
+                 viewMode={viewMode}
+                 filter={filter}
+                 searchTerm={searchTerm}
+                 language={language}
+                 onSelectChatRoom={setSelectedChatRoom}
+                 onFilterChange={setFilter}
+                 onSearchChange={setSearchTerm}
+                 getChatRoomTitle={getChatRoomTitle}
+                 getChatRoomSubtitle={getChatRoomSubtitle}
+                 getChatRoomTypeBadge={getChatRoomTypeBadge}
+                 getChatRoomIcon={getChatRoomIcon}
+                 getChatRoomStatus={getChatRoomStatus}
+                 getProjectTitle={getProjectTitle}
+                 getUnreadCount={getUnreadCount}
+                 formatTime={formatTime}
+               />
 
               {/* Messages Area */}
               <Card className="flex-1 flex flex-col overflow-hidden bg-black border-gray-800 h-full">
                 {selectedChatRoom ? (
                   <>
                      {/* Chat Header */}
-                     <div className="flex-shrink-0 border-b border-gray-800 bg-gray-900/50 px-4 py-3">
-                       <div className="flex items-center justify-between">
-                         {/* Left Side - Action Buttons */}
-                         <div className="flex gap-2">
-                           {/* Start Chat Button - Show if chat hasn't started yet */}
-                           {!selectedChatRoom.adminStartedChat && selectedChatRoom.type !== 'group' && (
-                             <Button
-                               onClick={handleStartChat}
-                               disabled={startingChat}
-                               className="bg-green-500 hover:bg-green-600 text-white h-7 px-3 text-xs font-medium rounded"
-                               size="sm"
-                             >
-                               {startingChat ? (
-                                 <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                               ) : (
-                                 <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
-                               )}
-                               {language === 'en' ? 'Start Chat' : 'بدء الدردشة'}
-                             </Button>
-                           )}
-                           
-                           {/* Assign/Reject Buttons - Show only for admin-engineer/admin-company chats after chat started */}
-                           {selectedChatRoom.adminStartedChat && (selectedChatRoom.type === 'admin-engineer' || selectedChatRoom.type === 'admin-company') && (
-                             <>
-                               <Button
-                                 onClick={() => setShowRejectModal(true)}
-                                 className="bg-red-500 hover:bg-red-600 text-white h-7 px-3 text-xs font-medium rounded"
-                                 size="sm"
-                               >
-                                 <X className="h-3.5 w-3.5 mr-1.5" />
-                                 {language === 'en' ? 'Reject' : 'رفض'}
-                               </Button>
-                               <Button
-                                 onClick={handleAssignEngineer}
-                                 disabled={assigning}
-                                 className="bg-yellow-400 hover:bg-yellow-500 text-black h-7 px-3 text-xs font-medium rounded"
-                                 size="sm"
-                               >
-                                 {assigning ? (
-                                   <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                                 ) : (
-                                   <UserCheck className="h-3.5 w-3.5 mr-1.5" />
-                                 )}
-                                 {language === 'en' ? 'Assign' : 'تعيين'}
-                               </Button>
-                             </>
-                           )}
-                           
-                           {selectedChatRoom.type === 'admin-client' && <div />}
-                         </div>
-                         
-                         {/* Right Side - Participant Info */}
-                         <div className="flex items-center gap-3">
-                           {selectedChatRoom.type === 'admin-engineer' && (
-                             <>
-                               <Badge className="bg-yellow-400/20 text-yellow-400 border-0 text-xs px-2.5 py-1 h-6">
-                                 {language === 'en' ? 'Engineer' : 'مهندس'}
-                               </Badge>
-                               <div className="flex flex-col items-end">
-                                 <span className="text-sm font-semibold text-white">
-                                   {getChatRoomTitle(selectedChatRoom)}
-                                 </span>
-                                 <span className="text-xs text-gray-400">
-                                   {getChatRoomSubtitle(selectedChatRoom)} • {selectedProjectRoom?.projectTitle}
-                                 </span>
-                               </div>
-                               <div className="w-8 h-8 rounded-md bg-yellow-400/20 flex items-center justify-center">
-                                 <Briefcase className="h-4 w-4 text-yellow-400/80" />
-                               </div>
-                             </>
-                           )}
-                           {selectedChatRoom.type === 'admin-client' && (
-                             <>
-                               <div className="flex flex-col items-end">
-                                 <span className="text-sm font-semibold text-white">
-                                   {getChatRoomTitle(selectedChatRoom)}
-                                 </span>
-                                 <span className="text-xs text-gray-400">
-                                   {getChatRoomSubtitle(selectedChatRoom)} • {selectedProjectRoom?.projectTitle}
-                                 </span>
-                               </div>
-                               <div className="w-8 h-8 rounded-md bg-gray-700 flex items-center justify-center">
-                                 <User className="h-4 w-4 text-gray-300" />
-                               </div>
-                             </>
-                           )}
-                         </div>
-                       </div>
-                     </div>
+                     <ChatHeader
+                       selectedChatRoom={selectedChatRoom}
+                       selectedProjectRoom={selectedProjectRoom}
+                       language={language}
+                       startingChat={startingChat}
+                       assigning={assigning}
+                       onStartChat={handleStartChat}
+                       onReject={() => setShowRejectModal(true)}
+                       onAssign={handleAssignEngineer}
+                       getChatRoomTitle={getChatRoomTitle}
+                       getChatRoomSubtitle={getChatRoomSubtitle}
+                     />
 
                      {/* Admin Observer Banner - Show for group chats */}
                      {selectedChatRoom.type === 'group' && selectedChatRoom.adminObserver && (
-                       <div className="flex-shrink-0 bg-blue-500/10 border-b border-blue-500/20 px-4 py-2.5">
-                         <div className="flex items-center gap-2 text-blue-400 text-xs">
-                           <MessageSquare className="h-3.5 w-3.5 flex-shrink-0" />
-                           <span>
-                             {language === 'en' 
-                               ? 'This chat is monitored by admin to ensure both parties\' rights' 
-                               : 'يتم رؤية محتوى هذه الدردشة من قبل الإدارة لضمان حقوق الطرفين'}
-                           </span>
-                         </div>
-                       </div>
+                       <ObserverBanner language={language} />
                      )}
 
                      {/* Messages */}
-                     <div className="flex-1 overflow-hidden flex flex-col bg-black min-h-0">
-                       <ScrollArea
-                         className="flex-1 min-h-0"
-                         ref={messagesContainerRef}
-                       >
-                         <div className="px-4 py-4">
-                           {loadingMessages && page === 1 ? (
-                             <div className="flex items-center justify-center py-12">
-                               <Loader2 className="h-5 w-5 animate-spin text-yellow-400" />
-                             </div>
-                           ) : (
-                             <div className="space-y-2 pb-6">
-                               {messages.length === 0 ? (
-                                 <div className="flex items-center justify-center py-12 text-gray-400">
-                                   {language === 'en' ? 'No messages yet' : 'لا توجد رسائل بعد'}
-                                 </div>
-                               ) : (
-                                 messages.map((msg, idx) => {
-                               // Determine if message is from admin
-                               const senderObj = typeof msg.sender === 'object' ? msg.sender : null;
-                               const senderRole = msg.senderRole || senderObj?.role || (senderObj as any)?.role;
-                               // Check if sender is admin - also check if sender name contains admin or if it's a system message
-                               const isAdmin = senderRole === 'admin' || 
-                                             (senderObj as any)?.role === 'admin' ||
-                                             msg.type === 'system' ||
-                                             (msg.senderName && typeof msg.senderName === 'string' && msg.senderName.toLowerCase().includes('admin'));
-                               const isSystem = msg.type === 'system';
-                               
-                               // Handle sender comparison (can be string or object)
-                               const prevSender = idx > 0 ? (typeof messages[idx - 1].sender === 'object' 
-                                 ? (messages[idx - 1].sender as any)?._id 
-                                 : messages[idx - 1].sender) : null;
-                               const currentSender = typeof msg.sender === 'object' 
-                                 ? (msg.sender as any)?._id 
-                                 : msg.sender;
-                               const isSameSender = prevSender === currentSender;
-                               const senderName = msg.senderName || (typeof msg.sender === 'object' ? msg.sender?.name : msg.sender) || senderRole || 'Unknown';
-                               const senderAvatar = typeof senderName === 'string' ? senderName.charAt(0) : 'U';
-                               const showAvatar = !isAdmin && !isSystem && !isSameSender;
-                               const showSenderName = !isSystem && !isSameSender;
-                             
-                               return (
-                                 <div key={msg._id} className={`${isSameSender ? 'mt-1' : 'mt-4'}`}>
-                                   <div className={`flex items-end gap-2.5 ${isAdmin ? "justify-end" : "justify-start"}`}>
-                                     {/* Avatar for received messages (left side) */}
-                                     {!isAdmin && !isSystem && (
-                                       <Avatar className={`w-8 h-8 flex-shrink-0 ${showAvatar ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                                         <AvatarFallback className="bg-blue-600 text-white text-xs font-semibold">
-                                           {senderAvatar.toUpperCase()}
-                                         </AvatarFallback>
-                                       </Avatar>
-                                     )}
-                                     
-                                     {/* Avatar for sent messages (right side) - Admin */}
-                                     {isAdmin && !isSystem && (
-                                       <Avatar className={`w-8 h-8 flex-shrink-0 ${!isSameSender ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                                         <AvatarFallback className="bg-amber-700 text-white text-xs font-semibold">
-                                           {typeof msg.senderName === 'string' ? msg.senderName.charAt(0).toUpperCase() : 'A'}
-                                         </AvatarFallback>
-                                       </Avatar>
-                                     )}
-                                     
-                                     <div className={`flex flex-col gap-1 ${isAdmin ? "items-end" : "items-start"} max-w-[75%] md:max-w-[70%]`}>
-                                       {/* Message bubble */}
-                                       <div
-                                         className={`rounded-2xl px-4 py-2.5 ${
-                                           isAdmin
-                                             ? "bg-yellow-400 text-black rounded-br-sm"
-                                             : isSystem
-                                             ? "bg-gray-800/50 text-gray-300 text-center mx-auto rounded-lg"
-                                             : "bg-gray-800/80 text-gray-100 rounded-bl-sm"
-                                         }`}
-                                       >
-                                         {msg.content && (
-                                           <p
-                                             className={`text-sm leading-relaxed whitespace-pre-wrap break-words ${
-                                               isAdmin
-                                                 ? "text-black font-medium"
-                                                 : isSystem
-                                                 ? "text-gray-300 italic"
-                                                 : "text-gray-100"
-                                             }`}
-                                           >
-                                             {msg.content}
-                                           </p>
-                                         )}
-                                         
-                                         {msg.attachments && msg.attachments.length > 0 && (
-                                           <div className="space-y-1.5 mb-2 mt-2">
-                                             {msg.attachments.map((att, attIdx) => {
-                                               const isImage = att.type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(att.filename || '');
-                                               const isPDF = /\.pdf$/i.test(att.filename || '');
-                                               const isDocument = /\.(doc|docx|xls|xlsx|ppt|pptx)$/i.test(att.filename || '');
-                                               const fileSize = att.size ? (att.size > 1024 * 1024 
-                                                 ? `${(att.size / (1024 * 1024)).toFixed(2)} MB`
-                                                 : `${(att.size / 1024).toFixed(2)} KB`) : '';
-                                               
-                                               return (
-                                                 <a
-                                                   key={attIdx}
-                                                   href={att.url}
-                                                   target="_blank"
-                                                   rel="noopener noreferrer"
-                                                   className={`flex items-center gap-2 p-2.5 rounded-lg hover:opacity-80 transition-all group ${
-                                                     isAdmin 
-                                                       ? "bg-yellow-300/30 border border-yellow-400/40" 
-                                                       : "bg-gray-700/50 border border-gray-600/50"
-                                                   }`}
-                                                 >
-                                                   {isImage && <span className="text-lg">🖼️</span>}
-                                                   {isPDF && <span className="text-lg">📄</span>}
-                                                   {isDocument && <span className="text-lg">📝</span>}
-                                                   {!isImage && !isPDF && !isDocument && <span className="text-lg">📎</span>}
-                                                   <div className="flex-1 min-w-0">
-                                                     <p className={`text-xs font-medium truncate ${
-                                                       isAdmin ? "text-black/90" : "text-gray-200"
-                                                     }`}>
-                                                       {att.filename || 'File'}
-                                                     </p>
-                                                     {fileSize && (
-                                                       <p className={`text-[10px] opacity-70 ${
-                                                         isAdmin ? "text-black/70" : "text-gray-300/70"
-                                                       }`}>{fileSize}</p>
-                                                     )}
-                                                   </div>
-                                                   <span className={`text-xs opacity-60 ${
-                                                     isAdmin ? "text-black/70" : "text-gray-300"
-                                                   }`}>⬇️</span>
-                                                 </a>
-                                               );
-                                             })}
-                                           </div>
-                                         )}
-                                       </div>
-                                       
-                                       {/* Timestamp - below message */}
-                                       <p className={`text-[10px] text-gray-400/70 px-1 ${
-                                         isAdmin ? "text-right" : "text-left"
-                                       }`}>
-                                         {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
-                                       </p>
-                                     </div>
-                                   </div>
-                                 </div>
-                                 );
-                               }))}
-                               <div ref={messagesEndRef} className="h-1" />
-                             </div>
-                           )}
-                         </div>
-                       </ScrollArea>
-                     </div>
+                     <MessagesList
+                       messages={messages}
+                       loadingMessages={loadingMessages}
+                       page={page}
+                       language={language}
+                       messagesContainerRef={messagesContainerRef}
+                       messagesEndRef={messagesEndRef}
+                     />
 
                      {/* Message Input */}
-                     <div className="flex-shrink-0 px-4 py-3 border-t border-gray-800 bg-gray-900/50">
-                       {attachments.length > 0 && (
-                         <div className="mb-2 flex flex-wrap gap-1.5">
-                           {attachments.map((file, idx) => {
-                             const fileSize = file.size > 1024 * 1024 
-                               ? `${(file.size / (1024 * 1024)).toFixed(2)} MB`
-                               : `${(file.size / 1024).toFixed(2)} KB`;
-                             const fileType = file.type || 'application/octet-stream';
-                             const isImage = fileType.startsWith('image/');
-                             const isPDF = fileType === 'application/pdf';
-                             const isDocument = fileType.includes('word') || fileType.includes('excel') || fileType.includes('powerpoint');
-                             
-                             return (
-                               <div
-                                 key={idx}
-                                 className="flex items-center gap-1.5 bg-gray-800 border border-gray-700 px-2 py-1.5 rounded-md text-xs shadow-sm"
-                               >
-                                 {isImage && <span className="text-yellow-400">🖼️</span>}
-                                 {isPDF && <span className="text-red-400">📄</span>}
-                                 {isDocument && <span className="text-blue-400">📝</span>}
-                                 {!isImage && !isPDF && !isDocument && <span className="text-gray-400">📎</span>}
-                                 <div className="flex flex-col min-w-0 flex-1">
-                                   <span className="text-gray-200 font-medium truncate max-w-[150px]" title={file.name}>
-                                     {file.name}
-                                   </span>
-                                   <span className="text-[10px] text-gray-400">{fileSize}</span>
-                                 </div>
-                                 <button
-                                   onClick={() => removeAttachment(idx)}
-                                   className="text-gray-400 hover:text-red-400 text-sm leading-none p-0.5 rounded hover:bg-red-500/10 transition-colors"
-                                   title={language === 'en' ? 'Remove file' : 'إزالة الملف'}
-                                 >
-                                   ×
-                                 </button>
-                               </div>
-                             );
-                           })}
-                         </div>
-                       )}
-                           <div className="flex gap-1.5 items-center">
-                         <input
-                           ref={fileInputRef}
-                           type="file"
-                           multiple
-                           accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar"
-                           className="hidden"
-                           onChange={handleFileSelect}
-                         />
-                         <Button
-                           variant="ghost"
-                           size="sm"
-                           onClick={() => fileInputRef.current?.click()}
-                           className="h-8 w-8 p-0 border border-gray-700 hover:bg-gray-800 hover:border-gray-600 text-gray-400 transition-colors"
-                           title={language === 'en' ? 'Attach file' : 'إرفاق ملف'}
-                         >
-                           <Paperclip className="h-4 w-4" />
-                         </Button>
-                            <Input
-                              value={message}
-                              onChange={(e) => setMessage(e.target.value)}
-                              placeholder={language === "en" ? "Type a message..." : "اكتب رسالة..."}
-                           className="flex-1 h-8 bg-gray-800 border-gray-700 text-gray-100 placeholder:text-gray-500 focus:border-yellow-400/50 text-sm"
-                              onKeyPress={(e) => {
-                             if (e.key === "Enter" && !e.shiftKey) {
-                               e.preventDefault();
-                               handleSendMessage();
-                             }
-                           }}
-                           disabled={sending}
-                            />
-                            <Button
-                           onClick={handleSendMessage}
-                           disabled={sending || (!message.trim() && attachments.length === 0)}
-                           className="bg-yellow-400 hover:bg-yellow-500 text-black h-8 px-4 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                         >
-                           {sending ? (
-                             <Loader2 className="w-4 h-4 animate-spin" />
-                           ) : (
-                               <Send className="w-4 h-4" />
-                           )}
-                         </Button>
-                       </div>
-                     </div>
-                      </>
+                     <MessageInput
+                       message={message}
+                       setMessage={setMessage}
+                       attachments={attachments}
+                       sending={sending}
+                       language={language}
+                       fileInputRef={fileInputRef}
+                       onFileSelect={handleFileSelect}
+                       onRemoveAttachment={removeAttachment}
+                       onSendMessage={handleSendMessage}
+                     />
+                  </>
                 ) : (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
