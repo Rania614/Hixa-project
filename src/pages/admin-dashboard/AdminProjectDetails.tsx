@@ -74,15 +74,33 @@ interface Project {
   title?: string;
   description: string;
   category: string;
+  projectType?: string;
   country: string;
+  city?: string;
   location?: string;
-  budget?: number;
+  budget?: number | { amount: number; currency: string };
   status: string;
+  startDate?: string;
+  deadline?: string;
+  requirements?: string;
+  tags?: string[];
+  attachments?: Array<{
+    _id?: string;
+    name?: string;
+    filename?: string;
+    url?: string;
+    path?: string;
+    fileUrl?: string;
+    type?: string;
+    size?: number;
+  }>;
   client?: {
     _id: string;
     name: string;
     email: string;
     phone?: string;
+    phoneNumber?: string;
+    contact?: string;
   };
   assignedTo?: {
     _id: string;
@@ -90,6 +108,7 @@ interface Project {
     type: 'engineer' | 'company';
   };
   proposals?: Proposal[];
+  proposalsCount?: number;
   requiredSkills?: string[];
   targetRoles?: string[];
   visibility?: {
@@ -97,7 +116,6 @@ interface Project {
     hiddenFrom?: string[];
   };
   createdAt: string;
-  deadline?: string;
 }
 
 interface Proposal {
@@ -341,6 +359,51 @@ const AdminProjectDetails = () => {
       setLoading(true);
       const response = await http.get(`/projects/${id}`);
       const projectData = response.data?.data || response.data;
+      
+      // Normalize client data - handle both populated and unpopulated client
+      if (projectData.client) {
+        console.log('📋 Client data from API:', projectData.client);
+        
+        // If client is just an ID (string), we need to fetch it separately
+        if (typeof projectData.client === 'string') {
+          try {
+            console.log('📞 Fetching client details for ID:', projectData.client);
+            const clientResponse = await http.get(`/users/${projectData.client}`);
+            const clientData = clientResponse.data?.data || clientResponse.data?.user || clientResponse.data;
+            console.log('📞 Client details fetched:', clientData);
+            projectData.client = {
+              _id: projectData.client,
+              name: clientData.name || '',
+              email: clientData.email || '',
+              phone: clientData.phone || clientData.phoneNumber || clientData.contact || '',
+            };
+            console.log('✅ Normalized client data:', projectData.client);
+          } catch (error) {
+            console.error('❌ Error fetching client data:', error);
+            // Keep client as ID if fetch fails
+            projectData.client = {
+              _id: projectData.client,
+              name: '',
+              email: '',
+              phone: '',
+            };
+          }
+        } else {
+          // Client is already populated, but ensure phone is accessible
+          const originalClient = projectData.client;
+          projectData.client = {
+            ...originalClient,
+            phone: originalClient.phone || originalClient.phoneNumber || originalClient.contact || '',
+          };
+          console.log('✅ Client already populated, normalized phone:', {
+            original: originalClient,
+            normalized: projectData.client
+          });
+        }
+      } else {
+        console.warn('⚠️ No client data in project response');
+      }
+      
       setProject(projectData);
       
       // Fetch proposals if project is published
@@ -868,9 +931,9 @@ const AdminProjectDetails = () => {
                   {language === 'en' ? 'Proposals' : 'العروض'} ({proposals.length})
                 </TabsTrigger>
               )}
-              <TabsTrigger value="visibility">
+              {/* <TabsTrigger value="visibility">
                 {language === 'en' ? 'Visibility Control' : 'التحكم في الظهور'}
-              </TabsTrigger>
+              </TabsTrigger> */}
               <TabsTrigger value="communication">
                 {language === 'en' ? 'Communication' : 'التواصل'}
               </TabsTrigger>
@@ -885,22 +948,97 @@ const AdminProjectDetails = () => {
                     <CardTitle>{language === 'en' ? 'Project Information' : 'معلومات المشروع'}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    {/* Project Title */}
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        {language === 'en' ? 'Project Title' : 'عنوان المشروع'}
+                      </label>
+                      <p className="mt-1 font-semibold">{project.title || project.name || 'N/A'}</p>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
+                      {/* Project Type */}
+                      {project.projectType && (
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">
+                            {language === 'en' ? 'Project Type' : 'نوع المشروع'}
+                          </label>
+                          <p className="mt-1">{project.projectType}</p>
+                        </div>
+                      )}
+                      
+                      {/* Business Scope / Category */}
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">
-                          {language === 'en' ? 'Category' : 'الفئة'}
+                          {language === 'en' ? 'Business Scope' : 'نطاق الأعمال'}
                         </label>
-                        <p className="mt-1">{project.category}</p>
+                        <p className="mt-1">{project.category || 'N/A'}</p>
                       </div>
+                      
+                      {/* Country */}
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">
-                          {language === 'en' ? 'Country' : 'البلد'}
+                          {language === 'en' ? 'Country' : 'الدولة'}
                         </label>
                         <div className="flex items-center gap-2 mt-1">
                           <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <p>{project.country || project.location || 'N/A'}</p>
+                          <p>{project.country || 'N/A'}</p>
                         </div>
                       </div>
+                      
+                      {/* City */}
+                      {project.city && (
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">
+                            {language === 'en' ? 'City' : 'المدينة'}
+                          </label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                            <p>{project.city}</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Location */}
+                      {project.location && (
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">
+                            {language === 'en' ? 'Location' : 'الموقع'}
+                          </label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                            <p>{project.location}</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Start Date */}
+                      {project.startDate && (
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">
+                            {language === 'en' ? 'Start Date' : 'تاريخ البدء'}
+                          </label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <p>{new Date(project.startDate).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US')}</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Expected Deadline */}
+                      {project.deadline && (
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">
+                            {language === 'en' ? 'Expected Deadline' : 'الموعد المتوقع'}
+                          </label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <p>{new Date(project.deadline).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US')}</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Budget */}
                       {project.budget && (
                         <div>
                           <label className="text-sm font-medium text-muted-foreground">
@@ -908,23 +1046,92 @@ const AdminProjectDetails = () => {
                           </label>
                           <div className="flex items-center gap-2 mt-1">
                             <DollarSign className="h-4 w-4 text-muted-foreground" />
-                            <p>${project.budget.toLocaleString()}</p>
-                          </div>
-                        </div>
-                      )}
-                      {project.deadline && (
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">
-                            {language === 'en' ? 'Deadline' : 'الموعد النهائي'}
-                          </label>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                            <p>{new Date(project.deadline).toLocaleDateString()}</p>
+                            <p>
+                              {typeof project.budget === 'object' 
+                                ? `${project.budget.amount?.toLocaleString() || 0} ${project.budget.currency || 'SAR'}`
+                                : `${project.budget.toLocaleString()} SAR`}
+                            </p>
                           </div>
                         </div>
                       )}
                     </div>
 
+                    {/* Project Description */}
+                    {project.description && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                          {language === 'en' ? 'Project Description' : 'وصف المشروع'}
+                        </label>
+                        <p className="text-sm whitespace-pre-wrap">{project.description}</p>
+                      </div>
+                    )}
+
+                    {/* Requirements and Specifications */}
+                    {project.requirements && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                          {language === 'en' ? 'Requirements and Specifications' : 'المتطلبات والمواصفات'}
+                        </label>
+                        <p className="text-sm whitespace-pre-wrap">{project.requirements}</p>
+                      </div>
+                    )}
+
+                    {/* Tags */}
+                    {project.tags && project.tags.length > 0 && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                          {language === 'en' ? 'Tags' : 'الوسوم'}
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {project.tags.map((tag, idx) => (
+                            <Badge key={idx} variant="outline">{tag}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Attachments */}
+                    {project.attachments && project.attachments.length > 0 && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                          {language === 'en' ? 'Attachments' : 'المرفقات'}
+                        </label>
+                        <div className="space-y-2">
+                          {project.attachments.map((att, idx) => {
+                            const fileUrl = att.url || att.path || att.fileUrl || '';
+                            const fileName = att.name || att.filename || `File ${idx + 1}`;
+                            const fileSize = att.size 
+                              ? (att.size > 1024 * 1024 
+                                  ? `${(att.size / (1024 * 1024)).toFixed(2)} MB`
+                                  : `${(att.size / 1024).toFixed(2)} KB`)
+                              : '';
+                            
+                            return (
+                              <div key={idx} className="flex items-center gap-2 p-2 border rounded-lg hover:bg-muted/50 transition-colors">
+                                <FileText className="h-4 w-4 text-muted-foreground" />
+                                {fileUrl ? (
+                                  <a 
+                                    href={fileUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="flex-1 text-sm text-primary hover:underline"
+                                  >
+                                    {fileName}
+                                  </a>
+                                ) : (
+                                  <span className="flex-1 text-sm">{fileName}</span>
+                                )}
+                                {fileSize && (
+                                  <span className="text-xs text-muted-foreground">{fileSize}</span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Required Skills (if exists) */}
                     {project.requiredSkills && project.requiredSkills.length > 0 && (
                       <div>
                         <label className="text-sm font-medium text-muted-foreground mb-2 block">
@@ -937,13 +1144,6 @@ const AdminProjectDetails = () => {
                         </div>
                       </div>
                     )}
-
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                        {language === 'en' ? 'Description' : 'الوصف'}
-                      </label>
-                      <p className="text-sm">{project.description}</p>
-                    </div>
                   </CardContent>
                 </Card>
 
@@ -1069,14 +1269,15 @@ const AdminProjectDetails = () => {
                             </label>
                             <p className="mt-1">{project.client.email}</p>
                           </div>
-                          {project.client.phone && (
-                            <div>
-                              <label className="text-sm font-medium text-muted-foreground">
-                                {language === 'en' ? 'Phone' : 'الهاتف'}
-                              </label>
-                              <p className="mt-1">{project.client.phone}</p>
-                            </div>
-                          )}
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">
+                              {language === 'en' ? 'Phone' : 'رقم التليفون'}
+                            </label>
+                            <p className="mt-1">
+                              {project.client.phone || project.client.phoneNumber || 
+                               (language === 'en' ? 'Not provided' : 'غير متوفر')}
+                            </p>
+                          </div>
                         </>
                       )}
                     </CardContent>
@@ -1272,12 +1473,12 @@ const AdminProjectDetails = () => {
               <div className="space-y-6">
                 {/* Info Card */}
                 <Card className="glass-card border-blue-500/20 bg-blue-500/5">
-                  <CardHeader>
+                  {/* <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-sm">
                       <AlertCircle className="h-4 w-4 text-blue-500" />
                       {language === 'en' ? 'How Visibility Works' : 'كيف يعمل التحكم في الظهور'}
                     </CardTitle>
-                  </CardHeader>
+                  </CardHeader> */}
                   <CardContent>
                     <div className="text-sm text-muted-foreground space-y-2">
                       <p>
@@ -1751,9 +1952,14 @@ const AdminProjectDetails = () => {
                     {language === 'en' ? 'Client Information' : 'معلومات العميل'}
                   </label>
                   {project.client && (
-                    <div className="p-3 bg-muted/30 rounded-lg">
+                    <div className="p-3 bg-muted/30 rounded-lg space-y-1">
                       <p className="font-medium">{project.client.name}</p>
                       <p className="text-sm text-muted-foreground">{project.client.email}</p>
+                      {project.client.phone && (
+                        <p className="text-sm text-muted-foreground">
+                          {language === 'en' ? 'Phone:' : 'رقم التليفون:'} {project.client.phone}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>

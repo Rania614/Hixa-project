@@ -964,13 +964,13 @@ const AdminMessages = () => {
                  onSelectProjectRoom={setSelectedProjectRoom}
                  formatTime={formatTime}
                />
-             ) : (
+            ) : (
                <ViewModeToggle
                  viewMode={viewMode}
                  language={language}
                  onViewModeChange={setViewMode}
                />
-             )}
+            )}
 
              {/* Main Area - Chats & Messages */}
              <div className="flex-1 flex gap-2 overflow-hidden min-h-0">
@@ -1041,7 +1041,7 @@ const AdminMessages = () => {
                        onRemoveAttachment={removeAttachment}
                        onSendMessage={handleSendMessage}
                      />
-                  </>
+                      </>
                 ) : (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
