@@ -796,22 +796,42 @@ const AdminMessages = () => {
       const clientParticipant = chatRoom.participants.find((p) => p.role === 'client');
       const user = clientParticipant?.user;
       // Handle both string and object (populated) user
-      if (typeof user === 'string') {
-        return user;
-      } else if (user && typeof user === 'object' && 'name' in user) {
-        return (user as any).name || (language === 'en' ? 'Client' : 'العميل');
+      if (user && typeof user === 'object' && 'name' in user) {
+        const userName = (user as any).name;
+        if (userName && typeof userName === 'string' && userName.trim() !== '') {
+          return userName;
+        }
       }
+      // If user is string (ID) or name is not available, try to get from project
+      if (project && project.client) {
+        const clientName = typeof project.client === 'object' 
+          ? project.client.name 
+          : null;
+        if (clientName && typeof clientName === 'string' && clientName.trim() !== '') {
+          return clientName;
+        }
+      }
+      // Fallback to default
       return language === 'en' ? 'Client' : 'العميل';
     }
     if (chatRoom.type === 'admin-engineer') {
-      const engineerParticipant = chatRoom.participants.find((p) => p.role === 'engineer');
+      const engineerParticipant = chatRoom.participants.find((p) => p.role === 'engineer' || p.role === 'company');
       const user = engineerParticipant?.user;
       // Handle both string and object (populated) user
-      if (typeof user === 'string') {
-        return user;
-      } else if (user && typeof user === 'object' && 'name' in user) {
-        return (user as any).name || (language === 'en' ? 'Engineer' : 'المهندس');
+      if (user && typeof user === 'object' && 'name' in user) {
+        const userName = (user as any).name;
+        if (userName && typeof userName === 'string' && userName.trim() !== '') {
+          return userName;
+        }
       }
+      // If user is string (ID) or name is not available, try to get from engineer field
+      if (chatRoom.engineer && typeof chatRoom.engineer === 'object' && chatRoom.engineer !== null) {
+        const engineer = (chatRoom.engineer as { name?: string }).name;
+        if (engineer && typeof engineer === 'string' && engineer.trim() !== '') {
+          return engineer;
+        }
+      }
+      // Fallback to default
       return language === 'en' ? 'Engineer' : 'المهندس';
     }
     return language === 'en' ? 'Chat' : 'محادثة';

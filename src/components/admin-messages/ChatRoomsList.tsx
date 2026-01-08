@@ -52,7 +52,9 @@ export const ChatRoomsList: React.FC<ChatRoomsListProps> = ({
     // Filter by type
     if (filter === 'client' && room.type !== 'admin-client') return false;
     if (filter === 'engineer' && room.type !== 'admin-engineer') return false;
-    if (room.type === 'group') return false;
+    // Group chats should be visible to admin (they can observe but not participate)
+    // Only filter out group chats if filter is set to 'client' or 'engineer'
+    if (filter !== 'all' && room.type === 'group') return false;
     
     // Filter by search term
     const title = getChatRoomTitle(room);

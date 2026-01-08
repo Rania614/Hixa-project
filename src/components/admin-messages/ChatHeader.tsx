@@ -1,7 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, MessageSquare, X, UserCheck, Briefcase, User } from "lucide-react";
+import { Loader2, MessageSquare, X, UserCheck, Briefcase, User, CheckCircle } from "lucide-react";
 import { ChatRoom, ProjectRoom } from "@/services/messagesApi";
 
 interface ChatHeaderProps {
@@ -10,11 +10,13 @@ interface ChatHeaderProps {
   language: string;
   startingChat: boolean;
   assigning: boolean;
+  loadingProject?: boolean;
   onStartChat: () => void;
   onReject: () => void;
   onAssign: () => void;
   getChatRoomTitle: (room: ChatRoom) => string;
   getChatRoomSubtitle: (room: ChatRoom) => string;
+  isEngineerAssigned?: (room: ChatRoom) => boolean;
 }
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
@@ -23,11 +25,13 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   language,
   startingChat,
   assigning,
+  loadingProject = false,
   onStartChat,
   onReject,
   onAssign,
   getChatRoomTitle,
   getChatRoomSubtitle,
+  isEngineerAssigned,
 }) => {
   if (!selectedChatRoom) return null;
 
@@ -56,27 +60,38 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           {/* Assign/Reject Buttons - Show only for admin-engineer/admin-company chats after chat started */}
           {selectedChatRoom.adminStartedChat && (selectedChatRoom.type === 'admin-engineer' || selectedChatRoom.type === 'admin-company') && (
             <>
-              <Button
-                onClick={onReject}
-                className="bg-red-500 hover:bg-red-600 text-white h-7 px-3 text-xs font-medium rounded"
-                size="sm"
-              >
-                <X className="h-3.5 w-3.5 mr-1.5" />
-                {language === 'en' ? 'Reject' : 'رفض'}
-              </Button>
-              <Button
-                onClick={onAssign}
-                disabled={assigning}
-                className="bg-yellow-400 hover:bg-yellow-500 text-black h-7 px-3 text-xs font-medium rounded"
-                size="sm"
-              >
-                {assigning ? (
-                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                ) : (
-                  <UserCheck className="h-3.5 w-3.5 mr-1.5" />
-                )}
-                {language === 'en' ? 'Assign' : 'تعيين'}
-              </Button>
+              {isEngineerAssigned && isEngineerAssigned(selectedChatRoom) ? (
+                // Show badge if engineer is assigned
+                <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs px-3 py-1 h-7 flex items-center gap-1.5">
+                  <CheckCircle className="h-3.5 w-3.5" />
+                  {language === 'en' ? 'Assigned - Working on Project' : 'معيّن - يعمل على المشروع'}
+                </Badge>
+              ) : (
+                // Show assign/reject buttons if engineer is not assigned
+                <>
+                  <Button
+                    onClick={onReject}
+                    className="bg-red-500 hover:bg-red-600 text-white h-7 px-3 text-xs font-medium rounded"
+                    size="sm"
+                  >
+                    <X className="h-3.5 w-3.5 mr-1.5" />
+                    {language === 'en' ? 'Reject' : 'رفض'}
+                  </Button>
+                  <Button
+                    onClick={onAssign}
+                    disabled={assigning || loadingProject}
+                    className="bg-yellow-400 hover:bg-yellow-500 text-black h-7 px-3 text-xs font-medium rounded"
+                    size="sm"
+                  >
+                    {assigning || loadingProject ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <UserCheck className="h-3.5 w-3.5 mr-1.5" />
+                    )}
+                    {language === 'en' ? 'Assign' : 'تعيين'}
+                  </Button>
+                </>
+              )}
             </>
           )}
           
