@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { http } from "@/services/http";
+import { Maximize2, ShoppingCart, Loader2, X, Info, QrCode, ChevronRight, ChevronLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface ServiceDetailsModalProps {
   open: boolean;
@@ -23,49 +25,35 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({
 }) => {
   const [serviceSections, setServiceSections] = useState<any[]>([]);
   const [loadingSections, setLoadingSections] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [expandedSections, setExpandedSections] = useState<Record<number, boolean>>({});
+
+  const isRtl = language === "ar";
+
+  const toggleExpand = (index: number) => {
+    setExpandedSections(prev => ({ ...prev, [index]: !prev[index] }));
+  };
+
+  const formatListContent = (content: string) => {
+    if (!content) return [];
+    return content.split(/\d+\.|\n|•/).map(item => item.trim()).filter(item => item.length > 0);
+  };
 
   useEffect(() => {
     if (!open) {
       setServiceSections([]);
       setLoadingSections(false);
-      setExpandedSections(new Set());
       setSelectedImage(null);
+      setExpandedSections({});
     }
   }, [open]);
 
-  const toggleSection = (index: number) => {
-    setExpandedSections(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(index)) {
-        newSet.delete(index);
-      } else {
-        newSet.add(index);
-      }
-      return newSet;
-    });
-  };
-
   useEffect(() => {
     const fetchServiceDetails = async () => {
-      if (!open || !selectedServiceForDetails) {
-        setServiceSections([]);
-        return;
-      }
-
+      if (!open || !selectedServiceForDetails) return;
       const serviceId = selectedServiceForDetails._id || selectedServiceForDetails.id;
       
-      if (!serviceId) {
-        if (selectedServiceDetails && selectedServiceDetails.length > 0) {
-          setServiceSections(selectedServiceDetails.slice(0, 4));
-        } else {
-          setServiceSections([]);
-        }
-        return;
-      }
-
-      if (selectedServiceDetails && selectedServiceDetails.length > 0) {
+      if (selectedServiceDetails?.length > 0) {
         setServiceSections(selectedServiceDetails.slice(0, 4));
         return;
       }
@@ -73,211 +61,145 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({
       setLoadingSections(true);
       try {
         const response = await http.get(`/content/services/items/${serviceId}/details`);
-        let details: any[] = [];
-        if (Array.isArray(response.data)) {
-          details = response.data;
-        } else if (response.data?.data && Array.isArray(response.data.data)) {
-          details = response.data.data;
-        } else if (response.data?.items && Array.isArray(response.data.items)) {
-          details = response.data.items;
-        } else if (response.data?.details && Array.isArray(response.data.details)) {
-          details = response.data.details;
-        }
-        
-        const sortedDetails = details
-          .sort((a: any, b: any) => (a.sectionKey || '').localeCompare(b.sectionKey || ''))
-          .slice(0, 4);
-        
-        setServiceSections(sortedDetails);
-      } catch (error: any) {
-        if (selectedServiceDetails && selectedServiceDetails.length > 0) {
-          setServiceSections(selectedServiceDetails.slice(0, 4));
-        } else {
-          setServiceSections([]);
-        }
+        const details = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+        setServiceSections(details.slice(0, 4));
+      } catch (error) {
+        setServiceSections([]);
       } finally {
         setLoadingSections(false);
       }
     };
-
     fetchServiceDetails();
   }, [open, selectedServiceForDetails, selectedServiceDetails]);
 
-  const serviceTitle = selectedServiceForDetails 
-    ? (getFieldValue(selectedServiceForDetails, "title", language) || selectedServiceForDetails?.name || "Service")
-    : "";
-
-  const serviceDescription = selectedServiceForDetails
-    ? (getFieldValue(selectedServiceForDetails, "description", language) || selectedServiceForDetails?.details || "")
-    : "";
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* تم تغيير bg-primary-dark إلى bg-[#0A0A0A] وجعل النصوص بيضاء صريحة */}
-      <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] bg-[#0A0A0A] border border-white/10 text-white rounded-2xl p-6 overflow-hidden flex flex-col shadow-2xl">
-        <DialogHeader className={`mb-4 flex-shrink-0 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-          <DialogTitle className={`text-2xl font-bold uppercase tracking-wider text-white ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-            {serviceTitle}
-          </DialogTitle>
-          {serviceDescription && (
-            <DialogDescription className={`text-gray-300 text-base mt-3 leading-relaxed ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-              {serviceDescription}
+      <DialogContent 
+        dir={isRtl ? "rtl" : "ltr"}
+        className="max-w-6xl w-[95vw] max-h-[90vh] bg-[#0A0A0A] border border-white/10 text-white rounded-[2rem] p-0 overflow-hidden flex flex-col shadow-2xl transition-all duration-500 outline-none"
+      >
+        {/* Header - تم ضبط المحاذاة والوصف هنا */}
+        <div className="relative p-10 bg-gradient-to-b from-white/5 to-transparent border-b border-white/5 shrink-0">
+          <DialogHeader className={isRtl ? "text-right" : "text-left"}>
+            <div className={`flex items-center gap-4 mb-4 ${isRtl ? "flex-row" : "flex-row"}`}>
+              <div className="h-10 w-2 bg-[#D4AF37] rounded-sm shadow-[0_0_15px_rgba(212,175,55,0.5)]" />
+              <DialogTitle className="text-4xl font-black tracking-tight text-white leading-tight">
+                {selectedServiceForDetails && getFieldValue(selectedServiceForDetails, "title", language)}
+              </DialogTitle>
+            </div>
+            {/* ضبط محاذاة الوصف لتبدأ من اليمين في العربية */}
+            <DialogDescription className={`text-gray-300 text-lg leading-relaxed max-w-5xl opacity-90 ${isRtl ? "text-right" : "text-left"}`}>
+              {selectedServiceForDetails && getFieldValue(selectedServiceForDetails, "description", language)}
             </DialogDescription>
-          )}
-        </DialogHeader>
+          </DialogHeader>
+        </div>
 
-        {selectedServiceForDetails && (
-          <div className="space-y-6 overflow-y-auto flex-1 scrollbar-hide">
-            {loadingSections ? (
-              <div className="text-center py-12">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-accent-gold"></div>
-              </div>
-            ) : serviceSections && serviceSections.length > 0 ? (
-              <div className="flex flex-col gap-6">
-                {serviceSections.map((section: any, index: number) => {
-                  const sectionTitle = getFieldValue(section, "title", language) || section?.title_en || "";
-                  const sectionDetails = getFieldValue(section, "details", language) || section?.details_en || "";
-                  const sectionImage = section?.image || section?.imageUrl || "";
-                  const qrCodeImage = section?.qrCodeImage || section?.qrCode || "";
-                  
-                  const detailsArray = typeof sectionDetails === 'string' 
-                    ? sectionDetails.split('\n').filter((line: string) => line.trim())
-                    : Array.isArray(sectionDetails)
-                    ? sectionDetails
-                    : sectionDetails ? [String(sectionDetails)] : [];
-                  
-                  const isExpanded = expandedSections.has(index);
-                  const hasMore = detailsArray.length > 3;
-                  const visibleItems = isExpanded ? detailsArray : detailsArray.slice(0, 3);
+        {/* Body Content */}
+        <div className="flex-1 overflow-y-auto p-10 custom-scrollbar">
+          {loadingSections ? (
+            <div className="h-64 flex flex-col items-center justify-center">
+              <Loader2 className="h-12 w-12 text-[#D4AF37] animate-spin" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
+              {serviceSections.map((section, index) => {
+                const listItems = formatListContent(getFieldValue(section, "details", language) || "");
+                const isExpanded = expandedSections[index];
+                const visibleItems = isExpanded ? listItems : listItems.slice(0, 3);
+                const hasMore = listItems.length > 3;
 
-                  return (
-                    <div 
-                      key={index} 
-                      className="flex items-center gap-6 p-2 group transition-all"
-                    >
-                      <div className="w-32 h-32 flex-shrink-0">
-                        {sectionImage ? (
-                          <img
-                            src={sectionImage}
-                            alt={sectionTitle}
-                            className="w-full h-full object-cover rounded-3xl border border-white/10 shadow-lg cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => setSelectedImage(sectionImage)}
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gray-800 rounded-3xl border border-white/10 flex items-center justify-center">
-                            <span className="text-gray-500 text-xs">No Image</span>
+                // جلب الصور من لوحة التحكم (CMS) - يدعم أكثر من مسمى للحقول
+                const sectionImage = section?.image || section?.imageUrl || section?.thumbnail;
+                const qrImage = section?.qrCodeImage || section?.qrCode || section?.qr;
+
+                return (
+                  <div key={index} className="group bg-white/[0.02] border border-white/5 rounded-[2.5rem] overflow-hidden hover:border-[#D4AF37]/30 transition-all duration-700 shadow-xl flex flex-col h-full">
+                    {/* Image Area - CMS Linked */}
+                    <div className="relative h-64 overflow-hidden shrink-0">
+                      {sectionImage ? (
+                        <>
+                          <img src={sectionImage} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" alt="Service Section" />
+                          <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-all" />
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button variant="secondary" size="icon" onClick={() => setSelectedImage(sectionImage)} className="rounded-full scale-125">
+                              <Maximize2 size={16} />
+                            </Button>
                           </div>
-                        )}
+                        </>
+                      ) : (
+                        <div className="w-full h-full bg-white/5 flex items-center justify-center text-gray-600 italic">No Preview Image</div>
+                      )}
+                    </div>
+
+                    {/* Content Area */}
+                    <div className="p-8 flex-1 flex flex-col">
+                      <div className="flex justify-between items-start mb-6">
+                        <h4 className="text-2xl font-bold text-white group-hover:text-[#D4AF37] transition-colors leading-tight max-w-[80%]">
+                          {getFieldValue(section, "title", language)}
+                        </h4>
+                        <span className="text-white/10 font-black text-5xl italic select-none">0{index + 1}</span>
                       </div>
 
-                      <div className="flex-1 space-y-3">
-                        {detailsArray.length > 0 && (
-                          <div>
-                            <div 
-                              className="text-sm text-gray-200 leading-relaxed space-y-1 cursor-pointer"
-                              onClick={() => hasMore && toggleSection(index)}
-                            >
-                              {visibleItems.map((item: string, itemIndex: number) => {
-                                const cleanItem = item.trim().replace(/^[\d•.\-\s]+/, '').trim();
-                                return (
-                                  <div key={itemIndex} className="flex gap-2">
-                                    <span className="text-accent-gold flex-shrink-0 font-semibold">{itemIndex + 1}.</span>
-                                    <span>{cleanItem || item.trim()}</span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                            {hasMore && (
-                              <button
-                                onClick={() => toggleSection(index)}
-                                className="text-gold hover:text-gold-dark text-xs mt-2 underline cursor-pointer"
-                              >
-                                {isExpanded 
-                                  ? (language === 'en' ? 'Show Less' : 'عرض أقل')
-                                  : (language === 'en' ? 'Show More' : 'عرض المزيد')
-                                }
-                              </button>
+                      <div className={`space-y-4 mb-6 flex-1 text-gray-400 ${isRtl ? "text-right" : "text-left"}`}>
+                        {visibleItems.map((item, i) => (
+                          <div key={i} className="flex gap-3 text-sm leading-relaxed animate-in fade-in duration-500 items-start">
+                            {isRtl ? <ChevronLeft size={18} className="text-[#D4AF37] shrink-0 mt-1" /> : <ChevronRight size={18} className="text-[#D4AF37] shrink-0 mt-1" />}
+                            <span className="w-full">{item}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {hasMore && (
+                        <button 
+                          onClick={() => toggleExpand(index)}
+                          className="text-[#D4AF37] hover:text-white text-xs font-bold uppercase tracking-widest mb-8 transition-all w-fit border-b border-[#D4AF37]/30 hover:border-white pb-1"
+                        >
+                          {isExpanded ? (isRtl ? "عرض أقل" : "Show Less") : (isRtl ? "إقرأ المزيد" : "Read More")}
+                        </button>
+                      )}
+
+                      {/* Footer: QR (CMS Linked) & Order Button */}
+                      <div className="flex items-center justify-between pt-6 border-t border-white/5 mt-auto">
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="bg-white p-2 rounded-xl w-24 h-24 shadow-2xl flex items-center justify-center transition-transform hover:scale-105">
+                            {qrImage ? (
+                              <img src={qrImage} className="w-full h-full object-contain" alt="QR" />
+                            ) : (
+                              <div className="text-black flex flex-col items-center">
+                                <QrCode size={35} />
+                                <span className="text-[8px] font-bold">NO QR</span>
+                              </div>
                             )}
                           </div>
-                        )}
-                      </div>
-
-                      <div className="flex flex-col items-center gap-2 flex-shrink-0">
-                        <div className="w-20 h-20 bg-white p-1 rounded-sm">
-                          {qrCodeImage ? (
-                            <img
-                              src={qrCodeImage}
-                              alt="QR Code"
-                              className="w-full h-full object-contain"
-                              onError={(e) => {
-                                // Fallback to placeholder if image fails to load
-                                e.currentTarget.style.display = 'none';
-                                const placeholder = e.currentTarget.parentElement?.querySelector('.qr-placeholder');
-                                if (placeholder) {
-                                  (placeholder as HTMLElement).style.display = 'flex';
-                                }
-                              }}
-                            />
-                          ) : null}
-                          <div className={`w-full h-full border border-black flex items-center justify-center ${qrCodeImage ? 'hidden' : ''} qr-placeholder`}>
-                            <span className="text-[8px] text-black font-bold">QR CODE</span>
-                          </div>
+                          <span className="text-[10px] text-[#D4AF37] font-bold uppercase tracking-widest">{isRtl ? "امسح الآن" : "Scan Now"}</span>
                         </div>
-                        <a
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            onOrderClick(section);
-                          }}
-                          className="text-gold hover:text-gold-dark font-bold text-xs uppercase underline cursor-pointer text-center"
+
+                        <Button 
+                          onClick={() => onOrderClick(section)}
+                          className="bg-[#D4AF37] hover:bg-white text-black font-black rounded-full px-12 h-14 transition-all shadow-lg active:scale-95 text-lg"
                         >
-                          {language === 'en' ? 'Order Now' : 'اطلب الآن'}
-                        </a>
+                          {isRtl ? "اطلب الآن" : "Order"}
+                        </Button>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-gray-500">
-                {language === 'en' ? 'No services available' : 'لا توجد خدمات متاحة'}
-              </div>
-            )}
-          </div>
-        )}
-      </DialogContent>
-      
-      {/* Image Modal for Full Size View */}
-      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] bg-[#0A0A0A] border border-white/10 p-0 overflow-hidden">
-          {selectedImage && (
-            <div className="relative w-full h-full flex items-center justify-center p-4">
-              <img
-                src={selectedImage}
-                alt="Full size"
-                className="max-w-full max-h-[90vh] object-contain rounded-lg"
-              />
-              <button
-                onClick={() => setSelectedImage(null)}
-                className="absolute top-4 right-4 text-white hover:text-gold transition-colors bg-black/50 rounded-full p-2"
-                aria-label={language === 'en' ? 'Close' : 'إغلاق'}
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+                  </div>
+                );
+              })}
             </div>
           )}
+        </div>
+      </DialogContent>
+
+      {/* Full Screen Image Previewer */}
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] bg-black/95 border-none p-0 flex items-center justify-center backdrop-blur-3xl z-[200]">
+          <button 
+            onClick={() => setSelectedImage(null)} 
+            className={`absolute top-8 ${isRtl ? "left-8" : "right-8"} z-[210] p-3 bg-white/10 rounded-full text-white hover:bg-gold transition-all`}
+          >
+            <X size={28} />
+          </button>
+          <img src={selectedImage!} className="max-w-full max-h-[90vh] object-contain rounded-2xl animate-in zoom-in-95 duration-500" alt="Full view" />
         </DialogContent>
       </Dialog>
     </Dialog>
