@@ -24,6 +24,10 @@ export interface Proposal {
   proposedBudget: {
     amount: number;
     currency: string;
+    items?: Array<{
+      description: string;
+      amount: number;
+    }>;
   };
   milestones?: Array<{
     label: string;
@@ -31,9 +35,13 @@ export interface Proposal {
     amount: number;
   }>;
   attachments?: Array<{
-    name: string;
-    url: string;
-    type: string;
+    name?: string;
+    filename?: string;
+    url?: string;
+    path?: string;
+    fileUrl?: string;
+    type?: string;
+    size?: number;
   }>;
   status: "pending" | "accepted" | "rejected" | "reviewed";
   createdAt: string;
