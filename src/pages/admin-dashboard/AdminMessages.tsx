@@ -8,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Search, Send, Paperclip, Loader2, Briefcase, User, UserCheck, CheckCircle, Clock, X, MessageSquare } from "lucide-react";
+import { Search, Send, Paperclip, Loader2, Briefcase, User, Users, UserCheck, CheckCircle, Clock, X, MessageSquare } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/components/ui/sonner";
 import { messagesApi, ProjectRoom, ChatRoom, Message } from "@/services/messagesApi";
+import { projectsApi, Project } from "@/services/projectsApi";
 import { socketService, SocketMessageEvent } from "@/services/socketService";
 import { formatDistanceToNow } from "date-fns";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
@@ -51,6 +52,8 @@ const AdminMessages = () => {
   const [filter, setFilter] = useState<'all' | 'client' | 'engineer'>('all');
   const [viewMode, setViewMode] = useState<'all' | 'project'>('all'); // 'all' = show all chat rooms, 'project' = show by project
   const [startingChat, setStartingChat] = useState(false);
+  const [project, setProject] = useState<Project | null>(null);
+  const [loadingProject, setLoadingProject] = useState(false);
   
   // Unread messages count
   const { unreadCount } = useUnreadMessagesCount(60000); // Refresh every 60 seconds / 1 minute
@@ -642,23 +645,70 @@ const AdminMessages = () => {
 
   // Assign engineer from chat - Direct assignment
   const handleAssignEngineer = async () => {
-    if (!selectedChatRoom || !selectedProjectRoom || (selectedChatRoom.type !== 'admin-engineer' && selectedChatRoom.type !== 'admin-company')) return;
+    if (!selectedChatRoom || !selectedProjectRoom) {
+      toast.error(language === 'en' ? 'Please select a chat room and project' : 'يرجى اختيار غرفة محادثة ومشروع');
+      return;
+    }
+    
+    if (selectedChatRoom.type !== 'admin-engineer' && selectedChatRoom.type !== 'admin-company') {
+      toast.error(language === 'en' ? 'Can only assign from engineer/company chat' : 'يمكن التعيين فقط من محادثة المهندس/الشركة');
+      return;
+    }
+    
     try {
       setAssigning(true);
-      const engineerId = selectedChatRoom.engineer || 
-                        selectedChatRoom.participants.find(p => p.role === 'engineer' || p.role === 'company')?.user;
+      
+      // Try to get engineer ID from multiple sources
+      let engineerId: any = selectedChatRoom.engineer;
+      
+      // If engineer field is populated (object), extract _id
+      if (engineerId && typeof engineerId === 'object' && engineerId !== null) {
+        engineerId = (engineerId as any)._id || (engineerId as any).id || engineerId;
+      }
+      
+      // If engineer field is not available, try to get from participants
+      if (!engineerId && selectedChatRoom.participants && selectedChatRoom.participants.length > 0) {
+        const engineerParticipant = selectedChatRoom.participants.find(
+          p => p.role === 'engineer' || p.role === 'company'
+        );
+        if (engineerParticipant) {
+          engineerId = engineerParticipant.user;
+          // If participant.user is populated (object), extract _id
+          if (engineerId && typeof engineerId === 'object' && engineerId !== null) {
+            engineerId = (engineerId as any)._id || (engineerId as any).id || engineerId;
+          }
+        }
+      }
+      
+      // Log for debugging
+      console.log('🔍 Assign Engineer Debug:', {
+        chatRoomId: selectedChatRoom._id,
+        chatRoomType: selectedChatRoom.type,
+        engineerField: selectedChatRoom.engineer,
+        participants: selectedChatRoom.participants,
+        foundEngineerId: engineerId
+      });
       
       if (!engineerId) {
-        toast.error(language === 'en' ? 'Engineer ID not found' : 'لم يتم العثور على معرف المهندس');
+        toast.error(language === 'en' ? 'Engineer ID not found in chat room' : 'لم يتم العثور على معرف المهندس في غرفة المحادثة');
+        setAssigning(false);
         return;
       }
 
-      // Get engineer ID as string
-      const engineerIdStr = typeof engineerId === 'string' ? engineerId : 
-                           (typeof engineerId === 'object' && engineerId !== null ? (engineerId as any)._id || String(engineerId) : String(engineerId));
+      // Get engineer ID as string (final conversion)
+      const engineerIdStr = typeof engineerId === 'string' 
+        ? engineerId 
+        : String(engineerId);
+
+      console.log('📤 Calling assignEngineerFromChat:', {
+        chatRoomId: selectedChatRoom._id,
+        engineerId: engineerIdStr
+      });
 
       // Call API directly
       const result = await messagesApi.assignEngineerFromChat(selectedChatRoom._id, engineerIdStr);
+      
+      console.log('✅ Assign engineer result:', result);
       
       toast.success(language === 'en' ? 'Engineer assigned successfully' : 'تم تعيين المهندس بنجاح');
       
@@ -668,14 +718,21 @@ const AdminMessages = () => {
       }
       
       // Optionally select the new group chat
-      if (result.groupChatRoom) {
+      if (result?.groupChatRoom) {
         setSelectedChatRoom(result.groupChatRoom as ChatRoom);
       }
       
       setShowAssignModal(false);
     } catch (error: any) {
-      console.error('Error assigning engineer:', error);
+      console.error('❌ Error assigning engineer:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
       const errorMessage = error.response?.data?.message || 
+                          error.message ||
                           (language === 'en' ? 'Failed to assign engineer' : 'فشل تعيين المهندس');
       toast.error(errorMessage);
     } finally {
@@ -726,6 +783,9 @@ const AdminMessages = () => {
   };
 
   const getChatRoomTitle = (chatRoom: ChatRoom): string => {
+    if (chatRoom.type === 'group') {
+      return language === 'en' ? 'Group Chat' : 'الدردشة الجماعية';
+    }
     if (chatRoom.type === 'admin-client') {
       const clientParticipant = chatRoom.participants.find((p) => p.role === 'client');
       const user = clientParticipant?.user;
@@ -765,6 +825,9 @@ const AdminMessages = () => {
   };
 
   const getChatRoomSubtitle = (chatRoom: ChatRoom): string => {
+    if (chatRoom.type === 'group') {
+      return language === 'en' ? 'Client & Engineer' : 'العميل والمهندس';
+    }
     if (chatRoom.type === 'admin-client') {
       return language === 'en' ? 'Project Owner' : 'صاحب المشروع';
     }
@@ -775,6 +838,12 @@ const AdminMessages = () => {
   };
 
   const getChatRoomTypeBadge = (chatRoom: ChatRoom) => {
+    if (chatRoom.type === 'group') {
+      return {
+        label: language === 'en' ? 'Group' : 'جماعي',
+        className: 'bg-blue-500/10 text-blue-400/80 border-0 text-[10px] px-2 py-0.5 h-5'
+      };
+    }
     if (chatRoom.type === 'admin-client') {
       return {
         label: language === 'en' ? 'Client' : 'عميل',
@@ -791,6 +860,7 @@ const AdminMessages = () => {
   };
 
   const getChatRoomIcon = (chatRoom: ChatRoom) => {
+    if (chatRoom.type === 'group') return Users;
     if (chatRoom.type === 'admin-client') return User;
     return Briefcase;
   };
@@ -826,6 +896,70 @@ const AdminMessages = () => {
   useEffect(() => {
     selectedChatRoomRef.current = selectedChatRoom;
   }, [selectedChatRoom]);
+  
+  // Load project info when chat room is selected
+  useEffect(() => {
+    const loadProjectInfo = async () => {
+      if (!selectedChatRoom) {
+        setProject(null);
+        return;
+      }
+      
+      // Get project ID from chat room
+      const projectId = typeof selectedChatRoom.project === 'string' 
+        ? selectedChatRoom.project 
+        : selectedChatRoom.project?._id;
+      
+      if (!projectId) {
+        setProject(null);
+        return;
+      }
+      
+      try {
+        setLoadingProject(true);
+        const projectData = await projectsApi.getProjectById(projectId);
+        setProject(projectData);
+      } catch (error: any) {
+        console.error('Error loading project:', error);
+        setProject(null);
+      } finally {
+        setLoadingProject(false);
+      }
+    };
+    
+    loadProjectInfo();
+  }, [selectedChatRoom]);
+  
+  // Check if engineer is assigned to the project
+  const isEngineerAssigned = (chatRoom: ChatRoom): boolean => {
+    if (!project || !project.assignedEngineer) return false;
+    
+    // Get engineer ID from chat room
+    let engineerId: any = chatRoom.engineer;
+    if (engineerId && typeof engineerId === 'object' && engineerId !== null) {
+      engineerId = (engineerId as any)._id || (engineerId as any).id || engineerId;
+    }
+    
+    if (!engineerId && chatRoom.participants && chatRoom.participants.length > 0) {
+      const engineerParticipant = chatRoom.participants.find(
+        p => p.role === 'engineer' || p.role === 'company'
+      );
+      if (engineerParticipant) {
+        engineerId = engineerParticipant.user;
+        if (engineerId && typeof engineerId === 'object' && engineerId !== null) {
+          engineerId = (engineerId as any)._id || (engineerId as any).id || engineerId;
+        }
+      }
+    }
+    
+    if (!engineerId) return false;
+    
+    const assignedEngineerId = typeof project.assignedEngineer === 'string'
+      ? project.assignedEngineer
+      : project.assignedEngineer?._id;
+    
+    return String(engineerId) === String(assignedEngineerId);
+  };
 
   // Effects
   useEffect(() => {
@@ -935,7 +1069,9 @@ const AdminMessages = () => {
     // Filter by type
     if (filter === 'client' && room.type !== 'admin-client') return false;
     if (filter === 'engineer' && room.type !== 'admin-engineer') return false;
-    if (room.type === 'group') return false;
+    // Group chats should be visible to admin (they can observe but not participate)
+    // Only filter out group chats if filter is set to 'client' or 'engineer'
+    if (filter !== 'all' && room.type === 'group') return false;
     
     // Filter by search term
     const title = getChatRoomTitle(room);
@@ -1215,27 +1351,38 @@ const AdminMessages = () => {
                            {/* Assign/Reject Buttons - Show only for admin-engineer/admin-company chats after chat started */}
                            {selectedChatRoom.adminStartedChat && (selectedChatRoom.type === 'admin-engineer' || selectedChatRoom.type === 'admin-company') && (
                              <>
-                               <Button
-                                 onClick={() => setShowRejectModal(true)}
-                                 className="bg-red-500 hover:bg-red-600 text-white h-7 px-3 text-xs font-medium rounded"
-                                 size="sm"
-                               >
-                                 <X className="h-3.5 w-3.5 mr-1.5" />
-                                 {language === 'en' ? 'Reject' : 'رفض'}
-                               </Button>
-                               <Button
-                                 onClick={handleAssignEngineer}
-                                 disabled={assigning}
-                                 className="bg-yellow-400 hover:bg-yellow-500 text-black h-7 px-3 text-xs font-medium rounded"
-                                 size="sm"
-                               >
-                                 {assigning ? (
-                                   <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                                 ) : (
-                                   <UserCheck className="h-3.5 w-3.5 mr-1.5" />
-                                 )}
-                                 {language === 'en' ? 'Assign' : 'تعيين'}
-                               </Button>
+                               {isEngineerAssigned(selectedChatRoom) ? (
+                                 // Show badge if engineer is assigned
+                                 <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs px-3 py-1 h-7 flex items-center gap-1.5">
+                                   <CheckCircle className="h-3.5 w-3.5" />
+                                   {language === 'en' ? 'Assigned - Working on Project' : 'معيّن - يعمل على المشروع'}
+                                 </Badge>
+                               ) : (
+                                 // Show assign/reject buttons if engineer is not assigned
+                                 <>
+                                   <Button
+                                     onClick={() => setShowRejectModal(true)}
+                                     className="bg-red-500 hover:bg-red-600 text-white h-7 px-3 text-xs font-medium rounded"
+                                     size="sm"
+                                   >
+                                     <X className="h-3.5 w-3.5 mr-1.5" />
+                                     {language === 'en' ? 'Reject' : 'رفض'}
+                                   </Button>
+                                   <Button
+                                     onClick={handleAssignEngineer}
+                                     disabled={assigning || loadingProject}
+                                     className="bg-yellow-400 hover:bg-yellow-500 text-black h-7 px-3 text-xs font-medium rounded"
+                                     size="sm"
+                                   >
+                                     {assigning || loadingProject ? (
+                                       <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                     ) : (
+                                       <UserCheck className="h-3.5 w-3.5 mr-1.5" />
+                                     )}
+                                     {language === 'en' ? 'Assign' : 'تعيين'}
+                                   </Button>
+                                 </>
+                               )}
                              </>
                            )}
                            

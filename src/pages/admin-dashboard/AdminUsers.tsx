@@ -96,6 +96,86 @@ const isUserActive = (user: User | any): boolean => {
 
 const AdminUsers = () => {
   const { language } = useApp();
+
+  // Countries list
+  const countries = [
+    { value: "SA", label: language === "en" ? "Saudi Arabia" : "السعودية" },
+    { value: "EG", label: language === "en" ? "Egypt" : "مصر" },
+    { value: "AE", label: language === "en" ? "United Arab Emirates" : "الإمارات العربية المتحدة" },
+    { value: "KW", label: language === "en" ? "Kuwait" : "الكويت" },
+    { value: "QA", label: language === "en" ? "Qatar" : "قطر" },
+    { value: "BH", label: language === "en" ? "Bahrain" : "البحرين" },
+    { value: "OM", label: language === "en" ? "Oman" : "عمان" },
+    { value: "JO", label: language === "en" ? "Jordan" : "الأردن" },
+    { value: "LB", label: language === "en" ? "Lebanon" : "لبنان" },
+  ];
+
+  // Cities by country
+  const citiesByCountry: { [key: string]: { value: string; label: { en: string; ar: string } }[] } = {
+    SA: [
+      { value: "Riyadh", label: { en: "Riyadh", ar: "الرياض" } },
+      { value: "Jeddah", label: { en: "Jeddah", ar: "جدة" } },
+      { value: "Dammam", label: { en: "Dammam", ar: "الدمام" } },
+      { value: "Mecca", label: { en: "Mecca", ar: "مكة المكرمة" } },
+      { value: "Medina", label: { en: "Medina", ar: "المدينة المنورة" } },
+      { value: "Khobar", label: { en: "Khobar", ar: "الخبر" } },
+      { value: "Abha", label: { en: "Abha", ar: "أبها" } },
+      { value: "Tabuk", label: { en: "Tabuk", ar: "تبوك" } },
+      { value: "Taif", label: { en: "Taif", ar: "الطائف" } },
+      { value: "Buraydah", label: { en: "Buraydah", ar: "بريدة" } },
+    ],
+    EG: [
+      { value: "Cairo", label: { en: "Cairo", ar: "القاهرة" } },
+      { value: "Alexandria", label: { en: "Alexandria", ar: "الإسكندرية" } },
+      { value: "Giza", label: { en: "Giza", ar: "الجيزة" } },
+      { value: "Port Said", label: { en: "Port Said", ar: "بورسعيد" } },
+      { value: "Suez", label: { en: "Suez", ar: "السويس" } },
+      { value: "Luxor", label: { en: "Luxor", ar: "الأقصر" } },
+      { value: "Aswan", label: { en: "Aswan", ar: "أسوان" } },
+    ],
+    AE: [
+      { value: "Dubai", label: { en: "Dubai", ar: "دبي" } },
+      { value: "Abu Dhabi", label: { en: "Abu Dhabi", ar: "أبو ظبي" } },
+      { value: "Sharjah", label: { en: "Sharjah", ar: "الشارقة" } },
+      { value: "Al Ain", label: { en: "Al Ain", ar: "العين" } },
+      { value: "Ajman", label: { en: "Ajman", ar: "عجمان" } },
+    ],
+    KW: [
+      { value: "Kuwait City", label: { en: "Kuwait City", ar: "مدينة الكويت" } },
+      { value: "Al Ahmadi", label: { en: "Al Ahmadi", ar: "الأحمدي" } },
+      { value: "Hawalli", label: { en: "Hawalli", ar: "حولي" } },
+    ],
+    QA: [
+      { value: "Doha", label: { en: "Doha", ar: "الدوحة" } },
+      { value: "Al Rayyan", label: { en: "Al Rayyan", ar: "الريان" } },
+      { value: "Al Wakrah", label: { en: "Al Wakrah", ar: "الوكرة" } },
+    ],
+    BH: [
+      { value: "Manama", label: { en: "Manama", ar: "المنامة" } },
+      { value: "Riffa", label: { en: "Riffa", ar: "الرفاع" } },
+      { value: "Muharraq", label: { en: "Muharraq", ar: "المحرق" } },
+    ],
+    OM: [
+      { value: "Muscat", label: { en: "Muscat", ar: "مسقط" } },
+      { value: "Salalah", label: { en: "Salalah", ar: "صلالة" } },
+      { value: "Sohar", label: { en: "Sohar", ar: "صحار" } },
+    ],
+    JO: [
+      { value: "Amman", label: { en: "Amman", ar: "عمان" } },
+      { value: "Zarqa", label: { en: "Zarqa", ar: "الزرقاء" } },
+      { value: "Irbid", label: { en: "Irbid", ar: "إربد" } },
+    ],
+    LB: [
+      { value: "Beirut", label: { en: "Beirut", ar: "بيروت" } },
+      { value: "Tripoli", label: { en: "Tripoli", ar: "طرابلس" } },
+      { value: "Sidon", label: { en: "Sidon", ar: "صيدا" } },
+    ],
+  };
+
+  const getCitiesForCountry = (countryCode: string) => {
+    return citiesByCountry[countryCode] || [];
+  };
+
   const [activeTab, setActiveTab] = useState<'engineers' | 'clients' | 'companies'>('engineers');
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
@@ -118,8 +198,12 @@ const AdminUsers = () => {
     phone: '',
     role: 'engineer' as 'engineer' | 'client' | 'company',
     status: 'active' as 'active' | 'pending' | 'suspended',
-    location: '',
+    country: '',
+    city: '',
     companyName: '',
+    contactPersonName: '', // For companies
+    specialization: '', // For engineers
+    nationalId: '', // For engineers (license number)
   });
   const [editForm, setEditForm] = useState({
     name: '',
@@ -459,26 +543,78 @@ const AdminUsers = () => {
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!userForm.name || !userForm.email || !userForm.password) {
+    // Basic validation
+    if (!userForm.email || !userForm.password) {
       toast.error(language === 'en' ? 'Please fill all required fields' : 'يرجى ملء جميع الحقول المطلوبة');
       return;
+    }
+
+    // Role-specific validation
+    if (userForm.role === 'engineer') {
+      if (!userForm.name || !userForm.specialization || !userForm.nationalId) {
+        toast.error(language === 'en' 
+          ? 'Please fill all required fields for engineer (Name, Specialization, License Number)' 
+          : 'يرجى ملء جميع الحقول المطلوبة للمهندس (الاسم، التخصص، رقم الترخيص)');
+        return;
+      }
+    } else if (userForm.role === 'company') {
+      if (!userForm.companyName || !userForm.contactPersonName) {
+        toast.error(language === 'en' 
+          ? 'Please fill all required fields for company (Company Name, Contact Person Name)' 
+          : 'يرجى ملء جميع الحقول المطلوبة للشركة (اسم الشركة، اسم الشخص المسؤول)');
+        return;
+      }
+    } else if (userForm.role === 'client') {
+      if (!userForm.name) {
+        toast.error(language === 'en' 
+          ? 'Please fill all required fields for client (Name)' 
+          : 'يرجى ملء جميع الحقول المطلوبة للعميل (الاسم)');
+        return;
+      }
     }
 
     try {
       setAdding(true);
       const userData: any = {
-        name: userForm.name,
         email: userForm.email,
         password: userForm.password,
         role: userForm.role,
-        status: userForm.status,
       };
 
-      if (userForm.phone) userData.phone = userForm.phone;
-      if (userForm.location) userData.location = userForm.location;
-      if (userForm.role === 'company' && userForm.companyName) {
-        userData.companyName = userForm.companyName;
+      // Set name based on role
+      if (userForm.role === 'company') {
+        userData.name = userForm.companyName;
+      } else {
+        userData.name = userForm.name;
       }
+
+      // Set nationalId (required for validation, can be empty string for non-engineers)
+      userData.nationalId = userForm.role === 'engineer' ? userForm.nationalId : '';
+
+      if (userForm.phone) userData.phone = userForm.phone;
+      if (userForm.country) userData.country = userForm.country;
+      if (userForm.city) userData.city = userForm.city;
+      // Auto-generate location if country/city provided
+      if (userForm.country && userForm.city) {
+        const countryName = countries.find(c => c.value === userForm.country)?.label || userForm.country;
+        const citiesForCountry = getCitiesForCountry(userForm.country);
+        const cityName = citiesForCountry.find(c => c.value === userForm.city)?.label[language] || userForm.city;
+        userData.location = `${cityName}, ${countryName}`;
+      }
+      
+      // Role-specific fields
+      if (userForm.role === 'company') {
+        if (userForm.contactPersonName) {
+          userData.bio = `Contact Person: ${userForm.contactPersonName}`;
+        }
+      } else if (userForm.role === 'engineer') {
+        if (userForm.specialization) {
+          userData.specializations = [userForm.specialization];
+        }
+      }
+      
+      // Set isActive from status
+      userData.isActive = userForm.status === 'active';
 
       await http.post('/users', userData);
       toast.success(language === 'en' ? 'User added successfully' : 'تم إضافة المستخدم بنجاح');
@@ -507,8 +643,12 @@ const AdminUsers = () => {
       phone: '',
       role: activeTab === 'engineers' ? 'engineer' : activeTab === 'clients' ? 'client' : 'company',
       status: 'active',
-      location: '',
+      country: '',
+      city: '',
       companyName: '',
+      contactPersonName: '',
+      specialization: '',
+      nationalId: '',
     });
   };
 
@@ -1230,18 +1370,22 @@ const AdminUsers = () => {
               
               <form onSubmit={handleAddUser} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">
-                      {language === 'en' ? 'Name' : 'الاسم'} *
-                    </Label>
-                    <Input
-                      id="name"
-                      value={userForm.name}
-                      onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
-                      required
-                      placeholder={language === 'en' ? 'Full name' : 'الاسم الكامل'}
-                    />
-                  </div>
+                  {/* Name field - shown for engineer and client, hidden for company */}
+                  {userForm.role !== 'company' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="name">
+                        {language === 'en' ? 'Name' : 'الاسم'} *
+                      </Label>
+                      <Input
+                        id="name"
+                        value={userForm.name}
+                        onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                        required={userForm.role !== 'company'}
+                        placeholder={language === 'en' ? 'Full name' : 'الاسم الكامل'}
+                      />
+                    </div>
+                  )}
+                  {userForm.role === 'company' && <div />}
                   
                   <div className="space-y-2">
                     <Label htmlFor="email">
@@ -1294,21 +1438,30 @@ const AdminUsers = () => {
                     </Label>
                     <Select
                       value={userForm.role}
-                      onValueChange={(value: 'engineer' | 'client' | 'company') => 
-                        setUserForm({ ...userForm, role: value })
-                      }
+                      onValueChange={(value: 'engineer' | 'client' | 'company') => {
+                        // Reset role-specific fields when role changes
+                        setUserForm({ 
+                          ...userForm, 
+                          role: value,
+                          specialization: '',
+                          nationalId: '',
+                          companyName: '',
+                          contactPersonName: '',
+                          city: '', // Reset city when role changes
+                        });
+                      }}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-hexa-bg border-hexa-border text-hexa-text-dark h-10">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="engineer">
+                      <SelectContent className="bg-hexa-card border-hexa-border">
+                        <SelectItem value="engineer" className="text-hexa-text-dark hover:bg-hexa-secondary/20 focus:bg-hexa-secondary/20 cursor-pointer">
                           {language === 'en' ? 'Engineer' : 'مهندس'}
                         </SelectItem>
-                        <SelectItem value="client">
+                        <SelectItem value="client" className="text-hexa-text-dark hover:bg-hexa-secondary/20 focus:bg-hexa-secondary/20 cursor-pointer">
                           {language === 'en' ? 'Client' : 'عميل'}
                         </SelectItem>
-                        <SelectItem value="company">
+                        <SelectItem value="company" className="text-hexa-text-dark hover:bg-hexa-secondary/20 focus:bg-hexa-secondary/20 cursor-pointer">
                           {language === 'en' ? 'Company' : 'شركة'}
                         </SelectItem>
                       </SelectContent>
@@ -1325,17 +1478,17 @@ const AdminUsers = () => {
                         setUserForm({ ...userForm, status: value })
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-hexa-bg border-hexa-border text-hexa-text-dark h-10">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="active">
+                      <SelectContent className="bg-hexa-card border-hexa-border">
+                        <SelectItem value="active" className="text-hexa-text-dark hover:bg-hexa-secondary/20 focus:bg-hexa-secondary/20 cursor-pointer">
                           {language === 'en' ? 'Active' : 'نشط'}
                         </SelectItem>
-                        <SelectItem value="pending">
+                        <SelectItem value="pending" className="text-hexa-text-dark hover:bg-hexa-secondary/20 focus:bg-hexa-secondary/20 cursor-pointer">
                           {language === 'en' ? 'Pending' : 'قيد الانتظار'}
                         </SelectItem>
-                        <SelectItem value="suspended">
+                        <SelectItem value="suspended" className="text-hexa-text-dark hover:bg-hexa-secondary/20 focus:bg-hexa-secondary/20 cursor-pointer">
                           {language === 'en' ? 'Suspended' : 'معلق'}
                         </SelectItem>
                       </SelectContent>
@@ -1343,31 +1496,124 @@ const AdminUsers = () => {
                   </div>
                 </div>
 
-                {userForm.role === 'company' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="companyName">
-                      {language === 'en' ? 'Company Name' : 'اسم الشركة'} *
-                    </Label>
-                    <Input
-                      id="companyName"
-                      value={userForm.companyName}
-                      onChange={(e) => setUserForm({ ...userForm, companyName: e.target.value })}
-                      required={userForm.role === 'company'}
-                      placeholder={language === 'en' ? 'Company name' : 'اسم الشركة'}
-                    />
+                {/* Engineer-specific fields */}
+                {userForm.role === 'engineer' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="specialization">
+                        {language === 'en' ? 'Specialization' : 'التخصص'} *
+                      </Label>
+                      <Input
+                        id="specialization"
+                        value={userForm.specialization}
+                        onChange={(e) => setUserForm({ ...userForm, specialization: e.target.value })}
+                        required={userForm.role === 'engineer'}
+                        placeholder={language === 'en' ? 'e.g., Civil Engineering' : 'مثال: الهندسة المدنية'}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="nationalId">
+                        {language === 'en' ? 'License Number' : 'رقم الترخيص'} *
+                      </Label>
+                      <Input
+                        id="nationalId"
+                        value={userForm.nationalId}
+                        onChange={(e) => setUserForm({ ...userForm, nationalId: e.target.value })}
+                        required={userForm.role === 'engineer'}
+                        placeholder={language === 'en' ? 'License number' : 'رقم الترخيص'}
+                      />
+                    </div>
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="location">
-                    {language === 'en' ? 'Location' : 'الموقع'}
-                  </Label>
-                  <Input
-                    id="location"
-                    value={userForm.location}
-                    onChange={(e) => setUserForm({ ...userForm, location: e.target.value })}
-                    placeholder={language === 'en' ? 'City, Country' : 'المدينة، الدولة'}
-                  />
+                {/* Company-specific fields */}
+                {userForm.role === 'company' && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="companyName">
+                        {language === 'en' ? 'Company Name' : 'اسم الشركة'} *
+                      </Label>
+                      <Input
+                        id="companyName"
+                        value={userForm.companyName}
+                        onChange={(e) => setUserForm({ ...userForm, companyName: e.target.value })}
+                        required={userForm.role === 'company'}
+                        placeholder={language === 'en' ? 'Company name' : 'اسم الشركة'}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="contactPersonName">
+                        {language === 'en' ? 'Contact Person Name' : 'اسم الشخص المسؤول'} *
+                      </Label>
+                      <Input
+                        id="contactPersonName"
+                        value={userForm.contactPersonName}
+                        onChange={(e) => setUserForm({ ...userForm, contactPersonName: e.target.value })}
+                        required={userForm.role === 'company'}
+                        placeholder={language === 'en' ? 'Contact person name' : 'اسم الشخص المسؤول'}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Location - Country and City */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="country">
+                      {language === 'en' ? 'Country' : 'الدولة'}
+                    </Label>
+                    <Select
+                      value={userForm.country}
+                      onValueChange={(value) => {
+                        setUserForm({ 
+                          ...userForm, 
+                          country: value,
+                          city: '', // Reset city when country changes
+                        });
+                      }}
+                    >
+                      <SelectTrigger className="bg-hexa-bg border-hexa-border text-hexa-text-dark h-10">
+                        <SelectValue placeholder={language === 'en' ? 'Select country' : 'اختر الدولة'} />
+                      </SelectTrigger>
+                      <SelectContent className="bg-hexa-card border-hexa-border">
+                        {countries.map((country) => (
+                          <SelectItem 
+                            key={country.value} 
+                            value={country.value}
+                            className="text-hexa-text-dark hover:bg-hexa-secondary/20 focus:bg-hexa-secondary/20 cursor-pointer"
+                          >
+                            {country.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="city">
+                      {language === 'en' ? 'City' : 'المدينة'}
+                    </Label>
+                    <Select
+                      value={userForm.city}
+                      onValueChange={(value) => setUserForm({ ...userForm, city: value })}
+                      disabled={!userForm.country}
+                    >
+                      <SelectTrigger className="bg-hexa-bg border-hexa-border text-hexa-text-dark h-10 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <SelectValue placeholder={language === 'en' ? 'Select city' : 'اختر المدينة'} />
+                      </SelectTrigger>
+                      <SelectContent className="bg-hexa-card border-hexa-border">
+                        {getCitiesForCountry(userForm.country).map((city) => (
+                          <SelectItem 
+                            key={city.value} 
+                            value={city.value}
+                            className="text-hexa-text-dark hover:bg-hexa-secondary/20 focus:bg-hexa-secondary/20 cursor-pointer"
+                          >
+                            {city.label[language]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <DialogFooter>
@@ -1729,17 +1975,17 @@ const AdminUsers = () => {
                         setEditForm({ ...editForm, role: value })
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-background border border-input text-foreground">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="engineer">
+                      <SelectContent className="bg-popover border border-border">
+                        <SelectItem value="engineer" className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
                           {language === 'en' ? 'Engineer' : 'مهندس'}
                         </SelectItem>
-                        <SelectItem value="client">
+                        <SelectItem value="client" className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
                           {language === 'en' ? 'Client' : 'عميل'}
                         </SelectItem>
-                        <SelectItem value="company">
+                        <SelectItem value="company" className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
                           {language === 'en' ? 'Company' : 'شركة'}
                         </SelectItem>
                       </SelectContent>
@@ -1756,17 +2002,17 @@ const AdminUsers = () => {
                         setEditForm({ ...editForm, status: value })
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-background border border-input text-foreground">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="active">
+                      <SelectContent className="bg-popover border border-border">
+                        <SelectItem value="active" className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
                           {language === 'en' ? 'Active' : 'نشط'}
                         </SelectItem>
-                        <SelectItem value="pending">
+                        <SelectItem value="pending" className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
                           {language === 'en' ? 'Pending' : 'قيد الانتظار'}
                         </SelectItem>
-                        <SelectItem value="suspended">
+                        <SelectItem value="suspended" className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
                           {language === 'en' ? 'Suspended' : 'معلق'}
                         </SelectItem>
                       </SelectContent>
