@@ -302,10 +302,6 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
           setError(language === 'ar' ? 'تم التسجيل بنجاح لكن لم يتم استلام رمز الوصول' : 'Registration successful but no token received');
         }
       } catch (err: any) {
-        console.error('❌ Registration failed:', err);
-        console.error('❌ Error response:', err.response?.data);
-        console.error('❌ Error status:', err.response?.status);
-        console.error('❌ Error config:', err.config);
         
         // Extract error message from various possible locations
         let errorMessage = '';

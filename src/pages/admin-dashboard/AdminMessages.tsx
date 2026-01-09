@@ -400,11 +400,6 @@ const AdminMessages = () => {
         timeoutPromise
       ]) as { messages: any[]; total: number; page: number; totalPages: number };
       
-      console.log('📥 [Admin] Raw response from getMessages:', result);
-      console.log('📥 [Admin] Response type:', typeof result);
-      console.log('📥 [Admin] Has messages?', !!result?.messages);
-      console.log('📥 [Admin] Messages is array?', Array.isArray(result?.messages));
-      console.log('📥 [Admin] Messages loaded:', result?.messages?.length || 0, 'messages');
       
       if (!result) {
         console.error('❌ [Admin] No result returned from API');
@@ -439,9 +434,6 @@ const AdminMessages = () => {
       } else {
         // Messages come from backend oldest first, we want newest at bottom
         // So we keep them as is (oldest first = top to bottom, newest at bottom)
-        console.log('📥 [Admin] Setting messages:', result.messages.length);
-        console.log('📥 [Admin] First message (oldest):', result.messages[0]);
-        console.log('📥 [Admin] Last message (newest):', result.messages[result.messages.length - 1]);
         setMessages(result.messages);
       }
       setHasMore(result.page < result.totalPages);
@@ -453,14 +445,7 @@ const AdminMessages = () => {
         }, 200);
       }
     } catch (error: any) {
-      console.error('❌ [Admin] Error loading messages:', error);
-      console.error('❌ [Admin] Error details:', {
-        message: error.message,
-        name: error.name,
-        stack: error.stack,
-        response: error.response?.data,
-        status: error.response?.status
-      });
+      
       
       // If timeout or network error, keep existing messages (from Socket.io)
       if (error.message === 'Request timeout' || error.code === 'ERR_NETWORK') {

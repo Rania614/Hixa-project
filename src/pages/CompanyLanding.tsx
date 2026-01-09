@@ -192,20 +192,17 @@ const CompanyLanding = () => {
 
   useEffect(() => {
     // Fetch real data from API immediately
-    console.log("🔄 CompanyLanding: Fetching landing data...");
     fetchLandingData();
     
     // Refetch data when page becomes visible (user returns to tab)
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        console.log("🔄 Page visible again, refetching landing data...");
         fetchLandingData();
       }
     };
     
     // Refetch data when window gets focus (user switches back to tab)
     const handleFocus = () => {
-      console.log("🔄 Window focused, refetching landing data...");
       fetchLandingData();
     };
     
@@ -214,7 +211,6 @@ const CompanyLanding = () => {
     
     // Listen for services update event from dashboard
     const handleServicesUpdated = () => {
-      console.log("📢 Services updated event received, refetching landing data...");
       fetchLandingData();
     };
     
@@ -229,46 +225,25 @@ const CompanyLanding = () => {
 
   // Debug: Log data changes
   useEffect(() => {
-    console.log("📊 CompanyLanding: Current store data:", {
-      hero,
-      about,
-      services,
-      projects,
-      loading,
-      hasHero: !!hero,
-      hasAbout: !!about,
-      servicesCount: Array.isArray(services) ? services.length : 0,
-      projectsCount: Array.isArray(projects) ? projects.length : 0,
-    });
+  
   }, [hero, about, services, projects, loading]);
   
   // Debug: Log services data
   useEffect(() => {
-    console.log('🔍 CompanyLanding: Services data changed:', {
-      services,
-      safeServices,
-      safeServicesCount: safeServices.length,
-      servicesType: Array.isArray(services) ? 'array' : typeof services,
-      hasItems: services && typeof services === 'object' && 'items' in services,
-    });
+   
   }, [services, safeServices]);
 
   // Debug: Log specific service data from API
   useEffect(() => {
     if (serviceItem1) {
-      console.log('📦 Service Item1 Data:', serviceItem1);
     }
     if (serviceItem2) {
-      console.log('📦 Service Item2 Data:', serviceItem2);
     }
     if (serviceItem3) {
-      console.log('📦 Service Item3 Data:', serviceItem3);
     }
     if (serviceItem4) {
-      console.log('📦 Service Item4 Data:', serviceItem4);
     }
     if (serviceItem3Detail4) {
-      console.log('📦 Service Item3 Detail4 Data:', serviceItem3Detail4);
     }
   }, [serviceItem1, serviceItem2, serviceItem3, serviceItem4, serviceItem3Detail4]);
 
@@ -287,7 +262,6 @@ const CompanyLanding = () => {
         setLoadingDetails(prev => ({ ...prev, [String(serviceId)]: true }));
         
         try {
-          console.log(`🔄 Fetching details for service ${serviceId}...`);
           const response = await http.get(`/content/services/items/${serviceId}/details`);
           
           let details: any[] = [];
@@ -322,9 +296,7 @@ const CompanyLanding = () => {
             [String(serviceId)]: sortedDetails
           }));
           
-          console.log(`✅ Fetched ${sortedDetails.length} details for service ${serviceId}`);
         } catch (error: any) {
-          console.error(`❌ Error fetching service details for ${serviceId}:`, error);
           if (error.response?.status === 404) {
             setServicesDetailsMap(prev => ({
               ...prev,
@@ -356,7 +328,6 @@ const CompanyLanding = () => {
       } catch (error: any) {
         // Silently handle 404 (endpoint may not exist)
         if (error.response?.status !== 404) {
-          console.error('Error fetching service item1:', error);
         }
       } finally {
         setLoadingServiceItem1(false);
@@ -370,7 +341,6 @@ const CompanyLanding = () => {
       } catch (error: any) {
         // Silently handle 404 (endpoint may not exist)
         if (error.response?.status !== 404) {
-          console.error('Error fetching service item2:', error);
         }
       } finally {
         setLoadingServiceItem2(false);
@@ -384,7 +354,6 @@ const CompanyLanding = () => {
       } catch (error: any) {
         // Silently handle 404 (endpoint may not exist)
         if (error.response?.status !== 404) {
-          console.error('Error fetching service item3:', error);
         }
       } finally {
         setLoadingServiceItem3(false);
@@ -398,7 +367,6 @@ const CompanyLanding = () => {
       } catch (error: any) {
         // Silently handle 404 (endpoint may not exist)
         if (error.response?.status !== 404) {
-          console.error('Error fetching service item4:', error);
         }
       } finally {
         setLoadingServiceItem4(false);
@@ -414,9 +382,7 @@ const CompanyLanding = () => {
         // Silently handle 404 (endpoint may not exist) - don't log as error
         if (error.response?.status === 404) {
           // Endpoint doesn't exist, which is fine
-          console.log('ℹ️ Endpoint /content/services/item3/details/detail4 not found (this is optional)');
         } else if (error.response?.status !== 404) {
-          console.error('Error fetching service item3 detail4:', error);
         }
       } finally {
         setLoadingServiceItem3Detail4(false);
@@ -603,11 +569,9 @@ const CompanyLanding = () => {
     const serviceId = service._id || service.id;
     if (serviceId) {
       try {
-        console.log(`🔄 Fetching details for service ${serviceId}...`);
         
         // Use the correct endpoint: /content/services/items/{serviceId}/details
         const response = await http.get(`/content/services/items/${serviceId}/details`);
-        console.log(`✅ Successfully fetched from /content/services/items/${serviceId}/details`);
         
         // Handle nested response shapes
         // Backend returns: { message: "...", data: [...], count: ... }
@@ -649,21 +613,14 @@ const CompanyLanding = () => {
           [String(serviceId)]: sortedDetails
         }));
         
-        console.log(`✅ Fetched ${sortedDetails.length} details for service ${serviceId}`);
       } catch (error: any) {
-        console.error(`❌ Error fetching service details for ${serviceId}:`, error);
-        console.error(`❌ Error response:`, error.response?.data);
-        console.error(`❌ Error status:`, error.response?.status);
-        console.error(`❌ Full URL attempted:`, error.config?.baseURL + error.config?.url);
         if (error.response?.status === 404) {
-          console.log(`ℹ️ No details found for service ${serviceId}`);
           // Set empty array for this service
           setServicesDetailsMap(prev => ({
             ...prev,
             [String(serviceId)]: []
           }));
         } else {
-          console.error(`❌ Error fetching details for service ${serviceId}:`, error);
         }
       }
     }
@@ -728,49 +685,21 @@ const CompanyLanding = () => {
         }
       }
 
-      // Log data being sent (for debugging)
-      console.log('📤 ========== Sending Service Order ==========');
-      console.log('📤 Endpoint: /service-orders');
-      console.log('📤 Payload:', payload);
-      console.log('📤 Base URL:', import.meta.env.VITE_API_BASE_URL);
-      console.log('📤 Full URL will be:', `${import.meta.env.VITE_API_BASE_URL}/service-orders`);
-      
       // Send to API
       const response = await http.post('/service-orders', payload);
 
       // Log response (for debugging)
-      console.log('✅ ========== Service Order Response ==========');
-      console.log('✅ Response Status:', response.status);
-      console.log('✅ Response Status Text:', response.statusText);
-      console.log('✅ Response Data:', response.data);
-      console.log('✅ Response Headers:', response.headers);
-      console.log('✅ Full Response Object:', response);
-      console.log('✅ ===========================================');
+      e.log('✅ ========== Service Order Response ==========');
 
       toast.success(language === 'en' ? 'Order submitted successfully!' : 'تم إرسال الطلب بنجاح!');
 
       // Close modal and reset form
       handleCloseModal();
     } catch (error: any) {
-      console.error('❌ ========== Service Order Error ==========');
-      console.error('❌ Error Object:', error);
-      console.error('❌ Error Message:', error.message);
-      console.error('❌ Error Response:', error.response);
-      console.error('❌ Error Response Data:', error.response?.data);
-      console.error('❌ Error Response Status:', error.response?.status);
-      console.error('❌ Error Response Status Text:', error.response?.statusText);
-      console.error('❌ Error Response Headers:', error.response?.headers);
-      console.error('❌ Request Config:', error.config);
-      console.error('❌ Request Data:', error.config?.data);
-      console.error('❌ Full Error:', JSON.stringify(error, null, 2));
       
       // Log backend error message if available
       if (error.response?.data) {
-        console.error('❌ Backend Error Message:', error.response.data.message || error.response.data.error || error.response.data);
-        console.error('❌ Backend Error Details:', JSON.stringify(error.response.data, null, 2));
       }
-      
-      console.error('❌ ===========================================');
       
       // Show detailed error message
       let errorMessage = '';
