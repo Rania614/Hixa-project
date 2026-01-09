@@ -61,7 +61,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ language }) => {
             </div>
           </div>
 
-          {/* الجزء البلاتيني المطفأ (تم تغميقه للتباين مع البيج الخارجي) */}
+          {/* الجزء البلاتيني المطفأ */}
           <div className="lg:w-3/5 bg-[#E2E2E2] p-12 md:p-16 flex flex-col justify-center relative">
             {/* ملمس هندسي نقطي خفيف لإعطاء طابع هندسي */}
             <div className="absolute inset-0 opacity-[0.08] pointer-events-none" 
@@ -70,7 +70,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ language }) => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 relative z-10">
               
-              {/* كارت الهاتف */}
+              {/* كارت الهاتف - تم إصلاح اتجاه الرقم هنا */}
               <div className="group cursor-pointer">
                 <div className="flex justify-between items-center mb-4">
                   <div className="p-3 bg-black rounded-xl text-gold group-hover:bg-gold group-hover:text-black transition-all duration-300 shadow-lg">
@@ -80,9 +80,14 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ language }) => {
                 <h4 className="text-black/40 text-sm font-bold uppercase tracking-widest mb-1">
                    {isAr ? 'اتصل بنا' : 'Call Us'}
                 </h4>
-                <p className="text-[#1A1A1A] text-2xl font-bold group-hover:text-gold transition-colors tabular-nums">
+                {/* استخدام dir="ltr" لضمان ترتيب الأرقام و inline-block للمحاذاة */}
+                <a 
+                  href="tel:+966504131885"
+                  className={`text-[#1A1A1A] text-2xl font-bold group-hover:text-gold transition-colors tabular-nums inline-block ${isAr ? 'text-right' : 'text-left'}`}
+                  dir="ltr"
+                >
                   +966 50 413 1885
-                </p>
+                </a>
               </div>
 
               {/* كارت الموقع */}
