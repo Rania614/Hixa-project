@@ -23,8 +23,6 @@ const Landing = () => {
   const [subscribePhone, setSubscribePhone] = useState('');
   const [subscribeName, setSubscribeName] = useState('');
   const [subscribeEmail, setSubscribeEmail] = useState('');
-
-  // حالة التحكم في الأسئلة الشائعة
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
 
   const handleSubscribeSubmit = async (e: React.FormEvent) => {
@@ -92,8 +90,6 @@ const Landing = () => {
 
   return (
     <div className={`min-h-screen bg-[#0A0A0A] text-white selection:bg-yellow-500 selection:text-black ${isAr ? 'font-arabic' : ''}`} dir={isAr ? 'rtl' : 'ltr'}>
-      
-      {/* Grid Background Effect */}
       <div className="fixed inset-0 opacity-[0.03] pointer-events-none z-0" 
            style={{ backgroundImage: `linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)`, backgroundSize: '60px 60px' }} />
 
@@ -129,11 +125,11 @@ const Landing = () => {
                 </button>
                 {dropdownOpen && (
                   <div className={`absolute top-0 ${isAr ? 'right-[calc(100%+20px)]' : 'left-[calc(100%+20px)]'} w-72 bg-[#111]/95 border border-white/10 shadow-2xl z-[999] animate-in fade-in slide-in-from-${isAr ? 'right' : 'left'}-5 zoom-in-95 backdrop-blur-3xl overflow-hidden rounded-2xl`}>
-                    <button onClick={() => navigate('/auth/partner')} className="w-full text-left p-6 hover:bg-yellow-500/10 hover:text-yellow-500 transition-all flex justify-between items-center border-b border-white/5 group">
+                    <button onClick={() => navigate('/auth/partner')} className={`w-full ${isAr ? 'text-right' : 'text-left'} p-6 hover:bg-yellow-500/10 hover:text-yellow-500 transition-all flex justify-between items-center border-b border-white/5 group`}>
                       <span className="font-bold text-xs md:text-sm uppercase tracking-[0.2em] leading-none">{isAr ? 'تسجيل كشريك' : 'JOIN AS PARTNER'}</span>
                       <ArrowRight size={18} className={`${isAr ? 'rotate-180' : ''} group-hover:translate-x-1 transition-transform opacity-50 group-hover:opacity-100`} />
                     </button>
-                    <button onClick={() => navigate('/client/login')} className="w-full text-left p-6 hover:bg-yellow-500/10 hover:text-yellow-500 transition-all flex justify-between items-center group">
+                    <button onClick={() => navigate('/client/login')} className={`w-full ${isAr ? 'text-right' : 'text-left'} p-6 hover:bg-yellow-500/10 hover:text-yellow-500 transition-all flex justify-between items-center group`}>
                       <span className="font-bold text-xs md:text-sm uppercase tracking-[0.2em] leading-none">{isAr ? 'بوابة العملاء' : 'CLIENT ACCESS'}</span>
                       <ArrowRight size={18} className={`${isAr ? 'rotate-180' : ''} group-hover:translate-x-1 transition-transform opacity-50 group-hover:opacity-100`} />
                     </button>
@@ -191,12 +187,7 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* --- Section 3: Featured Projects --- */}
-      {/* <section id="projects" className="py-32 bg-[#0A0A0A]">
-        <FeaturedProjects />
-      </section> */}
-
-      {/* --- Section 4: FAQ (الأسئلة الشائعة) --- */}
+      {/* --- Section 4: FAQ --- */}
       <section className="py-32 bg-[#0A0A0A] relative overflow-hidden border-t border-white/5">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-yellow-500/5 blur-[120px] rounded-full pointer-events-none" />
         <div className="container mx-auto px-6 max-w-4xl relative z-10">
@@ -217,7 +208,7 @@ const Landing = () => {
                   </div>
                 </button>
                 <div className={`transition-all duration-500 ease-in-out ${activeFaq === i ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                  <div className="px-8 pb-8 text-gray-500 text-lg leading-relaxed border-t border-white/5 pt-6 mx-8">{faq.a}</div>
+                  <div className={`px-8 pb-8 text-gray-500 text-lg leading-relaxed border-t border-white/5 pt-6 mx-8 ${isAr ? 'text-right' : 'text-left'}`}>{faq.a}</div>
                 </div>
               </div>
             ))}
@@ -228,37 +219,74 @@ const Landing = () => {
       <Footer />
       <Chatbot />
 
-      {/* --- Modal HIXA INSIGHTS --- */}
+      {/* --- Modal HIXA INSIGHTS (محدث بالشفافية واللغتين) --- */}
       {subscribeModalOpen && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
-          <div className="w-full max-w-5xl bg-[#111] border border-white/10 flex flex-col md:flex-row shadow-2xl relative overflow-hidden rounded-[40px]">
-            <div className="hidden md:block w-5/12 relative bg-yellow-500">
-               <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070" className="w-full h-full object-cover mix-blend-multiply opacity-60 grayscale" />
-               <div className="absolute inset-0 bg-yellow-600/10" />
-               <div className="absolute bottom-10 left-10 text-black font-black text-6xl opacity-20 rotate-90 origin-left">HIXA</div>
+          <div className={`w-full max-w-5xl bg-[#111] border border-white/10 flex flex-col ${isAr ? 'md:flex-row-reverse' : 'md:flex-row'} shadow-2xl relative overflow-hidden rounded-[40px]`}>
+            
+            {/* الجزء الأيمن (الخلفية الصفراء الشفافة للمباني) */}
+            <div className="hidden md:block w-5/12 relative overflow-hidden">
+               <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070" className="w-full h-full object-cover grayscale" />
+               {/* طبقة صفراء شبه شفافة (Opacity 80%) */}
+               <div className="absolute inset-0 bg-yellow-500/80 mix-blend-multiply" />
+               <div className={`absolute bottom-10 ${isAr ? 'right-10' : 'left-10'} text-black font-black text-6xl opacity-30 rotate-90 origin-bottom`}>HIXA</div>
             </div>
+
+            {/* الجزء الأيسر (الفورم) */}
             <div className="w-full md:w-7/12 p-12 md:p-20 relative bg-[#111]">
-              <button onClick={() => setSubscribeModalOpen(false)} className="absolute top-8 right-8 text-white/30 hover:text-white transition-colors group">
+              <button onClick={() => setSubscribeModalOpen(false)} className={`absolute top-8 ${isAr ? 'left-8' : 'right-8'} text-white/30 hover:text-white transition-colors group`}>
                 <X size={28} className="group-hover:rotate-90 transition-transform" />
               </button>
-              <div className="mb-12 text-right">
-                <h3 className="text-4xl md:text-5xl font-black uppercase tracking-tight mb-2 italic flex items-center justify-end gap-2">
-                  <span className="text-white">.HIXA</span> <span className="text-yellow-500">INSIGHTS</span>
+
+              <div className={`mb-12 ${isAr ? 'text-right' : 'text-left'}`}>
+                <h3 className={`text-4xl md:text-5xl font-black uppercase tracking-tight mb-2 italic flex items-center gap-2 ${isAr ? 'justify-end' : 'justify-start'}`}>
+                   {isAr ? (
+                     <><span className="text-yellow-500">أخبار</span> <span className="text-white">هيكسا </span></>
+                   ) : (
+                     <><span className="text-white">.HIXA</span> <span className="text-yellow-500">INSIGHTS</span></>
+                   )}
                 </h3>
-                <p className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.3em]">{isAr ? 'اشترك في النشرة الإخبارية' : 'SUBSCRIBE TO OUR NEWSLETTER'}</p>
+                <p className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.3em]">
+                  {isAr ? 'اشترك في النشرة الإخبارية للحصول على آخر التحديثات' : 'SUBSCRIBE TO OUR NEWSLETTER FOR LATEST UPDATES'}
+                </p>
               </div>
+
               <form onSubmit={handleSubscribeSubmit} className="space-y-8">
                 <div className="border-b border-white/10 pb-2">
-                    <input value={subscribeName} onChange={(e) => setSubscribeName(e.target.value)} placeholder={isAr ? "الاسم الكامل" : "FULL NAME"} className="w-full bg-transparent border-0 focus:ring-0 text-right text-xl placeholder:text-gray-700 outline-none" />
+                    <input 
+                      value={subscribeName} 
+                      onChange={(e) => setSubscribeName(e.target.value)} 
+                      placeholder={isAr ? "الاسم الكامل" : "FULL NAME"} 
+                      className={`w-full bg-transparent border-0 focus:ring-0 ${isAr ? 'text-right' : 'text-left'} text-xl placeholder:text-gray-700 outline-none`} 
+                    />
                 </div>
                 <div className="border-b border-white/10 pb-2 relative">
                    <Mail className={`absolute ${isAr ? 'left-0' : 'right-0'} top-1/2 -translate-y-1/2 text-white/10`} size={20} />
-                   <input type="email" required value={subscribeEmail} onChange={(e) => setSubscribeEmail(e.target.value)} placeholder={isAr ? "البريد الإلكتروني" : "EMAIL ADDRESS"} className="w-full bg-transparent border-0 focus:ring-0 text-right text-xl placeholder:text-gray-700 outline-none" />
+                   <input 
+                    type="email" 
+                    required 
+                    value={subscribeEmail} 
+                    onChange={(e) => setSubscribeEmail(e.target.value)} 
+                    placeholder={isAr ? "البريد الإلكتروني" : "EMAIL ADDRESS"} 
+                    className={`w-full bg-transparent border-0 focus:ring-0 ${isAr ? 'text-right' : 'text-left'} text-xl placeholder:text-gray-700 outline-none`} 
+                   />
                 </div>
                 <div className="pt-4 border-b border-yellow-500/50 mb-10">
-                  <input required type="tel" value={subscribePhone} onChange={(e) => setSubscribePhone(e.target.value)} placeholder={isAr ? "رقم الجوال" : "PHONE NUMBER"} dir="rtl" className="w-full bg-transparent border-0 focus:ring-0 text-4xl md:text-6xl font-black text-white placeholder:text-gray-800 p-0 text-right outline-none" />
+                  <input 
+                    required 
+                    type="tel" 
+                    value={subscribePhone} 
+                    onChange={(e) => setSubscribePhone(e.target.value)} 
+                    placeholder={isAr ? "رقم الجوال" : "PHONE NUMBER"} 
+                    dir={isAr ? "rtl" : "ltr"} 
+                    className={`w-full bg-transparent border-0 focus:ring-0 text-4xl md:text-6xl font-black text-white placeholder:text-gray-800 p-0 ${isAr ? 'text-right' : 'text-left'} outline-none`} 
+                  />
                 </div>
-                <button disabled={subscribing} style={{ clipPath: 'polygon(5% 0%, 95% 0%, 100% 50%, 95% 100%, 5% 100%, 0% 50%)' }} className="w-full bg-yellow-500 text-black hover:bg-yellow-400 h-20 font-black text-sm uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50">
+                <button 
+                  disabled={subscribing} 
+                  style={{ clipPath: 'polygon(5% 0%, 95% 0%, 100% 50%, 95% 100%, 5% 100%, 0% 50%)' }} 
+                  className="w-full bg-yellow-500 text-black hover:bg-yellow-400 h-20 font-black text-sm uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
+                >
                   {subscribing ? '...' : (isAr ? 'اشترك الآن' : 'SUBSCRIBE NOW')}
                 </button>
               </form>
