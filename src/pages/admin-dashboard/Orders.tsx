@@ -25,9 +25,10 @@ interface Order {
   email: string;
   phone?: string;
   serviceId?: string;
-  serviceType?: string;
-  title: string;
-  description?: string;
+  serviceTitle?: string;
+  serviceType?: string; // Keep for backward compatibility
+  title?: string; // Keep for backward compatibility
+  description?: string; // Keep for backward compatibility
   orderDetails?: string;
   image?: string;
   status?: string;
@@ -276,9 +277,9 @@ const Orders = () => {
                         </div>
                       )}
 
-                      {/* Service - Only show if serviceType exists */}
-                      {order.serviceType && (
-                        <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+                      {/* Service - Show if serviceTitle or serviceId exists */}
+                      {(order.serviceTitle || order.serviceId) && (
+                        <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors">
                           <div className="w-10 h-10 bg-gold/20 rounded-full flex items-center justify-center flex-shrink-0">
                             <Package className="h-5 w-5 text-gold" />
                           </div>
@@ -286,111 +287,100 @@ const Orders = () => {
                             <p className="text-sm font-medium text-muted-foreground mb-1">
                               {language === 'en' ? 'Service' : 'الخدمة'}
                             </p>
-                            <p className="text-base font-semibold text-card-foreground">
-                              {order.serviceType}
-                            </p>
+                            {order.serviceTitle && (
+                              <p className="text-base font-semibold text-card-foreground">
+                                {order.serviceTitle}
+                              </p>
+                            )}
+                            {order.serviceId && !order.serviceTitle && (
+                              <p className="text-base font-semibold text-card-foreground text-muted-foreground">
+                                ID: {order.serviceId}
+                              </p>
+                            )}
                           </div>
                         </div>
                       )}
 
                       {/* Order Details */}
-                      <div className="space-y-3 p-4 bg-muted/30 rounded-lg border border-border">
-                        <h4 className="font-semibold text-lg text-card-foreground mb-3">
-                          {language === 'en' ? 'Order Details' : 'تفاصيل الطلب'}
-                        </h4>
-                        
-                        {order.title && (
+                      {order.orderDetails && (
+                        <div className="space-y-3 p-4 bg-muted/30 rounded-lg border border-border">
+                          <h4 className="font-semibold text-lg text-card-foreground mb-3">
+                            {language === 'en' ? 'Order Details' : 'تفاصيل الطلب'}
+                          </h4>
+                          
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground mb-1">
-                              {language === 'en' ? 'Title' : 'العنوان'}
-                            </p>
-                            <p className="text-base text-card-foreground">{order.title}</p>
-                          </div>
-                        )}
-
-                        {order.description && (
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground mb-1">
-                              {language === 'en' ? 'Description' : 'الوصف'}
-                            </p>
-                            <p className="text-base text-card-foreground">{order.description}</p>
-                          </div>
-                        )}
-
-                        {order.orderDetails && (
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground mb-1">
-                              {language === 'en' ? 'Order Details' : 'تفاصيل الطلب'}
-                            </p>
                             <p className="text-base text-card-foreground whitespace-pre-wrap bg-background/50 p-3 rounded border border-border">
                               {order.orderDetails}
                             </p>
                           </div>
-                        )}
+                        </div>
+                      )}
 
-                        {order.image && (() => {
-                          // Helper function to get image URL
-                          const getImageUrl = (img: any): string => {
-                            if (!img) return '';
-                            
-                            // If it's a string
-                            if (typeof img === 'string') {
-                              // Already a full URL
-                              if (img.startsWith('http://') || img.startsWith('https://') || img.startsWith('data:')) {
-                                return img;
-                              }
-                              // Relative path - add base URL
-                              const baseURL = import.meta.env.VITE_API_BASE_URL || '';
-                              return `${baseURL}${img.startsWith('/') ? '' : '/'}${img}`;
-                            }
-                            
-                            // If it's an object, try to extract URL
-                            if (typeof img === 'object') {
-                              return img.url || img.path || img.src || img.uri || '';
-                            }
-                            
-                            return '';
-                          };
+                      {order.image && (() => {
+                        // Helper function to get image URL
+                        const getImageUrl = (img: any): string => {
+                          if (!img) return '';
                           
-                          const imageUrl = getImageUrl(order.image);
+                          // If it's a string
+                          if (typeof img === 'string') {
+                            // Already a full URL
+                            if (img.startsWith('http://') || img.startsWith('https://') || img.startsWith('data:')) {
+                              return img;
+                            }
+                            // Relative path - add base URL
+                            const baseURL = import.meta.env.VITE_API_BASE_URL || '';
+                            return `${baseURL}${img.startsWith('/') ? '' : '/'}${img}`;
+                          }
                           
-                          return imageUrl ? (
-                            <div>
-                              <p className="text-sm font-medium text-muted-foreground mb-2">
-                                {language === 'en' ? 'Image' : 'الصورة'}
-                              </p>
-                              <div className="rounded-lg border border-border overflow-hidden bg-muted/20">
-                                <img 
-                                  src={imageUrl}
-                                  alt={order.title || 'Order image'}
-                                  className="w-full h-auto max-h-96 object-contain"
-                                  onError={(e) => {
-                                    // Show placeholder on error
-                                    e.currentTarget.src = '/placeholder.svg';
-                                    e.currentTarget.onerror = null; // Prevent infinite loop
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          ) : null;
-                        })()}
-
-                        {order.status && (
+                          // If it's an object, try to extract URL
+                          if (typeof img === 'object') {
+                            return img.url || img.path || img.src || img.uri || '';
+                          }
+                          
+                          return '';
+                        };
+                        
+                        const imageUrl = getImageUrl(order.image);
+                        
+                        return imageUrl ? (
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground mb-1">
-                              {language === 'en' ? 'Status' : 'الحالة'}
+                            <p className="text-sm font-medium text-muted-foreground mb-2">
+                              {language === 'en' ? 'Image' : 'الصورة'}
                             </p>
-                            <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
-                              order.status === 'New' ? 'bg-blue-100 text-blue-800' :
-                              order.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' :
-                              order.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {order.status}
-                            </span>
+                            <div className="rounded-lg border border-border overflow-hidden bg-muted/20">
+                              <img 
+                                src={imageUrl}
+                                alt={order.title || 'Order image'}
+                                className="w-full h-auto max-h-96 object-contain"
+                                onError={(e) => {
+                                  // Show placeholder on error
+                                  e.currentTarget.src = '/placeholder.svg';
+                                  e.currentTarget.onerror = null; // Prevent infinite loop
+                                }}
+                              />
+                            </div>
                           </div>
-                        )}
-                      </div>
+                        ) : null;
+                      })()}
+
+                      {order.status && (
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground mb-1">
+                            {language === 'en' ? 'Status' : 'الحالة'}
+                          </p>
+                          <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
+                            order.status === 'New' ? 'bg-blue-100 text-blue-800' :
+                            order.status === 'In Review' ? 'bg-yellow-100 text-yellow-800' :
+                            order.status === 'Processing' ? 'bg-orange-100 text-orange-800' :
+                            order.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                            order.status === 'Cancelled' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {order.status}
+                          </span>
+                        </div>
+                      )}
+                    </CardContent>
 
                       {/* Action Buttons */}
                       <div className="flex gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
@@ -423,7 +413,6 @@ const Orders = () => {
                           )}
                         </Button>
                       </div>
-                        </CardContent>
                       </CollapsibleContent>
                     </Card>
                   </Collapsible>

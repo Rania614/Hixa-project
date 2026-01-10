@@ -100,6 +100,7 @@ const ContentManagement = () => {
     projects,
     partners,
     jobs,
+    cta,
     loading,
     fetchContent,
     updateHero,
@@ -119,6 +120,7 @@ const ContentManagement = () => {
     updateJobs,
     addJob,
     deleteJob,
+    updateCTA,
     setContent,
   } = useContentStore();
 
@@ -159,6 +161,13 @@ const ContentManagement = () => {
   useEffect(() => {
     fetchContent();
   }, []);
+
+  // Load CTA data when CTA tab is opened
+  useEffect(() => {
+    if (activeTab === 'cta' && !cta) {
+      fetchContent();
+    }
+  }, [activeTab, cta, fetchContent]);
 
   // Fetch services details after services are loaded
   useEffect(() => {
@@ -618,13 +627,14 @@ const ContentManagement = () => {
           </h2>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-            <TabsList className="grid grid-cols-6 gap-2" style={{ direction: language === 'ar' ? 'rtl' : 'ltr' }}>
+            <TabsList className="grid grid-cols-7 gap-2" style={{ direction: language === 'ar' ? 'rtl' : 'ltr' }}>
               <TabsTrigger value="hero">{language === 'en' ? 'Hero' : 'البطل'}</TabsTrigger>
               <TabsTrigger value="about">{language === 'en' ? 'About' : 'حول'}</TabsTrigger>
               <TabsTrigger value="services">{language === 'en' ? 'Services' : 'الخدمات'}</TabsTrigger>
               <TabsTrigger value="projects">{language === 'en' ? 'Projects' : 'المشاريع'}</TabsTrigger>
               <TabsTrigger value="partners">{language === 'en' ? 'Partners' : 'الشركاء'}</TabsTrigger>
               <TabsTrigger value="jobs">{language === 'en' ? 'Jobs' : 'الوظائف'}</TabsTrigger>
+              <TabsTrigger value="cta">{language === 'en' ? 'CTA' : 'اتصل بنا'}</TabsTrigger>
             </TabsList>
 
             {/* Hero Section */}
@@ -2034,6 +2044,227 @@ const ContentManagement = () => {
                   >
                     {loading ? (language === 'en' ? 'Saving...' : 'جاري الحفظ...') : (language === 'en' ? 'Save All Jobs' : 'حفظ كل الوظائف')}
                 </Button>
+                </div>
+              </Card>
+            </TabsContent>
+
+            {/* CTA Section */}
+            <TabsContent value="cta">
+              <Card className="p-6">
+                <div className="mb-6">
+                  <h3 className="text-2xl font-bold mb-4">
+                    {language === 'en' ? 'CTA Section' : 'قسم اتصل بنا'}
+                  </h3>
+                  {!cta && (
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {language === 'en' ? 'Loading CTA data...' : 'جاري تحميل بيانات CTA...'}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-6">
+                  {/* Title */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">{language === 'en' ? 'Title (English)' : 'العنوان (إنجليزي)'}</label>
+                      <Input
+                        placeholder={language === 'en' ? 'Title (English)' : 'العنوان (إنجليزي)'}
+                        value={cta?.title_en ?? ''}
+                        onChange={(e) => setContent({ cta: { ...(cta || {}), title_en: e.target.value } })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">{language === 'en' ? 'Title (Arabic)' : 'العنوان (عربي)'}</label>
+                      <Input
+                        placeholder={language === 'en' ? 'Title (Arabic)' : 'العنوان (عربي)'}
+                        dir="rtl"
+                        value={cta?.title_ar ?? ''}
+                        onChange={(e) => setContent({ cta: { ...(cta || {}), title_ar: e.target.value } })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Subtitle */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">{language === 'en' ? 'Subtitle (English)' : 'الوصف (إنجليزي)'}</label>
+                      <Textarea
+                        placeholder={language === 'en' ? 'Subtitle (English)' : 'الوصف (إنجليزي)'}
+                        value={cta?.subtitle_en ?? ''}
+                        onChange={(e) => setContent({ cta: { ...(cta || {}), subtitle_en: e.target.value } })}
+                        rows={3}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">{language === 'en' ? 'Subtitle (Arabic)' : 'الوصف (عربي)'}</label>
+                      <Textarea
+                        placeholder={language === 'en' ? 'Subtitle (Arabic)' : 'الوصف (عربي)'}
+                        dir="rtl"
+                        value={cta?.subtitle_ar ?? ''}
+                        onChange={(e) => setContent({ cta: { ...(cta || {}), subtitle_ar: e.target.value } })}
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Button Text */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">{language === 'en' ? 'Button Text (English)' : 'نص الزر (إنجليزي)'}</label>
+                      <Input
+                        placeholder={language === 'en' ? 'Button Text (English)' : 'نص الزر (إنجليزي)'}
+                        value={cta?.buttonText_en ?? ''}
+                        onChange={(e) => setContent({ cta: { ...(cta || {}), buttonText_en: e.target.value } })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">{language === 'en' ? 'Button Text (Arabic)' : 'نص الزر (عربي)'}</label>
+                      <Input
+                        placeholder={language === 'en' ? 'Button Text (Arabic)' : 'نص الزر (عربي)'}
+                        dir="rtl"
+                        value={cta?.buttonText_ar ?? ''}
+                        onChange={(e) => setContent({ cta: { ...(cta || {}), buttonText_ar: e.target.value } })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Button Link */}
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">{language === 'en' ? 'Button Link' : 'رابط الزر'}</label>
+                    <Input
+                      placeholder={language === 'en' ? 'https://...' : 'https://...'}
+                      value={cta?.buttonLink ?? ''}
+                      onChange={(e) => setContent({ cta: { ...(cta || {}), buttonLink: e.target.value } })}
+                    />
+                  </div>
+
+                  {/* Location */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">{language === 'en' ? 'Location (English)' : 'الموقع (إنجليزي)'}</label>
+                      <Input
+                        placeholder={language === 'en' ? 'Location (English)' : 'الموقع (إنجليزي)'}
+                        value={cta?.location_en ?? ''}
+                        onChange={(e) => setContent({ cta: { ...(cta || {}), location_en: e.target.value } })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">{language === 'en' ? 'Location (Arabic)' : 'الموقع (عربي)'}</label>
+                      <Input
+                        placeholder={language === 'en' ? 'Location (Arabic)' : 'الموقع (عربي)'}
+                        dir="rtl"
+                        value={cta?.location_ar ?? ''}
+                        onChange={(e) => setContent({ cta: { ...(cta || {}), location_ar: e.target.value } })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Phone */}
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">{language === 'en' ? 'Phone Number' : 'رقم الهاتف'}</label>
+                    <Input
+                      placeholder={language === 'en' ? '+966 50 413 1885' : '+966 50 413 1885'}
+                      value={cta?.phone ?? ''}
+                      onChange={(e) => setContent({ cta: { ...(cta || {}), phone: e.target.value } })}
+                    />
+                  </div>
+
+                  {/* Social Links */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">{language === 'en' ? 'Social Media Links' : 'روابط السوشيال ميديا'}</label>
+                    <div className="space-y-2">
+                      {(Array.isArray(cta?.social) ? cta.social : []).map((social: any, index: number) => (
+                        <div key={index} className="flex gap-2">
+                          <Input
+                            placeholder={language === 'en' ? 'Name (e.g., Instagram)' : 'الاسم (مثل: إنستغرام)'}
+                            value={social?.name || ''}
+                            onChange={(e) => {
+                              const newSocial = [...(Array.isArray(cta?.social) ? cta.social : [])];
+                              newSocial[index] = { ...newSocial[index], name: e.target.value };
+                              setContent({ cta: { ...(cta || {}), social: newSocial } });
+                            }}
+                            className="flex-1"
+                          />
+                          <Input
+                            placeholder={language === 'en' ? 'URL (https://...)' : 'الرابط (https://...)'}
+                            value={social?.url || ''}
+                            onChange={(e) => {
+                              const newSocial = [...(Array.isArray(cta?.social) ? cta.social : [])];
+                              newSocial[index] = { ...newSocial[index], url: e.target.value };
+                              setContent({ cta: { ...(cta || {}), social: newSocial } });
+                            }}
+                            className="flex-1"
+                          />
+                          <Select
+                            value={social?.icon || ''}
+                            onValueChange={(value) => {
+                              const newSocial = [...(Array.isArray(cta?.social) ? cta.social : [])];
+                              newSocial[index] = { ...newSocial[index], icon: value };
+                              setContent({ cta: { ...(cta || {}), social: newSocial } });
+                            }}
+                          >
+                            <SelectTrigger className="w-[180px]">
+                              <SelectValue placeholder={language === 'en' ? 'Select Icon' : 'اختر الأيقونة'} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="instagram">Instagram</SelectItem>
+                              <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                              <SelectItem value="twitter">Twitter</SelectItem>
+                              <SelectItem value="telegram">Telegram</SelectItem>
+                              <SelectItem value="facebook">Facebook</SelectItem>
+                              <SelectItem value="linkedin">LinkedIn</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => {
+                              const newSocial = [...(Array.isArray(cta?.social) ? cta.social : [])];
+                              newSocial.splice(index, 1);
+                              setContent({ cta: { ...(cta || {}), social: newSocial } });
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const newSocial = [...(Array.isArray(cta?.social) ? cta.social : []), { name: '', url: '', icon: '' }];
+                          setContent({ cta: { ...cta, social: newSocial } });
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        {language === 'en' ? 'Add Social Link' : 'إضافة رابط'}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Save Button */}
+                  <div className="pt-4">
+                    <Button
+                      onClick={async () => {
+                        // Use current cta from store, merging with any local changes
+                        const currentCta = cta || {};
+                        console.log('💾 Saving CTA:', currentCta);
+                        console.log('💾 CTA social:', currentCta.social);
+                        console.log('💾 CTA social is array?', Array.isArray(currentCta.social));
+                        console.log('💾 CTA social length:', Array.isArray(currentCta.social) ? currentCta.social.length : 0);
+                        await updateCTA(currentCta);
+                        // Wait a bit before triggering refresh to ensure data is saved
+                        setTimeout(() => {
+                          // Refresh landing data to show updated CTA on landing page
+                          window.dispatchEvent(new CustomEvent('ctaUpdated'));
+                        }, 500);
+                      }}
+                      disabled={loading}
+                      className="bg-gold hover:bg-gold-dark text-black font-semibold"
+                    >
+                    {loading ? (language === 'en' ? 'Saving...' : 'جاري الحفظ...') : (language === 'en' ? 'Save CTA' : 'حفظ CTA')}
+                    </Button>
+                  </div>
                 </div>
               </Card>
             </TabsContent>

@@ -175,7 +175,16 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({
                         </div>
 
                         <Button 
-                          onClick={() => onOrderClick(section)}
+                          onClick={() => {
+                            // Pass the full service object, not just the section
+                            // Include serviceId/itemId if available
+                            const serviceToSend = {
+                              ...selectedServiceForDetails,
+                              itemId: selectedServiceForDetails?.itemId || selectedServiceForDetails?.serviceId,
+                              serviceId: selectedServiceForDetails?.itemId || selectedServiceForDetails?.serviceId || selectedServiceForDetails?._id || selectedServiceForDetails?.id,
+                            };
+                            onOrderClick(serviceToSend);
+                          }}
                           className="bg-[#D4AF37] hover:bg-white text-black font-black rounded-full px-12 h-14 transition-all shadow-lg active:scale-95 text-lg"
                         >
                           {isRtl ? "اطلب الآن" : "Order"}

@@ -72,6 +72,8 @@ interface ContentState {
   updateJobs: (jobs: JobsData) => Promise<void>;
   addJob: (job: ContentItem) => Promise<void>;
   deleteJob: (id: string) => Promise<void>;
+  cta: ContentItem | null;
+  updateCTA: (cta: ContentItem) => Promise<void>;
 }
 
 export const useContentStore = create<ContentState>((set, get) => ({
@@ -81,6 +83,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
   projects: { items: [] },
   partners: { items: [] },
   jobs: { items: [] },
+  cta: null,
   loading: false,
   
   setContent: (data) => set(data),
@@ -121,6 +124,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
         projects,
         partners,
         jobs,
+        cta: data.cta || null,
       });
     } catch (err) {
       console.error("Fetch failed:", err);
@@ -911,6 +915,72 @@ export const useContentStore = create<ContentState>((set, get) => ({
       const errorMsg = err.response?.data?.message || err.message || "Failed to delete job";
       toast({ 
         title: "Error deleting job", 
+        description: errorMsg,
+        variant: "destructive" 
+      });
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  updateCTA: async (ctaChanges) => {
+    set({ loading: true });
+    try {
+      // Get current CTA from store to preserve existing values
+      const currentCta = get().cta || {};
+      
+      // Merge: use changes from parameter, fallback to current store value, fallback to empty string
+      // Clean social array: remove _id and other MongoDB fields before sending
+      const cleanSocialArray = (socialArray: any[]) => {
+        if (!Array.isArray(socialArray)) return [];
+        return socialArray.map(item => {
+          const { _id, __v, ...cleanItem } = item;
+          return {
+            name: cleanItem.name || '',
+            url: cleanItem.url || '',
+            icon: cleanItem.icon || '',
+          };
+        });
+      };
+      
+      const socialArray = Array.isArray(ctaChanges?.social) 
+        ? ctaChanges.social 
+        : (Array.isArray(currentCta?.social) ? currentCta.social : []);
+      
+      const payload = {
+        title_en: ctaChanges?.title_en !== undefined ? ctaChanges.title_en : (currentCta?.title_en ?? ""),
+        title_ar: ctaChanges?.title_ar !== undefined ? ctaChanges.title_ar : (currentCta?.title_ar ?? ""),
+        subtitle_en: ctaChanges?.subtitle_en !== undefined ? ctaChanges.subtitle_en : (currentCta?.subtitle_en ?? ""),
+        subtitle_ar: ctaChanges?.subtitle_ar !== undefined ? ctaChanges.subtitle_ar : (currentCta?.subtitle_ar ?? ""),
+        buttonText_en: ctaChanges?.buttonText_en !== undefined ? ctaChanges.buttonText_en : (currentCta?.buttonText_en ?? ""),
+        buttonText_ar: ctaChanges?.buttonText_ar !== undefined ? ctaChanges.buttonText_ar : (currentCta?.buttonText_ar ?? ""),
+        buttonLink: ctaChanges?.buttonLink !== undefined ? ctaChanges.buttonLink : (currentCta?.buttonLink ?? ""),
+        location_en: ctaChanges?.location_en !== undefined ? ctaChanges.location_en : (currentCta?.location_en ?? ""),
+        location_ar: ctaChanges?.location_ar !== undefined ? ctaChanges.location_ar : (currentCta?.location_ar ?? ""),
+        phone: ctaChanges?.phone !== undefined ? ctaChanges.phone : (currentCta?.phone ?? ""),
+        social: cleanSocialArray(socialArray),
+      };
+      
+      const response = await http.put("/content/cta", payload);
+      console.log('✅ CTA Update Response:', response.data);
+      console.log('✅ CTA Update Response data:', response.data?.data);
+      console.log('✅ CTA Update Response social:', response.data?.data?.social);
+      
+      // Update store with response data (server returns updated cta object)
+      if (response.data?.data) {
+        console.log('✅ Setting CTA in store:', response.data.data);
+        set({ cta: response.data.data });
+      } else {
+        console.log('⚠️ No data in response, using payload');
+        // Fallback: use the merged payload
+        set({ cta: payload });
+      }
+      toast({ title: "CTA Updated Successfully" });
+    } catch (err: any) {
+      console.error(err);
+      const errorMsg = err.response?.data?.message || err.message || "Failed to update CTA";
+      toast({ 
+        title: "Error updating CTA", 
         description: errorMsg,
         variant: "destructive" 
       });

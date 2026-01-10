@@ -55,6 +55,13 @@ const CompanyLanding = () => {
   );
   const fetchLandingData = useLandingStore((state) => state.fetchLandingData);
   
+  // Debug: Log CTA data changes
+  useEffect(() => {
+    console.log('🏠 CompanyLanding - CTA from store:', cta);
+    console.log('🏠 CompanyLanding - CTA social:', cta?.social);
+    console.log('🏠 CompanyLanding - Is CTA social array?', Array.isArray(cta?.social));
+  }, [cta]);
+  
   // Fetch services details from API (4 services, each with 4 sections)
   // Store service details by serviceId
   const [servicesDetailsMap, setServicesDetailsMap] = useState<{ [serviceId: string]: any[] }>({});
@@ -214,12 +221,20 @@ const CompanyLanding = () => {
       fetchLandingData();
     };
     
+    // Listen for CTA update events
+    const handleCTAUpdated = () => {
+      console.log('🔄 CTA updated event received, refreshing landing data...');
+      fetchLandingData();
+    };
+    
     window.addEventListener('servicesUpdated', handleServicesUpdated);
+    window.addEventListener('ctaUpdated', handleCTAUpdated);
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('servicesUpdated', handleServicesUpdated);
+      window.removeEventListener('ctaUpdated', handleCTAUpdated);
     };
   }, [fetchLandingData]);
 
@@ -518,6 +533,8 @@ const CompanyLanding = () => {
         ...service,
         _id: service._id || service.id || cardServiceId,
         id: service.id || service._id || cardServiceId,
+        serviceId: serviceId || cardServiceId, // Add serviceId explicitly
+        itemId: serviceId || cardServiceId, // Add itemId for compatibility
       };
       setSelectedServiceForDetails(serviceWithId);
       // Get the 4 sections for this service from servicesDetailsMap
@@ -665,7 +682,8 @@ const CompanyLanding = () => {
         return;
       }
       
-      const serviceId = selectedService?._id || selectedService?.id;
+      // Get serviceId from multiple possible fields
+      const serviceId = selectedService?.serviceId || selectedService?.itemId || selectedService?._id || selectedService?.id;
       
       // Use JSON instead of FormData since we're only sending text
       const payload: any = {
@@ -679,27 +697,28 @@ const CompanyLanding = () => {
         payload.serviceId = String(serviceId);
         
         // Add title if available (some backends require it)
-        const serviceTitle = getFieldValue(selectedService, "title", language) || selectedService?.name || "";
+        const serviceTitle = getFieldValue(selectedService, "title", language) || selectedService?.name || selectedService?.service?.title_en || selectedService?.service?.title_ar || "";
         if (serviceTitle) {
           payload.title = serviceTitle;
         }
       }
 
       // Send to API
+      console.log('📤 Sending service order request:', payload);
       const response = await http.post('/service-orders', payload);
 
       // Log response (for debugging)
-      e.log('✅ ========== Service Order Response ==========');
+      console.log('✅ Service Order Response:', response.data);
 
       toast.success(language === 'en' ? 'Order submitted successfully!' : 'تم إرسال الطلب بنجاح!');
 
       // Close modal and reset form
       handleCloseModal();
     } catch (error: any) {
-      
-      // Log backend error message if available
-      if (error.response?.data) {
-      }
+      console.error('❌ Service Order Error:', error);
+      console.error('❌ Error Response:', error.response?.data);
+      console.error('❌ Error Status:', error.response?.status);
+      console.error('❌ Error Message:', error.message);
       
       // Show detailed error message
       let errorMessage = '';
@@ -726,10 +745,24 @@ const CompanyLanding = () => {
           errorMessage = language === 'en' 
             ? 'Invalid data. Please check all fields and try again.' 
             : 'بيانات غير صحيحة. يرجى التحقق من جميع الحقول والمحاولة مرة أخرى.';
+        } else if (error.response?.status === 401) {
+          errorMessage = language === 'en' 
+            ? 'Authentication required. Please try again.' 
+            : 'يجب تسجيل الدخول. يرجى المحاولة مرة أخرى.';
+        } else if (error.response?.status === 403) {
+          errorMessage = language === 'en' 
+            ? 'Permission denied. Please contact support.' 
+            : 'لا توجد صلاحية. يرجى التواصل مع الدعم.';
+        } else if (error.response?.status === 404) {
+          errorMessage = language === 'en' 
+            ? 'Service not found. Please try again.' 
+            : 'الخدمة غير موجودة. يرجى المحاولة مرة أخرى.';
         } else if (error.response?.status === 500) {
           errorMessage = language === 'en' 
             ? 'Server error. Please try again later.' 
             : 'خطأ في الخادم. يرجى المحاولة مرة أخرى لاحقاً.';
+        } else if (error.message) {
+          errorMessage = error.message;
         } else {
           errorMessage = language === 'en' 
             ? 'Failed to submit order. Please try again.' 
@@ -737,7 +770,7 @@ const CompanyLanding = () => {
         }
       }
       
-      toast.error(errorMessage);
+      toast.error(errorMessage || (language === 'en' ? 'Failed to submit order' : 'فشل إرسال الطلب'));
     } finally {
       setSubmitting(false);
     }
@@ -797,7 +830,10 @@ const CompanyLanding = () => {
       {/* Jobs */}
       <Jobs />
 
-      <ContactSection language={language} />
+      <ContactSection 
+        language={language} 
+        cta={cta}
+      />
 
       <Footer />
       <Chatbot />

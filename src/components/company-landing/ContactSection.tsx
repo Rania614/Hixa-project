@@ -3,19 +3,105 @@ import { Instagram, MessageCircle, Twitter, Send, Facebook, Linkedin, Phone, Map
 
 interface ContactSectionProps {
   language: "en" | "ar";
+  cta?: {
+    title_en?: string;
+    title_ar?: string;
+    subtitle_en?: string;
+    subtitle_ar?: string;
+    buttonText_en?: string;
+    buttonText_ar?: string;
+    buttonLink?: string;
+    location_en?: string;
+    location_ar?: string;
+    phone?: string;
+    social?: Array<{ name?: string; url?: string; icon?: string }>;
+  } | null;
 }
 
-export const ContactSection: React.FC<ContactSectionProps> = ({ language }) => {
+// Icon mapping for social media
+// Supported icon names: instagram, whatsapp, twitter, telegram, facebook, linkedin
+const iconMap: { [key: string]: React.ComponentType<any> } = {
+  instagram: Instagram,
+  whatsapp: MessageCircle,
+  twitter: Twitter,
+  telegram: Send,
+  facebook: Facebook,
+  linkedin: Linkedin,
+  // Alternative names
+  'whats-app': MessageCircle,
+  'whats app': MessageCircle,
+  'ig': Instagram,
+  'fb': Facebook,
+  'li': Linkedin,
+  'x': Twitter,
+};
+
+export const ContactSection: React.FC<ContactSectionProps> = ({ language, cta }) => {
   const isAr = language === 'ar';
 
-  const socialLinks = [
-    { icon: Instagram, href: "https://www.instagram.com/hixa_groups" },
-    { icon: MessageCircle, href: "https://chat.whatsapp.com/LQrlGeLPOFjGlhN7d1Tl52" },
-    { icon: Twitter, href: "https://x.com/HIXAGroup" },
-    { icon: Send, href: "https://t.me/projectsco" },
-    { icon: Facebook, href: "https://www.facebook.com/HIXAGroup" },
-    { icon: Linkedin, href: "https://www.linkedin.com/company/hixagroup" }
-  ];
+  // Get field value helper
+  const getFieldValue = (field: any, lang: string) => {
+    if (typeof field === 'string') return field;
+    if (typeof field === 'object' && field) {
+      return field[lang] || field['en'] || '';
+    }
+    return '';
+  };
+
+  // Get CTA data with fallbacks - use correct language
+  const title = isAr 
+    ? (cta?.title_ar || cta?.title_en || 'نصنع مستقبلاً هندسياً مختلفاً')
+    : (cta?.title_en || cta?.title_ar || 'Engineering a Different Future');
+  const subtitle = isAr 
+    ? (cta?.subtitle_ar || cta?.subtitle_en || 'سواء كنت تبحث عن استشارة أو ترغب في بدء مشروع جديد، فريقنا مستعد للإجابة.')
+    : (cta?.subtitle_en || cta?.subtitle_ar || 'Whether you are looking for a consultation or want to start a new project, our team is ready.');
+  const buttonText = isAr 
+    ? (cta?.buttonText_ar || cta?.buttonText_en || 'ابدأ مشروعك الآن')
+    : (cta?.buttonText_en || cta?.buttonText_ar || 'Start Your Project');
+  const buttonLink = cta?.buttonLink || 'https://chat.whatsapp.com/LQrlGeLPOFjGlhN7d1Tl52';
+  const location = isAr 
+    ? (cta?.location_ar || cta?.location_en || 'المملكة العربية السعودية')
+    : (cta?.location_en || cta?.location_ar || 'Saudi Arabia');
+  const phoneNumber = cta?.phone || '+966 50 413 1885';
+
+  // Build social links from CTA data or use defaults
+  const socialLinks = React.useMemo(() => {
+    console.log('🔍 ContactSection - CTA data:', cta);
+    console.log('🔍 ContactSection - CTA social:', cta?.social);
+    console.log('🔍 ContactSection - Is social array?', Array.isArray(cta?.social));
+    console.log('🔍 ContactSection - Social length:', Array.isArray(cta?.social) ? cta.social.length : 0);
+    
+    if (Array.isArray(cta?.social) && cta.social.length > 0) {
+      const filtered = cta.social.filter(s => s.url && s.url.trim() !== '');
+      console.log('🔍 ContactSection - Filtered social links:', filtered);
+      
+      const mapped = filtered.map(s => {
+        // Try icon field first, then name field, normalize to lowercase and trim
+        const iconName = (s.icon || s.name || 'whatsapp').toLowerCase().trim().replace(/\s+/g, '-');
+        const IconComponent = iconMap[iconName] || MessageCircle; // Default to WhatsApp icon
+        console.log('🔍 ContactSection - Mapping:', { iconName, hasIcon: !!iconMap[iconName], url: s.url });
+        return {
+          icon: IconComponent,
+          href: s.url || '#',
+          name: s.name || iconName,
+        };
+      });
+      
+      console.log('🔍 ContactSection - Final mapped links:', mapped);
+      return mapped;
+    }
+    
+    console.log('⚠️ ContactSection - No social links in CTA, using defaults');
+    // Default social links (only shown if no social links in CTA data)
+    return [
+      { icon: Instagram, href: "https://www.instagram.com/hixa_groups", name: 'Instagram' },
+      { icon: MessageCircle, href: "https://chat.whatsapp.com/LQrlGeLPOFjGlhN7d1Tl52", name: 'WhatsApp' },
+      { icon: Twitter, href: "https://x.com/HIXAGroup", name: 'Twitter' },
+      { icon: Send, href: "https://t.me/projectsco", name: 'Telegram' },
+      { icon: Facebook, href: "https://www.facebook.com/HIXAGroup", name: 'Facebook' },
+      { icon: Linkedin, href: "https://www.linkedin.com/company/hixagroup", name: 'LinkedIn' }
+    ];
+  }, [cta?.social]);
 
   return (
     // الخلفية الخارجية: بيج فاتح ليعطي مساحة بياض وثقة للموقع
@@ -36,12 +122,10 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ language }) => {
 
             <div className="relative z-10">
               <h2 className="text-gold text-4xl md:text-5xl font-bold leading-tight mb-8">
-                {isAr ? 'نصنع مستقبلاً هندسياً مختلفاً' : 'Engineering a Different Future'}
+                {title}
               </h2>
               <p className="text-gray-400 text-lg opacity-90 mb-12 leading-relaxed">
-                {isAr 
-                  ? 'سواء كنت تبحث عن استشارة أو ترغب في بدء مشروع جديد، فريقنا مستعد للإجابة.' 
-                  : 'Whether you are looking for a consultation or want to start a new project, our team is ready.'}
+                {subtitle}
               </p>
             </div>
 
@@ -82,11 +166,11 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ language }) => {
                 </h4>
                 {/* استخدام dir="ltr" لضمان ترتيب الأرقام و inline-block للمحاذاة */}
                 <a 
-                  href="tel:+966504131885"
+                  href={`tel:${phoneNumber.replace(/\s/g, '')}`}
                   className={`text-[#1A1A1A] text-2xl font-bold group-hover:text-gold transition-colors tabular-nums inline-block ${isAr ? 'text-right' : 'text-left'}`}
                   dir="ltr"
                 >
-                  +966 50 413 1885
+                  {phoneNumber}
                 </a>
               </div>
 
@@ -101,7 +185,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ language }) => {
                    {isAr ? 'زورونا' : 'Visit Us'}
                 </h4>
                 <p className="text-[#1A1A1A] text-2xl font-bold group-hover:text-gold transition-colors">
-                  {isAr ? 'المملكة العربية السعودية' : 'Saudi Arabia'}
+                  {location}
                 </p>
               </div>
 
@@ -110,12 +194,12 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ language }) => {
             {/* زر الأكشن الرئيسي */}
             <div className="mt-16 relative z-10">
                <a 
-                href="https://chat.whatsapp.com/LQrlGeLPOFjGlhN7d1Tl52"
+                href={buttonLink}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-4 bg-[#0A0A0A] text-gold px-10 py-5 rounded-full font-bold text-xl hover:bg-gold hover:text-black hover:shadow-[0_20px_40px_rgba(0,0,0,0.2)] transition-all duration-500"
                >
-                 {isAr ? 'ابدأ مشروعك الآن' : 'Start Your Project'}
+                 {buttonText}
                  <MessageCircle size={24} />
                </a>
             </div>

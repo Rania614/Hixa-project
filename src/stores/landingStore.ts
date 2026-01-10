@@ -152,6 +152,9 @@ export const useLandingStore = create<LandingState>((set) => ({
         console.log("📦 Mapped payload:", mapped);
         console.log("📦 Mapped services:", mapped.services);
         console.log("📦 Mapped services count:", Array.isArray(mapped.services) ? mapped.services.length : 0);
+        console.log("📦 Mapped CTA:", mapped.cta);
+        console.log("📦 Mapped CTA social:", mapped.cta?.social);
+        console.log("📦 Mapped CTA social is array?", Array.isArray(mapped.cta?.social));
 
         // Update with real data from API
         set({
