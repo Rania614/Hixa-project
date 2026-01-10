@@ -176,12 +176,19 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({
 
                         <Button 
                           onClick={() => {
-                            // Pass the full service object, not just the section
-                            // Include serviceId/itemId if available
+                            // Pass the full service object with the selected section (detail)
+                            // Include serviceId/itemId and detailId/detailTitle
                             const serviceToSend = {
                               ...selectedServiceForDetails,
                               itemId: selectedServiceForDetails?.itemId || selectedServiceForDetails?.serviceId,
                               serviceId: selectedServiceForDetails?.itemId || selectedServiceForDetails?.serviceId || selectedServiceForDetails?._id || selectedServiceForDetails?.id,
+                              // Add detail information - section is the current detail being viewed
+                              // Use index + 1 to match detail1, detail2, detail3, detail4 format
+                              serviceDetailId: section?.detailId || section?.id || `detail${index + 1}`,
+                              serviceDetailTitle: getFieldValue(section, "title", language) || section?.title_en || section?.title_ar || "",
+                              detailTitle: getFieldValue(section, "title", language) || section?.title_en || section?.title_ar || "",
+                              selectedDetail: section, // Pass the full section object
+                              detailIndex: index, // Store index for reference
                             };
                             onOrderClick(serviceToSend);
                           }}

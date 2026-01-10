@@ -696,10 +696,19 @@ const CompanyLanding = () => {
       if (serviceId) {
         payload.serviceId = String(serviceId);
         
-        // Add title if available (some backends require it)
+        // Add service title if available
         const serviceTitle = getFieldValue(selectedService, "title", language) || selectedService?.name || selectedService?.service?.title_en || selectedService?.service?.title_ar || "";
         if (serviceTitle) {
           payload.title = serviceTitle;
+        }
+        
+        // Add service detail (section) information if available
+        if (selectedService?.serviceDetailId) {
+          payload.serviceDetailId = String(selectedService.serviceDetailId);
+        }
+        if (selectedService?.serviceDetailTitle || selectedService?.detailTitle) {
+          payload.serviceDetailTitle = selectedService.serviceDetailTitle || selectedService.detailTitle;
+          payload.detailTitle = selectedService.serviceDetailTitle || selectedService.detailTitle; // Support both field names
         }
       }
 

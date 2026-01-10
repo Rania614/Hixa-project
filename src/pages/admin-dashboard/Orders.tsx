@@ -26,6 +26,8 @@ interface Order {
   phone?: string;
   serviceId?: string;
   serviceTitle?: string;
+  serviceDetailId?: string;
+  serviceDetailTitle?: string;
   serviceType?: string; // Keep for backward compatibility
   title?: string; // Keep for backward compatibility
   description?: string; // Keep for backward compatibility
@@ -277,7 +279,7 @@ const Orders = () => {
                         </div>
                       )}
 
-                      {/* Service - Show if serviceTitle or serviceId exists */}
+                      {/* Service - Show breadcrumb if serviceTitle or serviceId exists */}
                       {(order.serviceTitle || order.serviceId) && (
                         <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors">
                           <div className="w-10 h-10 bg-gold/20 rounded-full flex items-center justify-center flex-shrink-0">
@@ -287,16 +289,31 @@ const Orders = () => {
                             <p className="text-sm font-medium text-muted-foreground mb-1">
                               {language === 'en' ? 'Service' : 'الخدمة'}
                             </p>
-                            {order.serviceTitle && (
-                              <p className="text-base font-semibold text-card-foreground">
-                                {order.serviceTitle}
-                              </p>
-                            )}
-                            {order.serviceId && !order.serviceTitle && (
-                              <p className="text-base font-semibold text-card-foreground text-muted-foreground">
-                                ID: {order.serviceId}
-                              </p>
-                            )}
+                            {/* Breadcrumb: Service Name > Service Detail Name */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {order.serviceTitle ? (
+                                <>
+                                  <span className="text-base font-semibold text-card-foreground">
+                                    {order.serviceTitle}
+                                  </span>
+                                  {order.serviceDetailTitle && (
+                                    <>
+                                      <span className="text-muted-foreground">
+                                        {language === 'en' ? '>' : '>'}
+                                      </span>
+                                      <span className="text-base font-semibold text-card-foreground text-gold">
+                                        {order.serviceDetailTitle}
+                                      </span>
+                                    </>
+                                  )}
+                                </>
+                              ) : order.serviceId ? (
+                                <span className="text-base font-semibold text-card-foreground text-muted-foreground">
+                                  ID: {order.serviceId}
+                                  {order.serviceDetailId && ` > ${order.serviceDetailId}`}
+                                </span>
+                              ) : null}
+                            </div>
                           </div>
                         </div>
                       )}
