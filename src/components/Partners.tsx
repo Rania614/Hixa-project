@@ -1,12 +1,15 @@
 import { useLandingStore } from '@/stores/landingStore';
 import { useApp } from '@/context/AppContext';
 import { useShallow } from 'zustand/react/shallow';
-import React from 'react';
+import React, { useState } from 'react';
 import { ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { CompanyRegistrationModal } from '@/components/company-landing/modals/CompanyRegistrationModal';
 
 export const Partners = () => {
   const { language } = useApp();
   const isAr = language === 'ar';
+  const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
   
   const { partners, loading } = useLandingStore(
     useShallow((state) => ({
@@ -39,7 +42,15 @@ export const Partners = () => {
           <h2 className="text-4xl font-arabic font-bold text-[#1A1A1A] mb-4">
             {isAr ? 'شركاؤنا' : 'Our Partners'}
           </h2>
-          <div className="w-20 h-1 bg-gold mx-auto"></div>
+          <div className="w-20 h-1 bg-gold mx-auto mb-6"></div>
+          
+          {/* Join Hixa Button */}
+          <Button
+            onClick={() => setIsRegistrationModalOpen(true)}
+            className="bg-gold hover:bg-gold-dark text-black font-semibold px-8 py-6 text-lg"
+          >
+            {isAr ? 'انضم إلى Hixa' : 'Join Hixa'}
+          </Button>
         </div>
 
         <div className="relative">
@@ -108,6 +119,13 @@ export const Partners = () => {
           animation-play-state: paused;
         }
       `}</style>
+
+      {/* Company Registration Modal */}
+      <CompanyRegistrationModal
+        open={isRegistrationModalOpen}
+        onClose={() => setIsRegistrationModalOpen(false)}
+        language={language}
+      />
     </section>
   );
 };

@@ -47,7 +47,6 @@ export const Jobs = () => {
     if (applicationLink) {
       window.open(applicationLink, '_blank');
     } else {
-      console.log(`Apply for job ${jobId}`);
     }
   };
 

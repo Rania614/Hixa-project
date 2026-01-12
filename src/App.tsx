@@ -506,8 +506,7 @@ const CompanyProtectedRoute = ({ children }: { children: React.ReactNode }) => {
             if (userData) {
               localStorage.setItem("user", JSON.stringify(userData));
             }
-          } catch (error: any) {
-            console.warn("Could not fetch user data:", error);
+          } catch (error: any) {  
             setIsChecking(false);
             setIsCompany(true);
             return;
