@@ -54,23 +54,23 @@ export const Header = () => {
   // Check if we're on the platform page
   const isPlatformPage = window.location.pathname === '/platform';
   
-  // Filter out certain links for the platform page
-  const navLinks = [
-    { id: 'hero', label: { en: 'Home', ar: 'الرئيسية' } },
-    { id: 'about', label: { en: 'About', ar: 'عن الشركة' } },
-    { id: 'services', label: { en: 'Services', ar: 'الخدمات' } },
-    { id: 'projects', label: { en: 'Projects', ar: 'المشاريع' } },
-    { id: 'partners', label: { en: 'Partners', ar: 'الشركاء' } },
-    { id: 'jobs', label: { en: 'Jobs', ar: 'الوظائف' } },
-    { id: 'contact', label: { en: 'Contact', ar: 'اتصل بنا' } },
-  ].filter(link => {
-    // On platform page, hide services, projects, partners, and jobs
-    if (isPlatformPage) {
-      return !['services', 'projects', 'partners', 'jobs'].includes(link.id);
-    }
-    // On other pages, show all links
-    return true;
-  });
+  // Different nav links for platform page vs company landing page
+  const navLinks = isPlatformPage
+    ? [
+        { id: 'hero', label: { en: 'Home', ar: 'الرئيسية' } },
+        { id: 'community', label: { en: 'Community', ar: 'المجتمع' } },
+        { id: 'projects', label: { en: 'Projects', ar: 'المشاريع' } },
+        { id: 'faq', label: { en: 'FAQ', ar: 'الأسئلة الشائعة' } },
+      ]
+    : [
+        { id: 'hero', label: { en: 'Home', ar: 'الرئيسية' } },
+        { id: 'about', label: { en: 'About', ar: 'عن اشركة' } },
+        { id: 'services', label: { en: 'Services', ar: 'الخدمات' } },
+        { id: 'projects', label: { en: 'Projects', ar: 'المشاريع' } },
+        { id: 'partners', label: { en: 'Partners', ar: 'الشركاء' } },
+        { id: 'jobs', label: { en: 'Jobs', ar: 'الوظائف' } },
+        { id: 'contact', label: { en: 'Contact', ar: 'اتصل بنا' } },
+      ];
 
   const scrollToSection = (sectionId: string) => {
     // Check if we're on the platform page or the company landing page
