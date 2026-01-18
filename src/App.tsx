@@ -7,6 +7,7 @@ import { AppProvider, useApp } from "./context/AppContext";
 import { useMemo, useState, useEffect } from "react";
 import { http } from "./services/http";
 import { SEOHead } from "@/components/SEOHead";
+import { RoleProtectedRoute } from "@/components/routing/RoleProtectedRoute";
 
 import Landing from "./pages/PlatformLanding";
 import AdminLogin from "./pages/admin-dashboard/AdminLogin";
@@ -163,157 +164,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// ClientProtectedRoute component - checks authentication AND verifies user is client
-// Redirects to client login if not authenticated or not a client
-const ClientProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, language } = useApp();
-  const location = useLocation();
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
-  const [isChecking, setIsChecking] = useState(true);
-  const [isClient, setIsClient] = useState(false);
-  
-  // Update token when localStorage changes
-  useEffect(() => {
-    const handleStorageChange = () => {
-      setToken(localStorage.getItem("token"));
-    };
-    
-    handleStorageChange();
-    window.addEventListener('storage', handleStorageChange);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [isAuthenticated]);
-  
-  // Verify token and client role
-  useEffect(() => {
-    const verifyClientAuth = async () => {
-      const currentToken = localStorage.getItem("token");
-      
-      // If no token, not authorized - redirect immediately
-      if (!currentToken) {
-        setIsChecking(false);
-        setIsClient(false);
-        return;
-      }
-      
-      // Update token state
-      setToken(currentToken);
-      
-      // Must have both token AND isAuthenticated
-      if (!isAuthenticated) {
-        localStorage.removeItem("token");
-        setToken(null);
-        setIsChecking(false);
-        setIsClient(false);
-        return;
-      }
-      
-      // Check if user is client by verifying role from localStorage or API
-      try {
-        const userDataStr = localStorage.getItem("user");
-        let userData = null;
-        
-        if (userDataStr) {
-          try {
-            userData = JSON.parse(userDataStr);
-          } catch (e) {
-            console.error("Error parsing user data:", e);
-          }
-        }
-        
-        // If no user data in localStorage, try to fetch from API
-        if (!userData) {
-          try {
-            const response = await http.get("/auth/me");
-            userData = response.data?.user || response.data?.data || response.data;
-            if (userData) {
-              localStorage.setItem("user", JSON.stringify(userData));
-            }
-          } catch (error: any) {
-            console.warn("Could not fetch user data:", error);
-            setIsChecking(false);
-            setIsClient(true);
-            return;
-          }
-        }
-        
-        // Verify user is client (not company, not engineer, not admin)
-        if (userData) {
-          const userRole = userData.role || "";
-          const bio = userData.bio || '';
-          const hasCompanyName = userData.companyName !== undefined && userData.companyName !== null;
-          const hasContactPersonInBio = bio && bio.includes('Contact Person:');
-          const savedPartnerType = localStorage.getItem('partnerType');
-          
-          const isCompany = savedPartnerType === 'company' ||
-                            userRole === 'company' || 
-                            userRole === 'Company' ||
-                            userData.isCompany === true ||
-                            hasCompanyName ||
-                            hasContactPersonInBio;
-          
-          const isEngineer = savedPartnerType === 'engineer' ||
-                            userRole === 'engineer' || 
-                            userRole === 'Engineer' ||
-                            userRole === 'partner' ||
-                            userData.isEngineer === true;
-          
-          const isAdmin = userRole === 'admin' || userData.isAdmin === true;
-          
-          // User is client if role is 'client' and not company, engineer, or admin
-          const userIsClient = (userRole === 'client' || userRole === 'Client') && 
-                              !isCompany && 
-                              !isEngineer && 
-                              !isAdmin;
-          setIsClient(userIsClient);
-        } else {
-          setIsClient(true);
-        }
-      } catch (error) {
-        console.error("Error verifying client role:", error);
-        setIsClient(true);
-      } finally {
-        setIsChecking(false);
-      }
-    };
-    
-    verifyClientAuth();
-  }, [isAuthenticated, location.pathname]);
-  
-  // Check authorization
-  const isAuthorized = useMemo(() => {
-    return isAuthenticated && !!token && isClient;
-  }, [isAuthenticated, token, isClient]);
-  
-  // Show loading while checking
-  if (isChecking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-xl font-semibold text-muted-foreground">
-            {language === "en" ? "Checking authentication..." : "جارٍ التحقق من المصادقة..."}
-          </p>
-        </div>
-      </div>
-    );
-  }
-  
-  // Redirect to client login if not authorized
-  if (!isAuthorized) {
-    if (token && isAuthenticated && !isClient) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-    }
-    return <Navigate to="/client/login" replace state={{ from: location }} />;
-  }
-  
-  return <>{children}</>;
-};
+// Old Protected Route components removed - replaced with RoleProtectedRoute
+// The old components (ClientProtectedRoute, AdminProtectedRoute, CompanyProtectedRoute, EngineerProtectedRoute)
+// have been replaced with the unified RoleProtectedRoute component that uses userRole from AppContext
 
-// AdminProtectedRoute component - checks authentication AND verifies user is admin
+// PublicRoute component - redirects to dashboard if already authenticated
 // Redirects to admin login if not authenticated or not an admin
 const AdminProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, language } = useApp();
@@ -712,7 +567,7 @@ const EngineerProtectedRoute = ({ children }: { children: React.ReactNode }) => 
 // Used for login and auth pages
 // BUT: /platform should be accessible even if authenticated
 const PublicRoute = ({ children, allowWhenAuthenticated = false }: { children: React.ReactNode; allowWhenAuthenticated?: boolean }) => {
-  const { isAuthenticated, isCheckingAuth } = useApp();
+  const { isAuthenticated, isCheckingAuth, userRole } = useApp();
   const location = useLocation();
   const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
   
@@ -756,36 +611,19 @@ const PublicRoute = ({ children, allowWhenAuthenticated = false }: { children: R
     // Check if user is authenticated and on /auth/partner - redirect to dashboard
     const currentToken = localStorage.getItem("token");
     if (isAuthenticated && currentToken && location.pathname === '/auth/partner') {
-      // User is authenticated on auth page - redirect to dashboard
-      const userDataStr = localStorage.getItem('user');
-      let userData = null;
-      if (userDataStr) {
-        try {
-          userData = JSON.parse(userDataStr);
-        } catch (e) {
-          console.error('Error parsing user data:', e);
-        }
-      }
+      // Use userRole from context (source of truth from backend)
+      let dashboardPath = '/admin/dashboard'; // Default fallback
       
-      const userRole = userData?.role || '';
-      const savedPartnerType = localStorage.getItem('partnerType');
-      
-      const isCompany = savedPartnerType === 'company' || userRole === 'company' || userRole === 'Company';
-      const isEngineer = savedPartnerType === 'engineer' || userRole === 'engineer' || userRole === 'Engineer';
-      const isAdmin = userRole === 'admin';
-      
-      let dashboardPath = '/admin/dashboard'; // Default
-      if (isAdmin) {
+      if (userRole === 'admin') {
         dashboardPath = '/admin/dashboard';
-      } else if (isCompany) {
+      } else if (userRole === 'company') {
         dashboardPath = '/company/dashboard';
-      } else if (isEngineer) {
+      } else if (userRole === 'engineer') {
         dashboardPath = '/engineer/dashboard';
-      } else if (userRole === 'client' || userRole === 'Client') {
+      } else if (userRole === 'client') {
         dashboardPath = '/client/dashboard';
       }
       
-      console.log("🔄 User authenticated on /auth/partner - redirecting to dashboard:", dashboardPath);
       return <Navigate to={dashboardPath} replace />;
     }
     
@@ -808,41 +646,10 @@ const PublicRoute = ({ children, allowWhenAuthenticated = false }: { children: R
   
   // For login/auth pages, redirect to dashboard if already authenticated
   if (isAuthorized) {
-    // Redirect to appropriate dashboard based on login page
-    // Check user data to determine correct dashboard
-    const userDataStr = localStorage.getItem('user');
-    let userData = null;
-    if (userDataStr) {
-      try {
-        userData = JSON.parse(userDataStr);
-      } catch (e) {
-        console.error('Error parsing user data:', e);
-      }
-    }
+    // Use userRole from context (source of truth from backend)
+    let dashboardPath = '/admin/dashboard'; // Default fallback
     
-    const userRole = userData?.role || '';
-    const bio = userData?.bio || '';
-    const hasCompanyName = userData?.companyName !== undefined && userData?.companyName !== null;
-    const hasContactPersonInBio = bio && bio.includes('Contact Person:');
-    const savedPartnerType = localStorage.getItem('partnerType');
-    
-    const isCompany = savedPartnerType === 'company' ||
-                      userRole === 'company' || 
-                      userRole === 'Company' ||
-                      userData?.isCompany === true ||
-                      hasCompanyName ||
-                      hasContactPersonInBio;
-    
-    const isEngineer = savedPartnerType === 'engineer' ||
-                       userRole === 'engineer' || 
-                       userRole === 'Engineer' ||
-                       userRole === 'partner' ||
-                       userData?.isEngineer === true;
-    
-    const isAdmin = userRole === 'admin' || userData?.isAdmin === true;
-    
-    let dashboardPath = '/admin/dashboard'; // Default
-    
+    // First check if on specific login page - redirect to that dashboard
     if (location.pathname.includes('/company/login')) {
       dashboardPath = '/company/dashboard';
     } else if (location.pathname.includes('/client/login')) {
@@ -852,14 +659,14 @@ const PublicRoute = ({ children, allowWhenAuthenticated = false }: { children: R
     } else if (location.pathname.includes('/admin/login')) {
       dashboardPath = '/admin/dashboard';
     } else {
-      // If on generic auth page, determine dashboard from user data
-      if (isAdmin) {
+      // If on generic auth page, determine dashboard from userRole in context
+      if (userRole === 'admin') {
         dashboardPath = '/admin/dashboard';
-      } else if (isCompany) {
+      } else if (userRole === 'company') {
         dashboardPath = '/company/dashboard';
-      } else if (isEngineer) {
+      } else if (userRole === 'engineer') {
         dashboardPath = '/engineer/dashboard';
-      } else if (userRole === 'client' || userRole === 'Client') {
+      } else if (userRole === 'client') {
         dashboardPath = '/client/dashboard';
       }
     }
@@ -923,97 +730,97 @@ const AppRoutes = () => {
       <Route
         path="/admin/dashboard"
         element={
-          <AdminProtectedRoute>
+          <RoleProtectedRoute allowedRole="admin">
             <AdminDashboard />
-          </AdminProtectedRoute>
+          </RoleProtectedRoute>
         }
       />
       <Route
         path="/admin/content"
         element={
-          <AdminProtectedRoute>
+          <RoleProtectedRoute allowedRole="admin">
             <ContentManagement />
-          </AdminProtectedRoute>
+          </RoleProtectedRoute>
         }
       />
       <Route
         path="/admin/orders"
         element={
-          <AdminProtectedRoute>
+          <RoleProtectedRoute allowedRole="admin">
             <Orders />
-          </AdminProtectedRoute>
+          </RoleProtectedRoute>
         }
       />
       <Route
         path="/admin/partner-requests"
         element={
-          <AdminProtectedRoute>
+          <RoleProtectedRoute allowedRole="admin">
             <PartnerRequests />
-          </AdminProtectedRoute>
+          </RoleProtectedRoute>
         }
       />
       <Route
         path="/admin/subscribers"
         element={
-          <AdminProtectedRoute>
+          <RoleProtectedRoute allowedRole="admin">
             <Subscribers />
-          </AdminProtectedRoute>
+          </RoleProtectedRoute>
         }
       />
       <Route
         path="/admin/messages"
         element={
-          <AdminProtectedRoute>
+          <RoleProtectedRoute allowedRole="admin">
             <AdminMessages />
-          </AdminProtectedRoute>
+          </RoleProtectedRoute>
         }
       />
       <Route
         path="/admin/notifications"
         element={
-          <AdminProtectedRoute>
+          <RoleProtectedRoute allowedRole="admin">
             <AdminNotifications />
-          </AdminProtectedRoute>
+          </RoleProtectedRoute>
         }
       />
       <Route
         path="/admin/users"
         element={
-          <AdminProtectedRoute>
+          <RoleProtectedRoute allowedRole="admin">
             <AdminUsers />
-          </AdminProtectedRoute>
+          </RoleProtectedRoute>
         }
       />
       <Route
         path="/admin/projects"
         element={
-          <AdminProtectedRoute>
+          <RoleProtectedRoute allowedRole="admin">
             <AdminProjects />
-          </AdminProtectedRoute>
+          </RoleProtectedRoute>
         }
       />
       <Route
         path="/admin/projects/:id"
         element={
-          <AdminProtectedRoute>
+          <RoleProtectedRoute allowedRole="admin">
             <AdminProjectDetails />
-          </AdminProtectedRoute>
+          </RoleProtectedRoute>
         }
       />
       <Route
         path="/admin/projects/:id/proposals"
         element={
-          <AdminProtectedRoute>
+          <RoleProtectedRoute allowedRole="admin">
             <AdminProjectProposals />
-          </AdminProtectedRoute>
+          </RoleProtectedRoute>
         }
       />
       <Route
         path="/admin/settings"
         element={
-          <AdminProtectedRoute>
+          <RoleProtectedRoute allowedRole="admin">
             <AdminSettings />
-          </AdminProtectedRoute>
+          </RoleProtectedRoute>
         }
       />
       
@@ -1029,81 +836,81 @@ const AppRoutes = () => {
       <Route 
         path="/client/dashboard" 
         element={
-          <ClientProtectedRoute>
+          <RoleProtectedRoute allowedRole="client">
             <ClientDashboard />
-          </ClientProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/client/projects" 
         element={
-          <ClientProtectedRoute>
+          <RoleProtectedRoute allowedRole="client">
             <ClientProjects />
-          </ClientProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/client/projects/browse" 
         element={
-          <ClientProtectedRoute>
+          <RoleProtectedRoute allowedRole="client">
             <ClientBrowseProjects />
-          </ClientProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/client/projects/new" 
         element={
-          <ClientProtectedRoute>
+          <RoleProtectedRoute allowedRole="client">
             <CreateProject />
-          </ClientProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/client/projects/:id" 
         element={
-          <ClientProtectedRoute>
+          <RoleProtectedRoute allowedRole="client">
             <ProjectDetails />
-          </ClientProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/client/engineers/:id" 
         element={
-          <ClientProtectedRoute>
+          <RoleProtectedRoute allowedRole="client">
             <EngineerProfileView />
-          </ClientProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/client/messages" 
         element={
-          <ClientProtectedRoute>
+          <RoleProtectedRoute allowedRole="client">
             <ClientMessages />
-          </ClientProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/client/notifications" 
         element={
-          <ClientProtectedRoute>
+          <RoleProtectedRoute allowedRole="client">
             <ClientNotifications />
-          </ClientProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/client/contracts" 
         element={
-          <ClientProtectedRoute>
+          <RoleProtectedRoute allowedRole="client">
             <ClientContracts />
-          </ClientProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/client/profile" 
         element={
-          <ClientProtectedRoute>
+          <RoleProtectedRoute allowedRole="client">
             <ClientProfile />
-          </ClientProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       
@@ -1119,97 +926,97 @@ const AppRoutes = () => {
       <Route 
         path="/engineer/dashboard" 
         element={
-          <EngineerProtectedRoute>
+          <RoleProtectedRoute allowedRole="engineer">
             <EngineerDashboard />
-          </EngineerProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/engineer/available-projects" 
         element={
-          <EngineerProtectedRoute>
+          <RoleProtectedRoute allowedRole="engineer">
             <AvailableProjects />
-          </EngineerProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/engineer/projects" 
         element={
-          <EngineerProtectedRoute>
+          <RoleProtectedRoute allowedRole="engineer">
             <EngineerProjects />
-          </EngineerProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/engineer/projects/:id" 
         element={
-          <EngineerProtectedRoute>
+          <RoleProtectedRoute allowedRole="engineer">
             <EngineerProjectDetails />
-          </EngineerProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/engineer/projects/:id/proposal" 
         element={
-          <EngineerProtectedRoute>
+          <RoleProtectedRoute allowedRole="engineer">
             <SubmitProposal />
-          </EngineerProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/engineer/messages" 
         element={
-          <EngineerProtectedRoute>
+          <RoleProtectedRoute allowedRole="engineer">
             <EngineerMessages />
-          </EngineerProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/engineer/notifications" 
         element={
-          <EngineerProtectedRoute>
+          <RoleProtectedRoute allowedRole="engineer">
             <EngineerNotifications />
-          </EngineerProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/engineer/portfolio" 
         element={
-          <EngineerProtectedRoute>
+          <RoleProtectedRoute allowedRole="engineer">
             <EngineerPortfolio />
-          </EngineerProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/engineer/portfolio/add" 
         element={
-          <EngineerProtectedRoute>
+          <RoleProtectedRoute allowedRole="engineer">
             <AddWork />
-          </EngineerProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/engineer/portfolio/:id/edit" 
         element={
-          <EngineerProtectedRoute>
+          <RoleProtectedRoute allowedRole="engineer">
             <AddWork />
-          </EngineerProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/engineer/portfolio/:id" 
         element={
-          <EngineerProtectedRoute>
+          <RoleProtectedRoute allowedRole="engineer">
             <WorkDetails />
-          </EngineerProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/engineer/profile" 
         element={
-          <EngineerProtectedRoute>
+          <RoleProtectedRoute allowedRole="engineer">
             <EngineerProfile />
-          </EngineerProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       
@@ -1225,97 +1032,97 @@ const AppRoutes = () => {
       <Route 
         path="/company/dashboard" 
         element={
-          <CompanyProtectedRoute>
+          <RoleProtectedRoute allowedRole="company">
             <CompanyDashboard />
-          </CompanyProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/company/available-projects" 
         element={
-          <CompanyProtectedRoute>
+          <RoleProtectedRoute allowedRole="company">
             <CompanyAvailableProjects />
-          </CompanyProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/company/projects" 
         element={
-          <CompanyProtectedRoute>
+          <RoleProtectedRoute allowedRole="company">
             <CompanyProjects />
-          </CompanyProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/company/projects/:id" 
         element={
-          <CompanyProtectedRoute>
+          <RoleProtectedRoute allowedRole="company">
             <CompanyProjectDetails />
-          </CompanyProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/company/projects/:id/proposal" 
         element={
-          <CompanyProtectedRoute>
+          <RoleProtectedRoute allowedRole="company">
             <CompanySubmitProposal />
-          </CompanyProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/company/messages" 
         element={
-          <CompanyProtectedRoute>
+          <RoleProtectedRoute allowedRole="company">
             <CompanyMessages />
-          </CompanyProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/company/notifications" 
         element={
-          <CompanyProtectedRoute>
+          <RoleProtectedRoute allowedRole="company">
             <CompanyNotifications />
-          </CompanyProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/company/portfolio" 
         element={
-          <CompanyProtectedRoute>
+          <RoleProtectedRoute allowedRole="company">
             <CompanyPortfolio />
-          </CompanyProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/company/portfolio/add" 
         element={
-          <CompanyProtectedRoute>
+          <RoleProtectedRoute allowedRole="company">
             <AddWork />
-          </CompanyProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/company/portfolio/:id/edit" 
         element={
-          <CompanyProtectedRoute>
+          <RoleProtectedRoute allowedRole="company">
             <AddWork />
-          </CompanyProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/company/portfolio/:id" 
         element={
-          <CompanyProtectedRoute>
+          <RoleProtectedRoute allowedRole="company">
             <WorkDetails />
-          </CompanyProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       <Route 
         path="/company/profile" 
         element={
-          <CompanyProtectedRoute>
+          <RoleProtectedRoute allowedRole="company">
             <CompanyProfile />
-          </CompanyProtectedRoute>
+          </RoleProtectedRoute>
         } 
       />
       

@@ -1,12 +1,24 @@
+/**
+ * AuthPage Component
+ * 
+ * Handles authentication flow and redirects based on user.role from backend.
+ * No longer uses partnerType, savedPartnerType, hasCompanyName, or bio fields.
+ * 
+ * Security:
+ * - Only uses user.role from backend response (stored in localStorage by AuthModal)
+ * - Updates AppContext with userRole after successful authentication
+ */
+
 import { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { UserRole } from '@/context/AppContext';
 
 const AuthPage = () => {
-  const { setIsAuthenticated } = useApp();
+  const { setIsAuthenticated, setUserRole } = useApp();
   const navigate = useNavigate();
   const { role } = useParams<{ role: 'client' | 'partner' }>();
   const [searchParams] = useSearchParams();
@@ -17,91 +29,54 @@ const AuthPage = () => {
   const mode = searchParams.get('mode');
   const initialMode = mode === 'register' ? 'register' : 'login';
 
-  const handleAuthSuccess = (partnerType?: 'engineer' | 'company') => {
-    // Authentication successful - redirect to appropriate dashboard based on ACTUAL user role
+  /**
+   * Handle successful authentication
+   * Determines dashboard path based ONLY on user.role from backend
+   */
+  const handleAuthSuccess = () => {
     setIsAuthenticated(true);
     
-    // Check user data from localStorage to determine actual role
+    // Get user data from localStorage (set by AuthModal after successful login/register)
     const userDataStr = localStorage.getItem('user');
     let userData = null;
+    
     if (userDataStr) {
       try {
         userData = JSON.parse(userDataStr);
       } catch (e) {
-        console.error('Error parsing user data:', e);
+        // Invalid JSON, will use default redirect
       }
     }
     
-    const userRole = userData?.role || '';
-    const savedPartnerType = localStorage.getItem('partnerType');
-    const bio = userData?.bio || '';
-    const hasCompanyName = userData?.companyName !== undefined && userData?.companyName !== null;
-    const hasContactPersonInBio = bio && bio.includes('Contact Person:');
+    // Extract role from user data (backend response)
+    const backendRole = userData?.role?.toLowerCase();
+    let normalizedRole: UserRole = null;
     
-    // Determine if user is company (companies may have role: "client" in database)
-    const isCompany = partnerType === 'company' || 
-                      savedPartnerType === 'company' ||
-                      userRole === 'company' || 
-                      userRole === 'Company' ||
-                      userData?.isCompany === true ||
-                      hasCompanyName ||
-                      hasContactPersonInBio;
+    if (backendRole === 'client' || backendRole === 'customer') normalizedRole = 'client';
+    else if (backendRole === 'engineer' || backendRole === 'partner') normalizedRole = 'engineer';
+    else if (backendRole === 'company') normalizedRole = 'company';
+    else if (backendRole === 'admin') normalizedRole = 'admin';
     
-    // Determine if user is engineer
-    const isEngineer = partnerType === 'engineer' ||
-                       savedPartnerType === 'engineer' ||
-                       userRole === 'engineer' || 
-                       userRole === 'Engineer' ||
-                       userRole === 'partner' ||
-                       userData?.isEngineer === true;
+    // Update context with role
+    setUserRole(normalizedRole);
     
-    // Determine if user is admin
-    const isAdmin = userRole === 'admin' || 
-                   userRole === 'Admin' ||
-                   userData?.isAdmin === true;
+    // Determine dashboard path based ONLY on role from backend
+    let redirectPath = '/client/login'; // Default: redirect to login if role is unclear
     
-    // Determine redirect path
-    let redirectPath = '/client/dashboard'; // Default fallback
-    
-    if (isAdmin) {
+    if (normalizedRole === 'admin') {
       redirectPath = '/admin/dashboard';
-    } else if (isCompany) {
+    } else if (normalizedRole === 'company') {
       redirectPath = '/company/dashboard';
-    } else if (isEngineer) {
+    } else if (normalizedRole === 'engineer') {
       redirectPath = '/engineer/dashboard';
-    } else if (userRole === 'client' || userRole === 'Client') {
+    } else if (normalizedRole === 'client') {
       redirectPath = '/client/dashboard';
-    } else {
-      // Fallback: try to determine from URL role if user role is unclear
-      if (role === 'client') {
-        redirectPath = '/client/dashboard';
-      } else if (role === 'partner') {
-        // Default to engineer dashboard for partner role if unclear
-        redirectPath = '/engineer/dashboard';
-      }
     }
     
-    // Log for debugging
-    console.log('🔍 Redirecting user:', {
-      userRole,
-      partnerType,
-      savedPartnerType,
-      isCompany,
-      isEngineer,
-      isAdmin,
-      hasCompanyName,
-      redirectPath,
-      userData,
-      token: localStorage.getItem('token') ? 'exists' : 'missing'
-    });
-    
-    // Use navigate instead of window.location.href to avoid page reload
-    // This preserves the authentication state in context
-    // Small delay to ensure state is updated before navigation
-    // Increased delay to ensure ProtectedRoute has time to update
+    // Navigate after a small delay to ensure context is updated
     setTimeout(() => {
       navigate(redirectPath, { replace: true });
-    }, 200);
+    }, 100);
   };
 
   const handleClose = () => {
