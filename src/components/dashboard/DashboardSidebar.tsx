@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { http, setAccessToken } from "@/services/http";
 
 interface DashboardSidebarProps {
   userType: "client" | "engineer" | "company";
@@ -61,9 +62,27 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ userType }) 
 
   const menuItems = isClient ? clientMenuItems : isCompany ? companyMenuItems : engineerMenuItems;
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/");
+  const handleLogout = async () => {
+    try {
+      // Call logout endpoint to clear refresh token cookie
+      await http.post('/auth/logout').catch(() => {
+        // Ignore errors - continue with logout anyway
+      });
+    } catch (error) {
+      // Ignore errors - continue with logout anyway
+    } finally {
+      // Clear tokens and user data
+      setAccessToken(null);
+      localStorage.removeItem("user");
+      
+      // Navigate to appropriate login page based on user type
+      if (userType === "client") {
+        navigate("/client/login");
+      } else {
+        // Engineers and companies use /auth/partner
+        navigate("/auth/partner");
+      }
+    }
   };
 
   const isActive = (path: string) => {

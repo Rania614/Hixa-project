@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { getInitialContentSnapshot } from "@/services/api";
-import { http } from "@/services/http";
+import { http, setAccessToken } from "@/services/http";
 
 interface LandingContent {
   _id: string;
@@ -56,6 +56,7 @@ interface AppContextProps {
   refresh: () => void;
   isAuthenticated: boolean;
   setIsAuthenticated: (authenticated: boolean) => void;
+  isCheckingAuth: boolean;
 }
 
 const AppContext = createContext<AppContextProps | undefined>(undefined);
@@ -66,6 +67,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [content, setContent] = useState<LandingContent | null>(getInitialContentSnapshot());
   const [loading, setLoading] = useState(false); // Start with false since we have fallback data
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState<boolean>(true); // Track if we're still checking auth
 
   // Set document direction and language on mount and when language changes
   useEffect(() => {
@@ -89,83 +91,56 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     fetchLandingContent();
     
-    // Check if user is already authenticated by verifying token with API
+    // Check if user is already authenticated by trying to refresh token
     const checkAuth = async () => {
-      const token = localStorage.getItem("token");
-      if (token) {
-        try {
-          // Try to verify token with API - check if admin is authenticated
-          // Suppress console errors for these optional endpoints by using validateStatus
-          try {
-            const verifyResponse = await http.get('/auth/verify', {
-              validateStatus: () => true, // Don't throw for any status code
-            });
-            // If status is 200-299, user is authenticated
-            if (verifyResponse.status >= 200 && verifyResponse.status < 300) {
-              setIsAuthenticated(true);
-            } else if (verifyResponse.status === 404) {
-              // Endpoint doesn't exist, try admin/me
-              throw { response: { status: 404 }, silent: true };
-            } else {
-              setIsAuthenticated(true);
-            }
-          } catch (verifyError: any) {
-            // If verify endpoint doesn't exist (404), try admin/me endpoint
-            if (verifyError.response?.status === 404 || verifyError.silent) {
-              try {
-                const meResponse = await http.get('/admin/me', {
-                  validateStatus: () => true, // Don't throw for any status code
-                });
-                // If status is 200-299, user is authenticated
-                if (meResponse.status >= 200 && meResponse.status < 300) {
-                  setIsAuthenticated(true);
-                } else if (meResponse.status === 404) {
-                  // Both endpoints don't exist - keep token for development
-                  setIsAuthenticated(true);
-                } else {
-                  setIsAuthenticated(true);
-                }
-              } catch (meError: any) {
-                // If both endpoints don't exist (404), keep token (fallback for development)
-                if (meError.response?.status === 404 || meError.silent) {
-                  // Endpoints don't exist - keep token for development
-                  // Silently handle 404 - endpoints may not be implemented yet
-                  setIsAuthenticated(true);
-                } else if (meError.response?.status === 401 || meError.response?.status === 403) {
-                  // Token is invalid
-                  localStorage.removeItem("token");
-                  setIsAuthenticated(false);
-                } else {
-                  // Other error, keep token (fallback)
-                  setIsAuthenticated(true);
-                }
-              }
-            } else if (verifyError.response?.status === 401 || verifyError.response?.status === 403) {
-              // Token is invalid
-              localStorage.removeItem("token");
-              setIsAuthenticated(false);
-            } else {
-              // Other error, keep token (fallback)
-              setIsAuthenticated(true);
-            }
-          }
-        } catch (error: any) {
-          // Network error or other issue - check if it's a 404 (endpoint doesn't exist)
-          if (error.response?.status === 404 || error.silent) {
-            // Endpoint doesn't exist - keep token for development
-            // Silently handle 404 - endpoints may not be implemented yet
-            setIsAuthenticated(true);
+      setIsCheckingAuth(true);
+      console.log("🔍 Starting auth check...");
+      console.log("🔍 Document cookies:", document.cookie);
+      
+      // Try to refresh token using refreshToken cookie
+      // This will automatically get a new access token if refresh token is valid
+      try {
+        console.log("🔄 Attempting to refresh token...");
+        const refreshResponse = await http.post('/auth/refresh', {}, {
+          validateStatus: () => true, // Don't throw for any status code
+        });
+        console.log("🔄 Refresh response status:", refreshResponse.status);
+        console.log("🔄 Refresh response data:", refreshResponse.data);
+        
+        // If status is 200-299, refresh token is valid - user is authenticated
+        if (refreshResponse.status >= 200 && refreshResponse.status < 300) {
+          // Update access token from response
+          const newAccessToken = refreshResponse.data?.accessToken || refreshResponse.data?.token;
+          if (newAccessToken) {
+            setAccessToken(newAccessToken);
+            console.log("🔑 Access token saved to localStorage");
           } else {
-            // Other network error - keep token for now
-            // Only log non-404 errors
-            if (error.response?.status !== 404 && !error.silent) {
-              console.warn('Auth check failed:', error.message || error);
-            }
-            setIsAuthenticated(true);
+            console.warn("⚠️ No access token in refresh response");
           }
+          
+          // Update user data if provided
+          if (refreshResponse.data?.user) {
+            localStorage.setItem("user", JSON.stringify(refreshResponse.data.user));
+            console.log("👤 User data saved to localStorage");
+          }
+          
+          setIsAuthenticated(true);
+          console.log("✅ Authentication verified via refresh token - isAuthenticated:", true);
+        } else {
+          // Refresh token is invalid or expired - user is not authenticated
+          setIsAuthenticated(false);
+          setAccessToken(null);
+          localStorage.removeItem("user");
+          console.log("❌ Refresh token invalid - user not authenticated");
         }
-      } else {
+      } catch (error: any) {
+        // Network error or refresh failed - assume not authenticated
+        console.warn('Auth check failed:', error.message || error);
         setIsAuthenticated(false);
+        setAccessToken(null);
+        localStorage.removeItem("user");
+      } finally {
+        setIsCheckingAuth(false);
       }
     };
     
@@ -180,7 +155,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       loading, 
       refresh: fetchLandingContent,
       isAuthenticated,
-      setIsAuthenticated
+      setIsAuthenticated,
+      isCheckingAuth
     }}>
       {children}
     </AppContext.Provider>

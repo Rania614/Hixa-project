@@ -20,6 +20,20 @@ baseURL = baseURL.replace(/\/+$/, ''); // remove trailing slashes
 console.log("🌐 HTTP Service initialized with baseURL:", baseURL);
 
 // -------------------------------
+// Access Token Storage (in-memory + localStorage for backward compatibility)
+// -------------------------------
+let accessToken = null;
+
+export const setAccessToken = (token) => {
+  accessToken = token;
+  if (token) {
+    localStorage.setItem("token", token);
+  } else {
+    localStorage.removeItem("token");
+  }
+};
+
+// -------------------------------
 // Axios instance
 // -------------------------------
 export const http = axios.create({
@@ -28,15 +42,15 @@ export const http = axios.create({
     "Content-Type": "application/json",
   },
   timeout: 30000, // 30 seconds timeout
-  withCredentials: false, // Don't send cookies automatically
+  withCredentials: true, // Send cookies (including refreshToken HttpOnly cookie)
 });
 
 // -------------------------------
 // Request Interceptor
 // -------------------------------
 http.interceptors.request.use((config) => {
-  // Add Authorization token if exists
-  const token = localStorage.getItem("token");
+  // Use in-memory token first, fallback to localStorage
+  const token = accessToken || localStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -88,17 +102,66 @@ http.interceptors.response.use(
       status: response.status,
       data: response.data,
     });
+    
+    // Update access token if response contains a new one (from login/register/refresh)
+    if (response.data?.accessToken || response.data?.token) {
+      const newToken = response.data.accessToken || response.data.token;
+      setAccessToken(newToken);
+    }
+    
     return response;
   },
-  (error) => {
-    if (error.response?.status === 401) {
-      console.warn("🔒 401 Unauthorized - Token invalid or expired");
-      localStorage.removeItem("token");
+  async (error) => {
+    const originalRequest = error.config;
 
-      const pathname = window.location.pathname;
-      if (pathname.startsWith('/admin')) window.location.href = '/admin/login';
-      else if (pathname.startsWith('/engineer')) window.location.href = '/engineer/login';
-      else if (pathname.startsWith('/client')) window.location.href = '/client/login';
+    // Handle 401 - Try to refresh token
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      // Don't retry refresh token endpoint to avoid infinite loop
+      if (originalRequest.url?.includes('/auth/refresh')) {
+        console.warn("🔒 401 on refresh endpoint - Clearing tokens and redirecting");
+        setAccessToken(null);
+        localStorage.removeItem("user");
+
+        const pathname = window.location.pathname;
+        if (pathname.startsWith('/admin')) window.location.href = '/admin/login';
+        else if (pathname.startsWith('/engineer') || pathname.startsWith('/company')) window.location.href = '/auth/partner';
+        else if (pathname.startsWith('/client')) window.location.href = '/client/login';
+        return Promise.reject(error);
+      }
+
+      try {
+        console.log("🔄 Attempting to refresh access token...");
+        // Try to get new access token using refresh token from cookie
+        const refreshResponse = await http.post('/auth/refresh');
+        
+        if (refreshResponse.data?.accessToken || refreshResponse.data?.token) {
+          const newAccessToken = refreshResponse.data.accessToken || refreshResponse.data.token;
+          setAccessToken(newAccessToken);
+          
+          // Update user data if provided
+          if (refreshResponse.data?.user) {
+            localStorage.setItem("user", JSON.stringify(refreshResponse.data.user));
+          }
+          
+          // Retry original request with new token
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          console.log("✅ Token refreshed, retrying original request");
+          return http(originalRequest);
+        }
+      } catch (refreshError) {
+        console.warn("❌ Failed to refresh token:", refreshError);
+        // Refresh failed - clear tokens and redirect to login
+        setAccessToken(null);
+        localStorage.removeItem("user");
+
+        const pathname = window.location.pathname;
+        if (pathname.startsWith('/admin')) window.location.href = '/admin/login';
+        else if (pathname.startsWith('/engineer') || pathname.startsWith('/company')) window.location.href = '/auth/partner';
+        else if (pathname.startsWith('/client')) window.location.href = '/client/login';
+        return Promise.reject(refreshError);
+      }
     }
 
     if (error.response?.status === 403) {

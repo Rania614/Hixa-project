@@ -55,7 +55,7 @@ const SubmitProposal = () => {
       
       if (!token) {
         toast.error(language === "en" ? "You must be logged in" : "يجب تسجيل الدخول");
-        navigate("/engineer/login");
+        navigate("/auth/partner");
         return;
       }
 

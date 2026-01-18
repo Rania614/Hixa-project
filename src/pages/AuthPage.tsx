@@ -98,9 +98,10 @@ const AuthPage = () => {
     // Use navigate instead of window.location.href to avoid page reload
     // This preserves the authentication state in context
     // Small delay to ensure state is updated before navigation
+    // Increased delay to ensure ProtectedRoute has time to update
     setTimeout(() => {
       navigate(redirectPath, { replace: true });
-    }, 100);
+    }, 200);
   };
 
   const handleClose = () => {

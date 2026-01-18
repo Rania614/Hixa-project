@@ -13,6 +13,7 @@ import AdminLogin from "./pages/admin-dashboard/AdminLogin";
 import AdminDashboard from "./pages/admin-dashboard/AdminDashboard";
 import ContentManagement from "./pages/admin-dashboard/ContentManagement";
 import Orders from "./pages/admin-dashboard/Orders";
+import PartnerRequests from "./pages/admin-dashboard/PartnerRequests";
 import Subscribers from "./pages/admin-dashboard/Subscribers";
 import AdminMessages from "./pages/admin-dashboard/AdminMessages";
 import AdminUsers from "./pages/admin-dashboard/AdminUsers";
@@ -24,6 +25,8 @@ import AdminNotifications from "./pages/admin-dashboard/AdminNotifications";
 import NotFound from "./pages/NotFound";
 import CompanyLanding from "./pages/CompanyLanding";
 import AuthPage from "./pages/AuthPage";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 // Client Dashboard
 import ClientLogin from "./pages/client-dashboard/ClientLogin";
@@ -69,7 +72,7 @@ const queryClient = new QueryClient();
 // ProtectedRoute component - checks both authentication state and token
 // Redirects to login if not authenticated
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useApp();
+  const { isAuthenticated, isCheckingAuth } = useApp();
   const location = useLocation();
   const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
   const [isChecking, setIsChecking] = useState(true);
@@ -94,15 +97,17 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   // Verify token is valid on mount and when dependencies change
   useEffect(() => {
     const verifyToken = () => {
+      // Wait for AppContext to finish checking auth (refresh token check)
+      if (isCheckingAuth) {
+        // Still checking - wait
+        return;
+      }
+      
       const currentToken = localStorage.getItem("token");
       
       // If no token, not authorized - redirect immediately
       if (!currentToken) {
         setIsChecking(false);
-        // Clear authentication state if no token
-        if (isAuthenticated) {
-          // This shouldn't happen, but clear it just in case
-        }
         return;
       }
       
@@ -110,9 +115,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       setToken(currentToken);
       
       // CRITICAL: Must have both token AND isAuthenticated to be authorized
-      // If token exists but isAuthenticated is false, token is invalid
+      // Now that auth check is complete, we can make a decision
       if (!isAuthenticated) {
-        // Token exists but user is not authenticated - clear token and redirect
+        // User is not authenticated - clear token and redirect
         localStorage.removeItem("token");
         setToken(null);
         setIsChecking(false);
@@ -124,7 +129,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     };
     
     verifyToken();
-  }, [isAuthenticated, location.pathname]);
+  }, [isAuthenticated, isCheckingAuth, location.pathname]);
   
   // Use useMemo to prevent unnecessary re-renders
   const isAuthorized = useMemo(() => {
@@ -132,8 +137,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return isAuthenticated && !!token;
   }, [isAuthenticated, token]);
   
-  // Show loading while checking
-  if (isChecking) {
+  // Show loading while checking (either local check or AppContext auth check)
+  if (isChecking || isCheckingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -149,10 +154,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     // Redirect to appropriate login page based on route
     const loginPath = location.pathname.startsWith('/client/') 
       ? '/client/login' 
-      : location.pathname.startsWith('/engineer/')
-      ? '/engineer/login'
-      : location.pathname.startsWith('/company/')
-      ? '/company/login'
+      : location.pathname.startsWith('/engineer/') || location.pathname.startsWith('/company/')
+      ? '/auth/partner'
       : '/admin/login';
     return <Navigate to={loginPath} replace state={{ from: location }} />;
   }
@@ -567,7 +570,7 @@ const CompanyProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
     }
-    return <Navigate to="/company/login" replace state={{ from: location }} />;
+    return <Navigate to="/auth/partner" replace state={{ from: location }} />;
   }
   
   return <>{children}</>;
@@ -699,7 +702,7 @@ const EngineerProtectedRoute = ({ children }: { children: React.ReactNode }) => 
       localStorage.removeItem("token");
       localStorage.removeItem("user");
     }
-    return <Navigate to="/engineer/login" replace state={{ from: location }} />;
+    return <Navigate to="/auth/partner" replace state={{ from: location }} />;
   }
   
   return <>{children}</>;
@@ -709,33 +712,99 @@ const EngineerProtectedRoute = ({ children }: { children: React.ReactNode }) => 
 // Used for login and auth pages
 // BUT: /platform should be accessible even if authenticated
 const PublicRoute = ({ children, allowWhenAuthenticated = false }: { children: React.ReactNode; allowWhenAuthenticated?: boolean }) => {
-  const { isAuthenticated } = useApp();
+  const { isAuthenticated, isCheckingAuth } = useApp();
   const location = useLocation();
   const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
   
-  // Update token when localStorage changes
+  // Update token when localStorage changes or when isAuthenticated changes
   useEffect(() => {
-    const handleStorageChange = () => {
-      setToken(localStorage.getItem("token"));
+    const updateToken = () => {
+      const currentToken = localStorage.getItem("token");
+      setToken(currentToken);
     };
     
-    handleStorageChange();
-    window.addEventListener('storage', handleStorageChange);
+    // Check immediately
+    updateToken();
+    
+    // Listen for storage events (from other tabs/windows)
+    window.addEventListener('storage', updateToken);
+    
+    // Also check when isAuthenticated changes (token might be set by setAccessToken)
+    const intervalId = setInterval(updateToken, 100); // Check every 100ms while checking auth
     
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('storage', updateToken);
+      clearInterval(intervalId);
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isCheckingAuth]);
   
-  // If already authenticated, redirect to dashboard (unless allowWhenAuthenticated is true)
-  const isAuthorized = useMemo(() => {
-    return isAuthenticated && !!token;
-  }, [isAuthenticated, token]);
+  // Wait for auth check to complete
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-xl font-semibold text-muted-foreground">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
   
   // If allowWhenAuthenticated is true (e.g., for /platform), allow access even if authenticated
+  // BUT: For /auth/partner, if user is authenticated, redirect to appropriate dashboard
   if (allowWhenAuthenticated) {
+    // Check if user is authenticated and on /auth/partner - redirect to dashboard
+    const currentToken = localStorage.getItem("token");
+    if (isAuthenticated && currentToken && location.pathname === '/auth/partner') {
+      // User is authenticated on auth page - redirect to dashboard
+      const userDataStr = localStorage.getItem('user');
+      let userData = null;
+      if (userDataStr) {
+        try {
+          userData = JSON.parse(userDataStr);
+        } catch (e) {
+          console.error('Error parsing user data:', e);
+        }
+      }
+      
+      const userRole = userData?.role || '';
+      const savedPartnerType = localStorage.getItem('partnerType');
+      
+      const isCompany = savedPartnerType === 'company' || userRole === 'company' || userRole === 'Company';
+      const isEngineer = savedPartnerType === 'engineer' || userRole === 'engineer' || userRole === 'Engineer';
+      const isAdmin = userRole === 'admin';
+      
+      let dashboardPath = '/admin/dashboard'; // Default
+      if (isAdmin) {
+        dashboardPath = '/admin/dashboard';
+      } else if (isCompany) {
+        dashboardPath = '/company/dashboard';
+      } else if (isEngineer) {
+        dashboardPath = '/engineer/dashboard';
+      } else if (userRole === 'client' || userRole === 'Client') {
+        dashboardPath = '/client/dashboard';
+      }
+      
+      console.log("🔄 User authenticated on /auth/partner - redirecting to dashboard:", dashboardPath);
+      return <Navigate to={dashboardPath} replace />;
+    }
+    
+    // For other routes with allowWhenAuthenticated (like /platform), allow access
     return <>{children}</>;
   }
+  
+  // If already authenticated, redirect to dashboard
+  // Check localStorage directly for token to ensure we have the latest value
+  const currentToken = localStorage.getItem("token");
+  const isAuthorized = isAuthenticated && !!currentToken;
+  
+  console.log("🔍 PublicRoute check:", { 
+    pathname: location.pathname, 
+    isAuthenticated, 
+    hasToken: !!currentToken, 
+    isAuthorized,
+    allowWhenAuthenticated 
+  });
   
   // For login/auth pages, redirect to dashboard if already authenticated
   if (isAuthorized) {
@@ -826,6 +895,22 @@ const AppRoutes = () => {
           </PublicRoute>
         } 
       />
+      <Route 
+        path="/forgot-password" 
+        element={
+          <PublicRoute>
+            <ForgotPassword />
+          </PublicRoute>
+        } 
+      />
+      <Route 
+        path="/reset-password" 
+        element={
+          <PublicRoute>
+            <ResetPassword />
+          </PublicRoute>
+        } 
+      />
       {/* Admin routes - Hidden from UI but accessible via direct URL */}
       <Route 
         path="/admin/login" 
@@ -856,6 +941,14 @@ const AppRoutes = () => {
         element={
           <AdminProtectedRoute>
             <Orders />
+          </AdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/partner-requests"
+        element={
+          <AdminProtectedRoute>
+            <PartnerRequests />
           </AdminProtectedRoute>
         }
       />

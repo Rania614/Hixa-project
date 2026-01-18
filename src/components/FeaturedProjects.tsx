@@ -155,7 +155,7 @@ export const FeaturedProjects = () => {
                               if (token) {
                                 navigate(`/engineer/projects/${project._id || project.id}`);
                               } else {
-                                navigate('/engineer/login');
+                                navigate('/auth/partner');
                               }
                             }}
                           >

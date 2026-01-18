@@ -78,44 +78,50 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
           // Save token
           localStorage.setItem('token', response.data.token);
           
-          // Set authenticated FIRST to ensure ProtectedRoute allows access
-          setIsAuthenticated(true);
-          
           // Save user data if available
           const userData = response.data.user;
           if (userData) {
             localStorage.setItem('user', JSON.stringify(userData));
-            
-            // Save partnerType if it's a company or engineer
-            const userRole = userData.role || '';
-            const bio = userData.bio || '';
-            const hasCompanyName = userData.companyName !== undefined && userData.companyName !== null;
-            const hasContactPersonInBio = bio && bio.includes('Contact Person:');
-            
-            // Check if it's a company (companies may have role: "client" in database)
-            if (userRole === 'company' || 
-                userRole === 'Company' ||
-                userData.isCompany === true ||
-                hasCompanyName ||
-                hasContactPersonInBio) {
-              localStorage.setItem('partnerType', 'company');
-              onAuthSuccess('company');
-              return;
-            }
-            
-            // Check if it's an engineer
-            if (userRole === 'engineer' || 
-                userRole === 'Engineer' ||
-                userRole === 'partner' ||
-                userData.isEngineer === true) {
-              localStorage.setItem('partnerType', 'engineer');
-              onAuthSuccess('engineer');
-              return;
-            }
           }
           
-          // Call onAuthSuccess without partnerType - AuthPage will determine from user data
-          onAuthSuccess();
+          // Set authenticated FIRST to ensure ProtectedRoute allows access
+          setIsAuthenticated(true);
+          
+          // Wait a bit to ensure state is updated before navigation
+          // This fixes the race condition where navigate() happens before setIsAuthenticated() updates
+          setTimeout(() => {
+            if (userData) {
+              // Save partnerType if it's a company or engineer
+              const userRole = userData.role || '';
+              const bio = userData.bio || '';
+              const hasCompanyName = userData.companyName !== undefined && userData.companyName !== null;
+              const hasContactPersonInBio = bio && bio.includes('Contact Person:');
+              
+              // Check if it's a company (companies may have role: "client" in database)
+              if (userRole === 'company' || 
+                  userRole === 'Company' ||
+                  userData.isCompany === true ||
+                  hasCompanyName ||
+                  hasContactPersonInBio) {
+                localStorage.setItem('partnerType', 'company');
+                onAuthSuccess('company');
+                return;
+              }
+              
+              // Check if it's an engineer
+              if (userRole === 'engineer' || 
+                  userRole === 'Engineer' ||
+                  userRole === 'partner' ||
+                  userData.isEngineer === true) {
+                localStorage.setItem('partnerType', 'engineer');
+                onAuthSuccess('engineer');
+                return;
+              }
+            }
+            
+            // Call onAuthSuccess without partnerType - AuthPage will determine from user data
+            onAuthSuccess();
+          }, 100);
         } else {
           setError('Invalid response from server');
         }
@@ -286,18 +292,20 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
             localStorage.setItem('user', JSON.stringify(userData));
           }
           
-          // Set authenticated FIRST to ensure ProtectedRoute allows access
-          setIsAuthenticated(true);
-          
           // Save partnerType in localStorage if it's a partner registration
           if (role === 'partner' && partnerType) {
             localStorage.setItem('partnerType', partnerType);
           }
           
-          // Call onAuthSuccess which will navigate to appropriate dashboard
-          // Pass partnerType to help with routing
-          console.log('✅ Registration successful, redirecting with partnerType:', partnerType);
-          onAuthSuccess(partnerType);
+          // Set authenticated FIRST to ensure ProtectedRoute allows access
+          setIsAuthenticated(true);
+          
+          // Wait a bit to ensure state is updated before navigation
+          // This fixes the race condition where navigate() happens before setIsAuthenticated() updates
+          setTimeout(() => {
+            console.log('✅ Registration successful, redirecting with partnerType:', partnerType);
+            onAuthSuccess(partnerType);
+          }, 100);
         } else {
           setError(language === 'ar' ? 'تم التسجيل بنجاح لكن لم يتم استلام رمز الوصول' : 'Registration successful but no token received');
         }

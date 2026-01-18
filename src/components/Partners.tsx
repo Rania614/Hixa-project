@@ -62,7 +62,14 @@ export const Partners = () => {
             className="flex gap-8 animate-scroll-partners hover:pause-animation"
             style={{ width: 'max-content' }}
           >
-            {[...activePartners, ...activePartners].map((partner: any, index: number) => {
+            {[...activePartners, ...activePartners]
+              .filter((partner: any) => {
+                // Filter out partners without valid logo URLs to avoid 404 errors
+                const logoUrl = partner.logoUrl || partner.logo;
+                return logoUrl && logoUrl.trim() !== '' && 
+                       (logoUrl.startsWith('http') || logoUrl.startsWith('data:') || logoUrl.startsWith('/'));
+              })
+              .map((partner: any, index: number) => {
               const partnerName = getPartnerName(partner);
               const logoUrl = partner.logoUrl || partner.logo;
               const hasLink = partner.link && partner.link !== 'https://example.com';
@@ -79,10 +86,19 @@ export const Partners = () => {
                     {/* اللوجو الكبير (الألوان الأصلية) */}
                     <div className="h-28 w-full flex items-center justify-center transition-all duration-500 group-hover:scale-90 group-hover:opacity-10">
                       <img 
-                        src={logoUrl || '/placeholder.svg'} 
+                        src={logoUrl} 
                         alt={partnerName} 
                         className="max-h-full max-w-[85%] object-contain transition-all duration-700" 
-                        onError={(e) => { e.currentTarget.src = '/placeholder.svg' }}
+                        onError={(e) => { 
+                          // Hide broken images silently to prevent 404 errors in console
+                          const target = e.currentTarget;
+                          target.style.display = 'none';
+                          target.onerror = null; // Prevent infinite loop
+                          // Optionally show placeholder
+                          if (target.parentElement) {
+                            target.parentElement.innerHTML = '<div class="text-muted-foreground text-sm">Logo unavailable</div>';
+                          }
+                        }}
                       />
                     </div>
 

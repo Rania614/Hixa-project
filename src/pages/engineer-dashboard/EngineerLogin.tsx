@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Lock, Wrench, Eye, EyeOff } from 'lucide-react';
 import { HexagonIcon } from '@/components/ui/hexagon-icon';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { http } from '@/services/http';
 import { toast } from '@/components/ui/sonner';
 
@@ -80,7 +80,11 @@ const EngineerLogin = () => {
 
         toast.success(language === 'en' ? 'Login successful' : 'تم تسجيل الدخول بنجاح');
 
-        navigate('/engineer/dashboard');
+        // Wait a bit to ensure state is updated before navigation
+        // This fixes the race condition where navigate() happens before setIsAuthenticated() updates
+        setTimeout(() => {
+          navigate('/engineer/dashboard');
+        }, 100);
       } else {
         setError(language === 'en' 
           ? 'Invalid response from server.' 
@@ -230,6 +234,12 @@ const EngineerLogin = () => {
             </Button>
 
             <div className="text-center mt-4">
+              <Link 
+                to="/forgot-password" 
+                className="text-sm text-hexa-secondary hover:underline font-medium block mb-3"
+              >
+                {language === 'en' ? 'Forgot password?' : 'نسيت كلمة المرور؟'}
+              </Link>
               <p className="text-sm text-hexa-text-light">
                 {language === 'en' 
                   ? "Don't have an account? " 

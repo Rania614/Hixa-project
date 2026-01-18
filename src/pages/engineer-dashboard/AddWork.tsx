@@ -19,6 +19,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { addPortfolioWork, updatePortfolioWork, getPortfolioWorkById } from "@/services/portfolioApi";
+import { businessCategories } from "@/constants/filters";
 
 const AddWork = () => {
   const { id } = useParams<{ id: string }>();
@@ -71,15 +72,11 @@ const AddWork = () => {
     }
   };
 
-  const categories = [
-    { value: "Architecture", label: language === "en" ? "Architecture" : "الهندسة المعمارية" },
-    { value: "Urban Planning", label: language === "en" ? "Urban Planning" : "التخطيط العمراني" },
-    { value: "Civil Engineering", label: language === "en" ? "Civil Engineering" : "الهندسة المدنية" },
-    { value: "Mechanical Engineering", label: language === "en" ? "Mechanical Engineering" : "الهندسة الميكانيكية" },
-    { value: "Electrical Engineering", label: language === "en" ? "Electrical Engineering" : "الهندسة الكهربائية" },
-    { value: "Industrial Design", label: language === "en" ? "Industrial Design" : "التصميم الصناعي" },
-    { value: "Interior Design", label: language === "en" ? "Interior Design" : "التصميم الداخلي" },
-  ];
+  // Use the same categories as defined in backend validation (Arabic values from filters.ts)
+  const categories = businessCategories.map(category => ({
+    value: category,
+    label: category
+  }));
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -103,25 +100,52 @@ const AddWork = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate category is selected
+    if (!formData.category || formData.category.trim() === "") {
+      toast.error(language === "en" ? "Please select a category" : "يرجى اختيار نطاق الأعمال");
+      return;
+    }
+    
+    // Validate category is from allowed list
+    const isValidCategory = businessCategories.includes(formData.category.trim());
+    if (!isValidCategory) {
+      console.error("Invalid category:", formData.category);
+      console.error("Allowed categories:", businessCategories);
+      toast.error(language === "en" ? "Invalid category selected" : "نطاق الأعمال غير صحيح");
+      return;
+    }
+    
     try {
       setLoading(true);
       
       // Create FormData if image exists, otherwise send JSON
       if (formData.image) {
         const formDataToSend = new FormData();
-        formDataToSend.append("title", formData.title);
-        formDataToSend.append("description", formData.description);
-        formDataToSend.append("category", formData.category);
+        formDataToSend.append("title", formData.title.trim());
+        formDataToSend.append("description", formData.description.trim());
+        formDataToSend.append("category", formData.category.trim());
         formDataToSend.append("date", formData.date);
         formDataToSend.append("image", formData.image);
         
-        console.log("Sending FormData with image:", {
-          title: formData.title,
-          description: formData.description,
-          category: formData.category,
+        console.log("📤 Sending FormData with image:", {
+          title: formData.title.trim(),
+          description: formData.description.trim(),
+          category: formData.category.trim(),
+          categoryLength: formData.category.trim().length,
           date: formData.date,
           hasImage: !!formData.image
         });
+        
+        // Log FormData entries
+        console.log("📤 FormData entries:");
+        for (const [key, value] of formDataToSend.entries()) {
+          if (value instanceof File) {
+            console.log(`  ${key}: [File] ${value.name} (${value.size} bytes)`);
+          } else {
+            console.log(`  ${key}: "${value}" (length: ${value.length})`);
+          }
+        }
         
         if (isEditMode && id) {
           const result = await updatePortfolioWork(id, formDataToSend);
@@ -132,13 +156,16 @@ const AddWork = () => {
         }
       } else {
         const workData = {
-          title: formData.title,
-          description: formData.description,
-          category: formData.category,
+          title: formData.title.trim(),
+          description: formData.description.trim(),
+          category: formData.category.trim(),
           date: formData.date,
         };
         
-        console.log("Sending JSON data:", workData);
+        console.log("📤 Sending JSON data:", workData);
+        console.log("📤 Category value:", workData.category);
+        console.log("📤 Category length:", workData.category.length);
+        console.log("📤 Is valid category?", businessCategories.includes(workData.category));
         
         if (isEditMode && id) {
           const result = await updatePortfolioWork(id, workData);

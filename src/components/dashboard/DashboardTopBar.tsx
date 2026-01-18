@@ -17,7 +17,7 @@ import { useNavigate } from "react-router-dom";
 import { useUnreadNotificationsCount } from "@/hooks/useUnreadNotificationsCount";
 import { useNotificationWebSocket } from "@/hooks/useNotificationWebSocket";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
-import { http } from "@/services/http";
+import { http, setAccessToken } from "@/services/http";
 
 interface DashboardTopBarProps {
   userType: "client" | "engineer" | "company";
@@ -153,12 +153,27 @@ export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({ userType }) =>
     else navigate("/engineer/profile");
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    if (userType === "client") navigate("/client/login");
-    else if (userType === "company") navigate("/company/login");
-    else navigate("/engineer/login");
+  const handleLogout = async () => {
+    try {
+      // Call logout endpoint to clear refresh token cookie
+      await http.post('/auth/logout').catch(() => {
+        // Ignore errors - continue with logout anyway
+      });
+    } catch (error) {
+      // Ignore errors - continue with logout anyway
+    } finally {
+      // Clear tokens and user data
+      setAccessToken(null);
+      localStorage.removeItem("user");
+      
+      // Navigate to login
+      if (userType === "client") {
+        navigate("/client/login");
+      } else {
+        // Engineers and companies use /auth/partner
+        navigate("/auth/partner");
+      }
+    }
   };
 
   return (

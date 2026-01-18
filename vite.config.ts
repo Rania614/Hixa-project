@@ -10,6 +10,14 @@ export default defineConfig({
     hmr: {
       overlay: true,
     },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        secure: false,
+        ws: true, // Enable WebSocket proxying
+      },
+    },
   },
   plugins: [react()],
   resolve: {

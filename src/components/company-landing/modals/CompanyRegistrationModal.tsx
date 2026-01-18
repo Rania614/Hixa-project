@@ -26,11 +26,11 @@ export const CompanyRegistrationModal: React.FC<CompanyRegistrationModalProps> =
   const [formData, setFormData] = useState({
     companyName: "",
     businessType: "",
-    shortDescription: "",
-    phoneNumber: "",
+    description: "",
+    phone: "",
     email: "",
     city: "",
-    adType: "Normal",
+    adType: "عادي",
   });
 
   const [companyLogo, setCompanyLogo] = useState<File | null>(null);
@@ -55,8 +55,8 @@ export const CompanyRegistrationModal: React.FC<CompanyRegistrationModalProps> =
   ];
 
   const adTypes = [
-    { value: "Normal", label: { en: "Normal", ar: "عادي" } },
-    { value: "Featured", label: { en: "Featured", ar: "مميز" } },
+    { value: "عادي", label: { en: "Normal", ar: "عادي" } },
+    { value: "مميز", label: { en: "Featured", ar: "مميز" } },
   ];
 
   const handleInputChange = (
@@ -151,8 +151,8 @@ export const CompanyRegistrationModal: React.FC<CompanyRegistrationModalProps> =
         : "Business type is required";
     }
 
-    if (!formData.phoneNumber.trim()) {
-      newErrors.phoneNumber = isAr
+    if (!formData.phone.trim()) {
+      newErrors.phone = isAr
         ? "رقم الهاتف مطلوب"
         : "Phone number is required";
     }
@@ -186,26 +186,40 @@ export const CompanyRegistrationModal: React.FC<CompanyRegistrationModalProps> =
       const formDataToSend = new FormData();
       formDataToSend.append("companyName", formData.companyName);
       formDataToSend.append("businessType", formData.businessType);
-      formDataToSend.append("shortDescription", formData.shortDescription);
-      formDataToSend.append("phoneNumber", formData.phoneNumber);
+      formDataToSend.append("description", formData.description);
+      formDataToSend.append("phone", formData.phone);
       formDataToSend.append("email", formData.email);
       formDataToSend.append("city", formData.city);
       formDataToSend.append("adType", formData.adType);
 
       if (companyLogo) {
-        formDataToSend.append("companyLogo", companyLogo);
+        formDataToSend.append("logo", companyLogo);
+        console.log('📤 Adding logo to FormData:', {
+          name: companyLogo.name,
+          size: companyLogo.size,
+          type: companyLogo.type
+        });
       }
 
+      // Append portfolio images with the correct field name
       portfolioImages.forEach((image, index) => {
-        formDataToSend.append(`portfolioImage${index + 1}`, image);
+        formDataToSend.append("portfolioImages", image);
+        console.log(`📤 Adding portfolio image ${index + 1} to FormData:`, {
+          name: image.name,
+          size: image.size,
+          type: image.type
+        });
       });
 
-      // Submit to API - adjust endpoint as needed
-      await http.post("/companies/register", formDataToSend, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+      // Log FormData contents for debugging
+      console.log('📤 FormData contents:', {
+        hasLogo: !!companyLogo,
+        portfolioCount: portfolioImages.length,
+        allFields: Array.from(formDataToSend.keys())
       });
+
+      // Submit to API
+      await http.post("/partner-requests", formDataToSend);
 
       toast.success(
         isAr
@@ -217,11 +231,11 @@ export const CompanyRegistrationModal: React.FC<CompanyRegistrationModalProps> =
       setFormData({
         companyName: "",
         businessType: "",
-        shortDescription: "",
-        phoneNumber: "",
+        description: "",
+        phone: "",
         email: "",
         city: "",
-        adType: "Normal",
+        adType: "عادي",
       });
       setCompanyLogo(null);
       setPortfolioImages([]);
@@ -345,8 +359,8 @@ export const CompanyRegistrationModal: React.FC<CompanyRegistrationModalProps> =
               {isAr ? "وصف مختصر" : "Short Description"}
             </label>
             <textarea
-              name="shortDescription"
-              value={formData.shortDescription}
+              name="description"
+              value={formData.description}
               onChange={handleInputChange}
               rows={4}
               className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
@@ -366,16 +380,16 @@ export const CompanyRegistrationModal: React.FC<CompanyRegistrationModalProps> =
             </label>
             <Input
               type="tel"
-              name="phoneNumber"
-              value={formData.phoneNumber}
+              name="phone"
+              value={formData.phone}
               onChange={handleInputChange}
               required
-              className={errors.phoneNumber ? "border-red-500" : ""}
+              className={errors.phone ? "border-red-500" : ""}
               placeholder={isAr ? "+201234567890" : "+1234567890"}
             />
-            {errors.phoneNumber && (
+            {errors.phone && (
               <p className="text-red-500 text-xs mt-1">
-                {errors.phoneNumber}
+                {errors.phone}
               </p>
             )}
           </div>

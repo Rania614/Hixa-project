@@ -14,7 +14,8 @@ import {
   ChevronsRight,
   PanelLeftClose,
   PanelRightClose,
-  Bell
+  Bell,
+  Handshake
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useApp } from '@/context/AppContext';
@@ -22,6 +23,7 @@ import { Button } from './ui/button';
 import { HexagonIcon } from './ui/hexagon-icon';
 import { useNavigate } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
+import { http, setAccessToken } from '@/services/http';
 
 export const AdminSidebar = () => {
   const { setIsAuthenticated, language } = useApp();
@@ -32,11 +34,22 @@ export const AdminSidebar = () => {
     return saved === 'true';
   });
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    localStorage.removeItem('token');
-    // Navigate to CompanyLanding page
-    window.location.href = '/';
+  const handleLogout = async () => {
+    try {
+      // Call logout endpoint to clear refresh token cookie
+      await http.post('/auth/logout').catch(() => {
+        // Ignore errors - continue with logout anyway
+      });
+    } catch (error) {
+      // Ignore errors - continue with logout anyway
+    } finally {
+      // Clear tokens and user data
+      setAccessToken(null);
+      setIsAuthenticated(false);
+      localStorage.removeItem('user');
+      // Navigate to admin login page
+      navigate('/admin/login');
+    }
   };
 
   const toggleSidebar = () => {
@@ -61,6 +74,11 @@ export const AdminSidebar = () => {
       to: "/admin/orders",
       icon: ShoppingCart,
       label: language === 'en' ? 'Service Orders' : 'طلبات الخدمات'
+    },
+    {
+      to: "/admin/partner-requests",
+      icon: Handshake,
+      label: language === 'en' ? 'Partner Requests' : 'طلبات الشراكة'
     },
     {
       to: "/admin/subscribers",

@@ -116,11 +116,20 @@ const AdminLogin = () => {
 
         // Save token
         localStorage.setItem("token", res.data.token);
+        
+        // Save user data if available
+        if (res.data.user) {
+          localStorage.setItem("user", JSON.stringify(res.data.user));
+        }
 
         // Set authenticated
         setIsAuthenticated(true);
 
-        navigate('/admin/dashboard');
+        // Wait a bit to ensure state is updated before navigation
+        // This fixes the race condition where navigate() happens before setIsAuthenticated() updates
+        setTimeout(() => {
+          navigate('/admin/dashboard');
+        }, 100);
       } else {
         setError('Invalid response from server.');
       }

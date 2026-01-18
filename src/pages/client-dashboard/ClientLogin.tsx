@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,8 +55,11 @@ const ClientLogin = () => {
         // Set authenticated
         setIsAuthenticated(true);
 
-        // Redirect to client dashboard
-        navigate('/client/dashboard');
+        // Wait a bit to ensure state is updated before navigation
+        // This fixes the race condition where navigate() happens before setIsAuthenticated() updates
+        setTimeout(() => {
+          navigate('/client/dashboard');
+        }, 100);
       } else {
         setError(language === 'en' ? 'Invalid response from server.' : 'استجابة غير صحيحة من الخادم.');
       }
@@ -179,6 +182,15 @@ const ClientLogin = () => {
               )}
             </Button>
           </form>
+
+          <div className="mt-4 text-center">
+            <Link 
+              to="/forgot-password" 
+              className="text-sm text-gold hover:text-gold-dark font-medium underline"
+            >
+              {language === 'en' ? 'Forgot password?' : 'نسيت كلمة المرور؟'}
+            </Link>
+          </div>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
