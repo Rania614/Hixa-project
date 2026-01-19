@@ -33,14 +33,23 @@ const Landing = () => {
     setSubscribing(true);
     try {
       await http.post('/subscribers/subscribe', { 
-        name: subscribeName, 
+        name: subscribeName || '', 
         phone: subscribePhone,
         email: subscribeEmail 
       });
       toast.success(isAr ? 'تم الاشتراك بنجاح' : 'Subscribed successfully');
+      // Reset form
+      setSubscribeName('');
+      setSubscribePhone('');
+      setSubscribeEmail('');
       setSubscribeModalOpen(false);
-    } catch (error) { 
-      toast.error(isAr ? 'حدث خطأ ما' : 'Error occurred'); 
+    } catch (error: any) {
+      console.error('Subscribe error:', error);
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message ||
+                          (isAr ? 'حدث خطأ ما' : 'Error occurred');
+      toast.error(errorMessage); 
     } finally { 
       setSubscribing(false); 
     }
@@ -144,13 +153,19 @@ const Landing = () => {
               <div className="flex flex-col items-center gap-3">
                 <div className="relative group">
                   <button 
-                    onClick={() => setDropdownOpen(!dropdownOpen)} 
-                    className={`w-[220px] h-[75px] border-2 ${dropdownOpen ? 'border-yellow-500 bg-yellow-500/5 text-yellow-500' : 'border-white/20 text-white bg-black'} font-black text-xl uppercase tracking-tighter hover:border-white/40 transition-all flex items-center justify-center gap-2 rounded-[20px]`}
+                    onClick={(e) => {
+                      // Open subscribe modal directly when clicking JOIN HIXA
+                      e.stopPropagation();
+                      setSubscribeModalOpen(true);
+                      setDropdownOpen(false);
+                    }}
+                    className="w-[220px] h-[75px] border-2 border-white/20 text-white bg-black font-black text-xl uppercase tracking-tighter hover:border-white/40 hover:border-yellow-500/50 hover:bg-yellow-500/5 hover:text-yellow-500 transition-all flex items-center justify-center gap-2 rounded-[20px]"
                   >
                     JOIN HIXA
-                    <div className={`w-3 h-3 rounded-full ${dropdownOpen ? 'bg-yellow-500' : 'bg-white/20'} border border-white/10 shadow-inner`} />
+                    <div className="w-3 h-3 rounded-full bg-white/20 border border-white/10 shadow-inner" />
                   </button>
-                  {dropdownOpen && (
+                  {/* Optional: Keep dropdown for other options if needed */}
+                  {false && dropdownOpen && (
                     <div className={`absolute top-[calc(100%+15px)] ${isAr ? 'right-0' : 'left-0'} w-72 bg-[#111]/95 border border-white/10 shadow-2xl z-[999] animate-in fade-in slide-in-from-top-5 zoom-in-95 backdrop-blur-3xl overflow-hidden rounded-2xl`}>
                       <button onClick={() => navigate('/auth/partner')} className={`w-full ${isAr ? 'text-right' : 'text-left'} p-6 hover:bg-yellow-500/10 hover:text-yellow-500 transition-all flex justify-between items-center border-b border-white/5`}>
                         <span className="font-bold text-xs md:text-sm uppercase tracking-[0.2em]">{isAr ? 'تسجيل كشريك' : 'JOIN AS PARTNER'}</span>
@@ -168,6 +183,7 @@ const Landing = () => {
                 </span>
               </div>
             </div>
+            
           </div>
 
           <div className="relative flex justify-center items-center">
@@ -219,9 +235,9 @@ const Landing = () => {
 
       {/* --- Section 3: Featured Projects --- */}
       {/* تم إضافة id="projects" للربط مع الهيدر */}
-      <div id="projects">
+      {/* <div id="projects">
         <FeaturedProjects />
-      </div>
+      </div> */}
 
       {/* --- Section 4: FAQ --- */}
       {/* تم إضافة id="faq" للربط مع الهيدر */}
@@ -255,8 +271,111 @@ const Landing = () => {
       <Footer />
       <Chatbot />
 
-      {/* Modal Subscribe تبقى كما هي */}
-      {/* ... */}
+      {/* --- Modal SUBSCRIBE (أخبار HIXA) --- */}
+      {subscribeModalOpen && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
+          <div className={`w-full max-w-5xl bg-[#111] border border-white/10 flex flex-col ${isAr ? 'md:flex-row-reverse' : 'md:flex-row'} shadow-2xl relative overflow-hidden rounded-[40px]`}>
+            
+            {/* الجزء الجانبي (صورة المبنى مع الطبقة الصفراء) */}
+            <div className="hidden md:block w-5/12 relative overflow-hidden">
+              <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070" className="w-full h-full object-cover grayscale" alt="HIXA Building" />
+              <div className="absolute inset-0 bg-yellow-500/80 mix-blend-multiply" />
+              <div className={`absolute bottom-10 ${isAr ? 'right-10' : 'left-10'} text-black font-black text-6xl opacity-30 rotate-90 origin-bottom`}>HIXA</div>
+            </div>
+
+            {/* الجزء الخاص بالنموذج (Form) */}
+            <div className="w-full md:w-7/12 p-12 md:p-20 relative bg-[#111]">
+              {/* زر الإغلاق (X) */}
+              <button 
+                onClick={() => {
+                  setSubscribeModalOpen(false);
+                  setSubscribeName('');
+                  setSubscribePhone('');
+                  setSubscribeEmail('');
+                }} 
+                className={`absolute top-8 ${isAr ? 'left-8' : 'right-8'} text-white/30 hover:text-white transition-colors group z-10`}
+                disabled={subscribing}
+              >
+                <X size={28} className="group-hover:rotate-90 transition-transform" />
+              </button>
+
+              <div className={`mb-12 ${isAr ? 'text-right' : 'text-left'}`}>
+                <h3 className={`text-4xl md:text-5xl font-black uppercase tracking-tight mb-2 italic flex items-center gap-2 ${isAr ? 'justify-end' : 'justify-start'}`}>
+                  {isAr ? (
+                    <><span className="text-yellow-500">أخبار</span> <span className="text-white">HIXA</span></>
+                  ) : (
+                    <><span className="text-white">HIXA</span> <span className="text-yellow-500">NEWS</span></>
+                  )}
+                </h3>
+                <p className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.3em]">
+                  {isAr ? 'اشترك في النشرة الإخبارية للحصول على آخر التحديثات' : 'SUBSCRIBE TO OUR NEWSLETTER FOR LATEST UPDATES'}
+                </p>
+              </div>
+
+              <form onSubmit={handleSubscribeSubmit} className="space-y-8">
+                {/* حقل الاسم */}
+                <div className="border-b border-white/10 pb-2">
+                  <input 
+                    value={subscribeName} 
+                    onChange={(e) => setSubscribeName(e.target.value)} 
+                    placeholder={isAr ? "الاسم الكامل" : "FULL NAME"} 
+                    className={`w-full bg-transparent border-0 focus:ring-0 ${isAr ? 'text-right' : 'text-left'} text-xl placeholder:text-gray-700 outline-none text-white`}
+                    disabled={subscribing}
+                  />
+                </div>
+
+                {/* حقل البريد الإلكتروني */}
+                <div className="border-b border-white/10 pb-2 relative">
+                  <Mail className={`absolute ${isAr ? 'left-0' : 'right-0'} top-1/2 -translate-y-1/2 text-white/10`} size={20} />
+                  <input 
+                    type="email" 
+                    required 
+                    value={subscribeEmail} 
+                    onChange={(e) => setSubscribeEmail(e.target.value)} 
+                    placeholder={isAr ? "البريد الإلكتروني" : "EMAIL ADDRESS"} 
+                    className={`w-full bg-transparent border-0 focus:ring-0 ${isAr ? 'text-right pr-10' : 'text-left pl-10'} text-xl placeholder:text-gray-700 outline-none text-white`}
+                    disabled={subscribing}
+                  />
+                </div>
+
+                {/* حقل رقم الجوال (الكبير) */}
+                <div className="pt-4 border-b border-yellow-500/50 mb-10">
+                  <input 
+                    required 
+                    type="tel" 
+                    value={subscribePhone} 
+                    onChange={(e) => setSubscribePhone(e.target.value)} 
+                    placeholder={isAr ? "رقم الجوال" : "PHONE NUMBER"} 
+                    dir={isAr ? "rtl" : "ltr"} 
+                    className={`w-full bg-transparent border-0 focus:ring-0 text-4xl md:text-6xl font-black text-white placeholder:text-gray-800 p-0 ${isAr ? 'text-right' : 'text-left'} outline-none`}
+                    disabled={subscribing}
+                  />
+                </div>
+                
+                {/* زر الاشتراك المشطوف (GET NEWS NOW) */}
+                <button 
+                  type="submit"
+                  disabled={subscribing} 
+                  style={{ clipPath: 'polygon(5% 0%, 95% 0%, 100% 50%, 95% 100%, 5% 100%, 0% 50%)' }}
+                  className="w-full bg-yellow-500 text-black hover:bg-yellow-400 h-20 font-black text-sm uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 group/btn relative overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300" />
+                  <span className="relative z-10 flex items-center justify-center gap-3">
+                    {subscribing ? (
+                      <span className="animate-pulse">{isAr ? 'جاري الاشتراك...' : 'SUBSCRIBING...'}</span>
+                    ) : (
+                      <>
+                        {isAr ? 'تصلني الأخبار الآن' : 'GET NEWS NOW'}
+                        <ArrowRight size={18} className={`${isAr ? 'rotate-180' : ''} group-hover/btn:translate-x-1 transition-transform`} />
+                      </>
+                    )}
+                  </span>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .stroke-text { -webkit-text-stroke: 1.5px rgba(255,255,255,0.15); }
