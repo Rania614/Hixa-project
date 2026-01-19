@@ -195,13 +195,12 @@ const ClientLogin = () => {
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
               {language === 'en' ? "Don't have an account? " : "ليس لديك حساب؟ "}
-              <button
-                type="button"
-                onClick={() => navigate('/auth/client?mode=register')}
+              <Link
+                to="/auth/client?mode=register"
                 className="text-gold hover:text-gold-dark font-medium underline"
               >
                 {language === 'en' ? 'Sign up' : 'سجل الآن'}
-              </button>
+              </Link>
             </p>
           </div>
         </CardContent>

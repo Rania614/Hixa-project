@@ -28,9 +28,10 @@ interface AuthModalProps {
   onAuthSuccess: () => void; // Changed: no longer passes partnerType
   role: 'client' | 'partner' | null;
   initialMode?: 'login' | 'register';
+  initialPartnerType?: 'engineer' | 'company' | null;
 }
 
-export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 'login' }: AuthModalProps) => {
+export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 'login', initialPartnerType = null }: AuthModalProps) => {
   const { setIsAuthenticated, setUserRole, language } = useApp();
   // Start with initialMode (login or register)
   const [isLogin, setIsLogin] = useState(initialMode === 'login');
@@ -47,13 +48,19 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
       setCompanyName('');
       setSpecialization('');
       setLicenseNumber('');
-      setPartnerType(null); // Keep for UI selection only (engineer/company during registration)
+      // Set partner type from URL if provided, otherwise null
+      // If mode is register and partnerType is provided, set it immediately
+      if (initialMode === 'register' && initialPartnerType) {
+        setPartnerType(initialPartnerType);
+      } else {
+        setPartnerType(null);
+      }
       setShowPassword(false);
       setShowConfirmPassword(false);
       // Reset form
       reset();
     }
-  }, [isOpen, initialMode]);
+  }, [isOpen, initialMode, initialPartnerType]);
   
   const { control, watch, formState: { errors }, reset } = useForm();
   // partnerType is only used for UI form selection during registration, NOT for role determination
@@ -541,7 +548,14 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
               )}
 
               {/* Phone and Country Code */}
-              <CountryPhoneInput control={control} />
+              <CountryPhoneInput 
+                control={control} 
+                countryCodeName="countryCode"
+                phoneName="phone"
+                label={language === 'ar' ? 'رقم الجوال' : 'Phone Number'}
+                required={true}
+                errors={errors}
+              />
             </>
           )}
 

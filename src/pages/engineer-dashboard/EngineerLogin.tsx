@@ -244,13 +244,12 @@ const EngineerLogin = () => {
                 {language === 'en' 
                   ? "Don't have an account? " 
                   : "ليس لديك حساب؟ "}
-                <button
-                  type="button"
-                  onClick={() => navigate('/auth/partner?mode=register')}
+                <Link
+                  to="/auth/partner?mode=register&type=engineer"
                   className="text-hexa-secondary hover:underline font-medium"
                 >
                   {language === 'en' ? 'Register' : 'سجل الآن'}
-                </button>
+                </Link>
               </p>
             </div>
           </form>

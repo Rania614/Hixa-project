@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { 
   ChevronDown, ArrowRight, X, 
-  Box, PencilRuler, Layers, Plus, Mail 
+  Box, PencilRuler, Layers, Plus, Mail, Wrench, Building 
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { http } from '@/services/http';
@@ -24,6 +24,7 @@ const Landing = () => {
   const [subscribeName, setSubscribeName] = useState('');
   const [subscribeEmail, setSubscribeEmail] = useState('');
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const [partnerTypeModalOpen, setPartnerTypeModalOpen] = useState(false);
 
   const handleSubscribeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,25 +154,31 @@ const Landing = () => {
               <div className="flex flex-col items-center gap-3">
                 <div className="relative group">
                   <button 
-                    onClick={(e) => {
-                      // Open subscribe modal directly when clicking JOIN HIXA
-                      e.stopPropagation();
-                      setSubscribeModalOpen(true);
-                      setDropdownOpen(false);
-                    }}
-                    className="w-[220px] h-[75px] border-2 border-white/20 text-white bg-black font-black text-xl uppercase tracking-tighter hover:border-white/40 hover:border-yellow-500/50 hover:bg-yellow-500/5 hover:text-yellow-500 transition-all flex items-center justify-center gap-2 rounded-[20px]"
+                    onClick={() => setDropdownOpen(!dropdownOpen)} 
+                    className={`w-[220px] h-[75px] border-2 ${dropdownOpen ? 'border-yellow-500 bg-yellow-500/5 text-yellow-500' : 'border-white/20 text-white bg-black'} font-black text-xl uppercase tracking-tighter hover:border-white/40 transition-all flex items-center justify-center gap-2 rounded-[20px]`}
                   >
                     JOIN HIXA
-                    <div className="w-3 h-3 rounded-full bg-white/20 border border-white/10 shadow-inner" />
+                    <div className={`w-3 h-3 rounded-full ${dropdownOpen ? 'bg-yellow-500' : 'bg-white/20'} border border-white/10 shadow-inner`} />
                   </button>
-                  {/* Optional: Keep dropdown for other options if needed */}
-                  {false && dropdownOpen && (
+                  {dropdownOpen && (
                     <div className={`absolute top-[calc(100%+15px)] ${isAr ? 'right-0' : 'left-0'} w-72 bg-[#111]/95 border border-white/10 shadow-2xl z-[999] animate-in fade-in slide-in-from-top-5 zoom-in-95 backdrop-blur-3xl overflow-hidden rounded-2xl`}>
-                      <button onClick={() => navigate('/auth/partner')} className={`w-full ${isAr ? 'text-right' : 'text-left'} p-6 hover:bg-yellow-500/10 hover:text-yellow-500 transition-all flex justify-between items-center border-b border-white/5`}>
+                      <button 
+                        onClick={() => {
+                          setDropdownOpen(false);
+                          setPartnerTypeModalOpen(true);
+                        }} 
+                        className={`w-full ${isAr ? 'text-right' : 'text-left'} p-6 hover:bg-yellow-500/10 hover:text-yellow-500 transition-all flex justify-between items-center border-b border-white/5`}
+                      >
                         <span className="font-bold text-xs md:text-sm uppercase tracking-[0.2em]">{isAr ? 'تسجيل كشريك' : 'JOIN AS PARTNER'}</span>
                         <ArrowRight size={18} className={isAr ? 'rotate-180' : ''} />
                       </button>
-                      <button onClick={() => navigate('/client/login')} className={`w-full ${isAr ? 'text-right' : 'text-left'} p-6 hover:bg-yellow-500/10 hover:text-yellow-500 transition-all flex justify-between items-center`}>
+                      <button 
+                        onClick={() => {
+                          setDropdownOpen(false);
+                          navigate('/client/login');
+                        }} 
+                        className={`w-full ${isAr ? 'text-right' : 'text-left'} p-6 hover:bg-yellow-500/10 hover:text-yellow-500 transition-all flex justify-between items-center`}
+                      >
                         <span className="font-bold text-xs md:text-sm uppercase tracking-[0.2em]">{isAr ? 'بوابة العملاء' : 'CLIENT ACCESS'}</span>
                         <ArrowRight size={18} className={isAr ? 'rotate-180' : ''} />
                       </button>
@@ -372,6 +379,78 @@ const Landing = () => {
                   </span>
                 </button>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Partner Type Selection Modal */}
+      {partnerTypeModalOpen && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
+          <div className={`w-full max-w-2xl bg-[#111] border border-white/10 shadow-2xl relative overflow-hidden rounded-[40px] p-8 md:p-12`}>
+            {/* Close Button */}
+            <button 
+              onClick={() => setPartnerTypeModalOpen(false)} 
+              className={`absolute top-6 ${isAr ? 'left-6' : 'right-6'} text-white/30 hover:text-white transition-colors group`}
+            >
+              <X size={28} className="group-hover:rotate-90 transition-transform" />
+            </button>
+
+            {/* Modal Content */}
+            <div className={`${isAr ? 'text-right' : 'text-left'}`}>
+              <h3 className={`text-3xl md:text-4xl font-black uppercase tracking-tight mb-2 ${isAr ? 'text-right' : 'text-left'}`}>
+                <span className="text-yellow-500">{isAr ? 'اختر نوع الحساب' : 'SELECT ACCOUNT TYPE'}</span>
+              </h3>
+              <p className="text-gray-500 text-xs font-bold uppercase tracking-[0.3em] mb-8">
+                {isAr ? 'اختر نوع الحساب المناسب لك' : 'CHOOSE YOUR ACCOUNT TYPE'}
+              </p>
+
+              {/* Selection Buttons */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Engineer Option */}
+                <button
+                  onClick={() => {
+                    setPartnerTypeModalOpen(false);
+                    navigate('/engineer/login');
+                  }}
+                  className="group relative bg-[#1a1a1a] border-2 border-white/10 hover:border-yellow-500/50 hover:bg-yellow-500/5 transition-all p-8 rounded-2xl flex flex-col items-center justify-center min-h-[200px]"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/0 to-yellow-500/0 group-hover:from-yellow-500/10 group-hover:to-transparent rounded-2xl transition-all" />
+                  <Wrench className="h-12 w-12 text-yellow-500 mb-4 group-hover:scale-110 transition-transform" />
+                  <h4 className="text-xl font-black uppercase tracking-tight text-white mb-2">
+                    {isAr ? 'مهندس' : 'ENGINEER'}
+                  </h4>
+                  <p className="text-gray-500 text-xs text-center">
+                    {isAr ? 'للمهندسين والمستقلين' : 'For Engineers & Freelancers'}
+                  </p>
+                  <ArrowRight 
+                    size={20} 
+                    className={`mt-4 text-yellow-500/50 group-hover:text-yellow-500 group-hover:translate-x-1 transition-all ${isAr ? 'rotate-180' : ''}`} 
+                  />
+                </button>
+
+                {/* Company Option */}
+                <button
+                  onClick={() => {
+                    setPartnerTypeModalOpen(false);
+                    navigate('/company/login');
+                  }}
+                  className="group relative bg-[#1a1a1a] border-2 border-white/10 hover:border-yellow-500/50 hover:bg-yellow-500/5 transition-all p-8 rounded-2xl flex flex-col items-center justify-center min-h-[200px]"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/0 to-yellow-500/0 group-hover:from-yellow-500/10 group-hover:to-transparent rounded-2xl transition-all" />
+                  <Building className="h-12 w-12 text-yellow-500 mb-4 group-hover:scale-110 transition-transform" />
+                  <h4 className="text-xl font-black uppercase tracking-tight text-white mb-2">
+                    {isAr ? 'شركة' : 'COMPANY'}
+                  </h4>
+                  <p className="text-gray-500 text-xs text-center">
+                    {isAr ? 'للشركات والمقاولين' : 'For Companies & Contractors'}
+                  </p>
+                  <ArrowRight 
+                    size={20} 
+                    className={`mt-4 text-yellow-500/50 group-hover:text-yellow-500 group-hover:translate-x-1 transition-all ${isAr ? 'rotate-180' : ''}`} 
+                  />
+                </button>
+              </div>
             </div>
           </div>
         </div>

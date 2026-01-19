@@ -28,6 +28,9 @@ const AuthPage = () => {
   // Check if mode=register is in URL, default to 'login'
   const mode = searchParams.get('mode');
   const initialMode = mode === 'register' ? 'register' : 'login';
+  
+  // Get partner type from URL (engineer or company)
+  const partnerTypeFromUrl = searchParams.get('type');
 
   /**
    * Handle successful authentication
@@ -101,6 +104,7 @@ const AuthPage = () => {
           onAuthSuccess={handleAuthSuccess}
           role={authRole}
           initialMode={initialMode}
+          initialPartnerType={partnerTypeFromUrl === 'engineer' ? 'engineer' : partnerTypeFromUrl === 'company' ? 'company' : null}
         />
       </div>
     </div>

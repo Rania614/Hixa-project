@@ -59,7 +59,7 @@ export const Header = () => {
     ? [
         { id: 'hero', label: { en: 'Home', ar: 'الرئيسية' } },
         { id: 'community', label: { en: 'Community', ar: 'المجتمع' } },
-        { id: 'projects', label: { en: 'Projects', ar: 'المشاريع' } },
+        // { id: 'projects', label: { en: 'Projects', ar: 'المشاريع' } },
         { id: 'faq', label: { en: 'FAQ', ar: 'الأسئلة الشائعة' } },
       ]
     : [
@@ -155,13 +155,13 @@ export const Header = () => {
             {/* On platform page, button with dropdown for login */}
             {isPlatformPage ? (
               <div className="dropdown-container relative hidden sm:flex">
-                <button
+                {/* <button
                   onClick={() => setShowPlatformDropdown(!showPlatformDropdown)}
                   className="justify-center whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary hover:bg-primary/90 h-10 py-2 bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold px-6 flex items-center gap-2"
                 >
                   {content.hero?.cta?.[language] || (language === 'en' ? 'Get Started' : 'ابدأ الآن')}
                   <ChevronDown className={`h-4 w-4 transition-transform ${showPlatformDropdown ? 'rotate-180' : ''}`} />
-                </button>
+                </button> */}
                 
                 {showPlatformDropdown && (
                   <div className="absolute top-full right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-lg z-50 animate-fade-in">
@@ -228,13 +228,13 @@ export const Header = () => {
               {/* On platform page, button with dropdown for login */}
               {isPlatformPage ? (
                 <div className="dropdown-container w-full">
-                  <button
+                  {/* <button
                     onClick={() => setShowPlatformDropdown(!showPlatformDropdown)}
                     className="justify-center whitespace-nowrap hexagon text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary hover:bg-primary/90 h-10 py-2 bg-gradient-to-r from-gold-light to-gold hover:from-gold hover:to-gold-dark text-primary-foreground font-semibold w-full flex items-center justify-between mt-2"
                   >
-                    {content.hero?.cta?.[language] || (language === 'en' ? 'Get Started' : 'ابدأ الآن')}
+                    {content.hero?.cta?.[language] || (language === 'en' ? 'Get Started' : '')}
                     <ChevronDown className={`h-4 w-4 transition-transform ${showPlatformDropdown ? 'rotate-180' : ''}`} />
-                  </button>
+                  </button> */}
                             
                   {showPlatformDropdown && (
                     <div className="mt-2 bg-card border border-border rounded-lg shadow-lg animate-fade-in">
