@@ -78,55 +78,115 @@ export const CompanyRegistrationModal: React.FC<CompanyRegistrationModalProps> =
   };
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    e.stopPropagation(); // Prevent form submission or re-render issues
+    
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        // 5MB limit
-        toast.error(
-          isAr
-            ? "حجم الصورة كبير جداً (الحد الأقصى 5 ميجابايت)"
-            : "Image size too large (max 5MB)"
-        );
-        return;
-      }
-      setCompanyLogo(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-      if (errors.companyLogo) {
-        setErrors((prev) => ({ ...prev, companyLogo: "" }));
-      }
+    if (!file) {
+      return;
+    }
+
+    // Validate file size before setting state
+    if (file.size > 5 * 1024 * 1024) {
+      // 5MB limit
+      toast.error(
+        isAr
+          ? "حجم الصورة كبير جداً (الحد الأقصى 5 ميجابايت)"
+          : "Image size too large (max 5MB)"
+      );
+      // Reset file input
+      e.target.value = '';
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error(
+        isAr
+          ? "نوع الملف غير مدعوم. يرجى رفع صورة بصيغة jpeg, jpg, png, gif, أو webp"
+          : "File type not supported. Please upload jpeg, jpg, png, gif, or webp"
+      );
+      e.target.value = '';
+      return;
+    }
+
+    // Set logo file (this preserves formData state)
+    setCompanyLogo(file);
+    
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setLogoPreview(reader.result as string);
+    };
+    reader.onerror = () => {
+      toast.error(isAr ? "فشل قراءة الصورة" : "Failed to read image");
+    };
+    reader.readAsDataURL(file);
+    
+    // Clear error if exists
+    if (errors.companyLogo) {
+      setErrors((prev) => ({ ...prev, companyLogo: "" }));
     }
   };
 
   const handlePortfolioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    e.stopPropagation(); // Prevent form submission or re-render issues
+    
     const files = Array.from(e.target.files || []);
+    
+    if (files.length === 0) {
+      return;
+    }
+
+    // Validate number of files
     if (files.length > 2) {
       toast.error(
         isAr
           ? "يمكنك رفع صورة أو صورتين فقط"
           : "You can upload 1-2 images only"
       );
+      e.target.value = '';
       return;
     }
 
-    files.forEach((file) => {
+    // Validate each file (size and type)
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const validFiles: File[] = [];
+    
+    for (const file of files) {
       if (file.size > 5 * 1024 * 1024) {
         // 5MB limit
         toast.error(
           isAr
-            ? "حجم الصورة كبير جداً (الحد الأقصى 5 ميجابايت)"
-            : "Image size too large (max 5MB)"
+            ? `حجم الصورة "${file.name}" كبير جداً (الحد الأقصى 5 ميجابايت)`
+            : `Image "${file.name}" size too large (max 5MB)`
         );
-        return;
+        continue; // Skip invalid file but continue with others
       }
-    });
+      
+      if (!allowedTypes.includes(file.type)) {
+        toast.error(
+          isAr
+            ? `نوع الملف "${file.name}" غير مدعوم`
+            : `File type "${file.name}" not supported`
+        );
+        continue; // Skip invalid file but continue with others
+      }
+      
+      validFiles.push(file);
+    }
 
-    setPortfolioImages(files);
-    const previews = files.map((file) => URL.createObjectURL(file));
-    setPortfolioPreviews(previews);
+    // Only set valid files (preserves formData state)
+    if (validFiles.length > 0) {
+      setPortfolioImages(validFiles);
+      const previews = validFiles.map((file) => URL.createObjectURL(file));
+      setPortfolioPreviews(previews);
+    } else {
+      // No valid files - reset input
+      e.target.value = '';
+    }
   };
 
   const removePortfolioImage = (index: number) => {
@@ -440,7 +500,7 @@ export const CompanyRegistrationModal: React.FC<CompanyRegistrationModalProps> =
               {isAr ? "شعار الشركة" : "Company Logo"}
             </label>
             <div className="flex items-center gap-4">
-              <label className="flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+              <div className="relative flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
                 {logoPreview ? (
                   <img
                     src={logoPreview}
@@ -457,18 +517,21 @@ export const CompanyRegistrationModal: React.FC<CompanyRegistrationModalProps> =
                 )}
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                   onChange={handleLogoChange}
-                  className="hidden"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   disabled={submitting}
+                  id="logo-upload-input"
                 />
-              </label>
+              </div>
               {logoPreview && (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     setCompanyLogo(null);
                     setLogoPreview(null);
                   }}
@@ -491,7 +554,7 @@ export const CompanyRegistrationModal: React.FC<CompanyRegistrationModalProps> =
               {isAr ? "صور المحفظة" : "Portfolio Images"} ({isAr ? "اختياري" : "Optional"})
             </label>
             <div className="space-y-4">
-              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+              <div className="relative flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
                 <ImageIcon className="h-8 w-8 text-muted-foreground mb-2" />
                 <span className="text-sm text-muted-foreground">
                   {isAr
@@ -500,13 +563,14 @@ export const CompanyRegistrationModal: React.FC<CompanyRegistrationModalProps> =
                 </span>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                   multiple
                   onChange={handlePortfolioChange}
-                  className="hidden"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   disabled={submitting || portfolioImages.length >= 2}
+                  id="portfolio-upload-input"
                 />
-              </label>
+              </div>
 
               {/* Portfolio Previews */}
               {portfolioPreviews.length > 0 && (
@@ -520,7 +584,11 @@ export const CompanyRegistrationModal: React.FC<CompanyRegistrationModalProps> =
                       />
                       <button
                         type="button"
-                        onClick={() => removePortfolioImage(index)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          removePortfolioImage(index);
+                        }}
                         disabled={submitting}
                         className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 disabled:opacity-50"
                       >
