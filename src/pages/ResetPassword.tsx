@@ -80,8 +80,28 @@ const ResetPassword = () => {
       );
       
       // Redirect to login after 2 seconds
+      // Determine login page based on user role (if available) or default to partner login
       setTimeout(() => {
-        navigate('/client/login');
+        // Try to get user role from localStorage if available
+        try {
+          const userStr = localStorage.getItem('user');
+          if (userStr) {
+            const user = JSON.parse(userStr);
+            if (user.role === 'client') {
+              navigate('/auth/client');
+            } else if (user.role === 'admin') {
+              navigate('/admin/login');
+            } else {
+              navigate('/auth/partner');
+            }
+          } else {
+            // Default to partner login (most common)
+            navigate('/auth/partner');
+          }
+        } catch {
+          // If error, default to partner login
+          navigate('/auth/partner');
+        }
       }, 2000);
     } catch (err: any) {
       console.error('Reset password error:', err);

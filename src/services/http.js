@@ -41,7 +41,7 @@ export const http = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 30000, // 30 seconds timeout
+  timeout: 120000, // 120 seconds (2 minutes) - increased for email sending operations
   withCredentials: true, // Send cookies (including refreshToken HttpOnly cookie)
 });
 

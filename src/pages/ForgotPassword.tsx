@@ -111,7 +111,7 @@ const ForgotPassword = () => {
               </div>
               <div className="flex flex-col gap-2 pt-4">
                 <Button 
-                  onClick={() => navigate('/login')}
+                  onClick={() => navigate('/auth/partner')}
                   className="w-full"
                 >
                   {isAr ? 'العودة إلى تسجيل الدخول' : 'Back to Login'}
@@ -172,7 +172,7 @@ const ForgotPassword = () => {
 
               <div className="text-center">
                 <Link 
-                  to="/login" 
+                  to="/auth/partner" 
                   className="text-sm text-primary hover:underline inline-flex items-center gap-1"
                 >
                   <ArrowLeft className="w-3 h-3" />
