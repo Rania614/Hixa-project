@@ -6,11 +6,17 @@ import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { 
   ChevronDown, ArrowRight, X, 
-  Box, PencilRuler, Layers, Plus, Mail 
+  Box, PencilRuler, Layers, Plus, Mail, User, Handshake
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { http } from '@/services/http';
 import { toast } from '@/components/ui/sonner';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const Landing = () => {
   const { language } = useApp();
@@ -177,18 +183,40 @@ const Landing = () => {
 
               <div className="flex flex-col items-center gap-3">
                 <div className="relative group">
-                  <button 
-                    className="w-[220px] h-[75px] border-2 border-white/20 text-white bg-black font-black text-xl uppercase tracking-tighter hover:border-yellow-500/50 hover:bg-yellow-500/5 hover:text-yellow-500 transition-all flex items-center justify-center gap-2 rounded-[20px] relative overflow-hidden"
-                    disabled
-                  >
-                    <span className="relative z-10 group-hover:opacity-0 transition-opacity duration-300">
-                      JOIN HIXA
-                    </span>
-                    <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
-                      {isAr ? 'انتظر قريباً' : 'COMING SOON'}
-                    </span>
-                    <div className="w-3 h-3 rounded-full bg-white/20 border border-white/10 shadow-inner group-hover:bg-yellow-500 transition-colors" />
-                  </button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button 
+                        className="w-[220px] h-[75px] border-2 border-white/20 text-white bg-black font-black text-xl uppercase tracking-tighter hover:border-yellow-500/50 hover:bg-yellow-500/5 hover:text-yellow-500 transition-all flex items-center justify-center gap-2 rounded-[20px] relative overflow-hidden group"
+                      >
+                        <span className="relative z-10">
+                          JOIN HIXA
+                        </span>
+                        <ChevronDown className={`w-4 h-4 transition-transform ${isAr ? 'mr-1' : 'ml-1'}`} />
+                        <div className="w-3 h-3 rounded-full bg-white/20 border border-white/10 shadow-inner group-hover:bg-yellow-500 transition-colors" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent 
+                      align={isAr ? "end" : "start"}
+                      className="bg-[#0D0D0D] border-white/10 text-white min-w-[220px] mt-2 rounded-lg"
+                    >
+                      <DropdownMenuItem 
+                        className="cursor-pointer hover:bg-yellow-500/10 hover:text-yellow-500 focus:bg-yellow-500/10 focus:text-yellow-500 py-3 px-4 flex items-center gap-2"
+                        onClick={() => navigate('/auth/partner')}
+                      >
+                        {!isAr && <Handshake className="h-6 w-6" />}
+                        <span>{isAr ? 'تسجيل الدخول كشريك' : 'Login as Partner'}</span>
+                        {isAr && <Handshake className="h-6 w-6" />}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        className="cursor-pointer hover:bg-yellow-500/10 hover:text-yellow-500 focus:bg-yellow-500/10 focus:text-yellow-500 py-3 px-4 flex items-center gap-2"
+                        onClick={() => navigate('/auth/partner?role=client')}
+                      >
+                        {!isAr && <User className="h-6 w-6" />}
+                        <span>{isAr ? 'تسجيل الدخول كعميل' : 'Login as Client'}</span>
+                        {isAr && <User className="h-6 w-6" />}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
                 <span className="text-gray-500 text-xs font-bold leading-tight text-center max-w-[180px]">
                   {isAr ? 'لأصحاب المشاريع، للشركات، والمهندسين' : 'Clients, & partners Professionals'}

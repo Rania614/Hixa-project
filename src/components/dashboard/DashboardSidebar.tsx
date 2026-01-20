@@ -46,7 +46,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ userType }) 
     { icon: FolderKanban, label: getDashboardText("myProjects", language), path: "/engineer/projects" },
     { icon: MessageSquare, label: getDashboardText("messages", language), path: "/engineer/messages" },
     { icon: Bell, label: getDashboardText("notifications", language), path: "/engineer/notifications" },
-    { icon: Image, label: getDashboardText("portfolio", language), path: "/engineer/portfolio" },
+    // { icon: Image, label: getDashboardText("portfolio", language), path: "/engineer/portfolio" },في مشكلة في رفع الاعمال 
     { icon: User, label: getDashboardText("profilePage", language), path: "/engineer/profile" },
   ];
 
@@ -75,13 +75,8 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ userType }) 
       setAccessToken(null);
       localStorage.removeItem("user");
       
-      // Navigate to appropriate login page based on user type
-      if (userType === "client") {
-        navigate("/client/login");
-      } else {
-        // Engineers and companies use /auth/partner
-        navigate("/auth/partner");
-      }
+      // Navigate to Company Landing page for all user types
+      navigate("/");
     }
   };
 
