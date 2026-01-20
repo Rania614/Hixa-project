@@ -46,7 +46,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ userType }) 
     { icon: FolderKanban, label: getDashboardText("myProjects", language), path: "/engineer/projects" },
     { icon: MessageSquare, label: getDashboardText("messages", language), path: "/engineer/messages" },
     { icon: Bell, label: getDashboardText("notifications", language), path: "/engineer/notifications" },
-    // { icon: Image, label: getDashboardText("portfolio", language), path: "/engineer/portfolio" },في مشكلة في رفع الاعمال 
+    { icon: Image, label: getDashboardText("portfolio", language), path: "/engineer/portfolio" },//في مشكلة في رفع الاعمال 
     { icon: User, label: getDashboardText("profilePage", language), path: "/engineer/profile" },
   ];
 
