@@ -217,6 +217,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegis
           )}
         </Button>
 
+        {/* Forgot password link */}
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => navigate('/forgot-password')}
+            className="mt-2 text-xs text-muted-foreground hover:text-gold transition-colors underline-offset-4 hover:underline"
+          >
+            {language === 'ar' ? 'هل نسيت كلمة المرور؟' : 'Forgot your password?'}
+          </button>
+        </div>
+
         {/* Don't have an account link */}
         <div className="text-center pt-4">
           <button
