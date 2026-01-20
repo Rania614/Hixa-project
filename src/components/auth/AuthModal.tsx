@@ -28,10 +28,9 @@ interface AuthModalProps {
   onAuthSuccess: () => void; // Changed: no longer passes partnerType
   role: 'client' | 'partner' | null;
   initialMode?: 'login' | 'register';
-  initialPartnerType?: 'engineer' | 'company' | null;
 }
 
-export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 'login', initialPartnerType = null }: AuthModalProps) => {
+export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 'login' }: AuthModalProps) => {
   const { setIsAuthenticated, setUserRole, language } = useApp();
   // Start with initialMode (login or register)
   const [isLogin, setIsLogin] = useState(initialMode === 'login');
@@ -48,19 +47,13 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
       setCompanyName('');
       setSpecialization('');
       setLicenseNumber('');
-      // Set partner type from URL if provided, otherwise null
-      // If mode is register and partnerType is provided, set it immediately
-      if (initialMode === 'register' && initialPartnerType) {
-        setPartnerType(initialPartnerType);
-      } else {
-        setPartnerType(null);
-      }
+      setPartnerType(null); // Keep for UI selection only (engineer/company during registration)
       setShowPassword(false);
       setShowConfirmPassword(false);
       // Reset form
       reset();
     }
-  }, [isOpen, initialMode, initialPartnerType]);
+  }, [isOpen, initialMode]);
   
   const { control, watch, formState: { errors }, reset } = useForm();
   // partnerType is only used for UI form selection during registration, NOT for role determination
@@ -301,6 +294,8 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
         }
       } catch (err: any) {
         console.error('❌ Registration failed:', err);
+        console.error('❌ Error response:', err.response?.data);
+        console.error('❌ Error status:', err.response?.status);
         
         // Extract error message
         let errorMessage = '';
@@ -321,21 +316,68 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
               ? errorMessages.join(', ') 
               : errorData.message || errorData.error || (language === 'ar' ? 'خطأ في التحقق. يرجى التحقق من جميع الحقول المطلوبة.' : 'Validation error. Please check all required fields.');
           } else {
-            errorMessage = errorData?.message || 
-                          errorData?.error || 
-                          (language === 'ar' ? 'بيانات غير صالحة. يرجى التحقق من جميع الحقول المطلوبة والمحاولة مرة أخرى.' : 'Invalid data. Please check all required fields and try again.');
+            // Handle string response or object response
+            if (typeof errorData === 'string') {
+              errorMessage = errorData;
+            } else {
+              errorMessage = errorData?.message || 
+                            errorData?.error || 
+                            (language === 'ar' ? 'بيانات غير صالحة. يرجى التحقق من جميع الحقول المطلوبة والمحاولة مرة أخرى.' : 'Invalid data. Please check all required fields and try again.');
+            }
           }
         } else if (err.response?.status === 409) {
-          errorMessage = err.response?.data?.message || 
-                        (language === 'ar' ? 'البريد الإلكتروني مستخدم بالفعل' : 'Email already exists');
+          // Handle 409 Conflict - could be email, phone, or other field conflicts
+          const errorData = err.response?.data;
+          
+          // Check if response is a string
+          if (typeof errorData === 'string') {
+            errorMessage = errorData;
+          } else {
+            // Check for specific field conflicts
+            const conflictMessage = errorData?.message || errorData?.error;
+            
+            if (conflictMessage) {
+              // Check if it mentions email
+              if (conflictMessage.toLowerCase().includes('email') || 
+                  conflictMessage.toLowerCase().includes('بريد') ||
+                  conflictMessage.toLowerCase().includes('e-mail')) {
+                errorMessage = language === 'ar' 
+                  ? 'البريد الإلكتروني مستخدم بالفعل. يرجى استخدام بريد إلكتروني آخر أو تسجيل الدخول.' 
+                  : 'Email already exists. Please use a different email or try logging in.';
+              } 
+              // Check if it mentions phone
+              else if (conflictMessage.toLowerCase().includes('phone') || 
+                       conflictMessage.toLowerCase().includes('هاتف') ||
+                       conflictMessage.toLowerCase().includes('mobile')) {
+                errorMessage = language === 'ar' 
+                  ? 'رقم الهاتف مستخدم بالفعل. يرجى استخدام رقم هاتف آخر.' 
+                  : 'Phone number already exists. Please use a different phone number.';
+              }
+              // Use the backend message as-is
+              else {
+                errorMessage = conflictMessage;
+              }
+            } else {
+              // Default message for 409
+              errorMessage = language === 'ar' 
+                ? 'البيانات المدخلة مستخدمة بالفعل. يرجى التحقق من البريد الإلكتروني أو رقم الهاتف.' 
+                : 'The provided information already exists. Please check your email or phone number.';
+            }
+          }
         } else if (err.response?.status === 429) {
           errorMessage = err.response?.data?.message || 
                         (language === 'ar' ? 'تم تجاوز عدد محاولات الدخول المسموح بها، يرجى المحاولة لاحقاً' : 'Too many requests. Please try again later.');
         } else {
-          errorMessage = err.response?.data?.message || 
-                        err.response?.data?.error || 
-                        err.message || 
-                        (language === 'ar' ? 'فشل التسجيل. يرجى المحاولة مرة أخرى.' : 'Registration failed. Please try again.');
+          // Handle other errors
+          const errorData = err.response?.data;
+          if (typeof errorData === 'string') {
+            errorMessage = errorData;
+          } else {
+            errorMessage = errorData?.message || 
+                          errorData?.error || 
+                          err.message || 
+                          (language === 'ar' ? 'فشل التسجيل. يرجى المحاولة مرة أخرى.' : 'Registration failed. Please try again.');
+          }
         }
         
         setError(errorMessage);
@@ -548,14 +590,7 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
               )}
 
               {/* Phone and Country Code */}
-              <CountryPhoneInput 
-                control={control} 
-                countryCodeName="countryCode"
-                phoneName="phone"
-                label={language === 'ar' ? 'رقم الجوال' : 'Phone Number'}
-                required={true}
-                errors={errors}
-              />
+              <CountryPhoneInput control={control} />
             </>
           )}
 

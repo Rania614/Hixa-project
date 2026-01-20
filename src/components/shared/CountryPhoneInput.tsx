@@ -26,8 +26,8 @@ interface CountryOption {
 
 interface CountryPhoneInputProps {
   control: Control<any>;
-  countryCodeName: string; // Field name for country code
-  phoneName: string; // Field name for phone number
+  countryCodeName?: string; // Field name for country code (defaults to "countryCode")
+  phoneName?: string; // Field name for phone number (defaults to "phone")
   cityName?: string; // Field name for city (optional)
   label?: string;
   className?: string;
@@ -216,8 +216,8 @@ const getCitiesForCountry = (countryCode: string, language: "ar" | "en" = "en"):
 
 export const CountryPhoneInput: React.FC<CountryPhoneInputProps> = ({
   control,
-  countryCodeName,
-  phoneName,
+  countryCodeName = "countryCode",
+  phoneName = "phone",
   cityName,
   label,
   className,

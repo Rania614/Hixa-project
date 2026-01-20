@@ -21,7 +21,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
   return (
     <section id="hero" className="relative h-screen w-full overflow-hidden">
-      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/images/hero.png')" }}>
+      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/images/W.jpeg')" }}>
         <div className="absolute inset-0 bg-black bg-opacity-50"></div>
       </div>
 

@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { 
   ChevronDown, ArrowRight, X, 
-  Box, PencilRuler, Layers, Plus, Mail, Wrench, Building 
+  Box, PencilRuler, Layers, Plus, Mail 
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { http } from '@/services/http';
@@ -17,40 +17,64 @@ const Landing = () => {
   const navigate = useNavigate();
   const isAr = language === 'ar';
   
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
   const [subscribeModalOpen, setSubscribeModalOpen] = useState(false);
   const [subscribePhone, setSubscribePhone] = useState('');
   const [subscribeName, setSubscribeName] = useState('');
   const [subscribeEmail, setSubscribeEmail] = useState('');
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
-  const [partnerTypeModalOpen, setPartnerTypeModalOpen] = useState(false);
 
   const handleSubscribeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate required fields
     if (!subscribePhone.trim() || !subscribeEmail.trim()) {
-      return toast.error(isAr ? 'جميع الحقول مطلوبة' : 'All fields are required');
+      return toast.error(isAr ? 'رقم الجوال والبريد الإلكتروني مطلوبان' : 'Phone number and email are required');
     }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(subscribeEmail.trim())) {
+      return toast.error(isAr ? 'البريد الإلكتروني غير صحيح' : 'Invalid email format');
+    }
+    
     setSubscribing(true);
     try {
-      await http.post('/subscribers/subscribe', { 
-        name: subscribeName || '', 
-        phone: subscribePhone,
-        email: subscribeEmail 
+      const response = await http.post('/subscribers/subscribe', { 
+        name: subscribeName.trim() || undefined, 
+        phone: subscribePhone.trim(),
+        email: subscribeEmail.trim().toLowerCase()
       });
-      toast.success(isAr ? 'تم الاشتراك بنجاح' : 'Subscribed successfully');
+      
+      console.log('✅ Subscription successful:', response.data);
+      
+      toast.success(isAr ? 'تم الاشتراك بنجاح!' : 'Subscribed successfully!');
+      
       // Reset form
       setSubscribeName('');
       setSubscribePhone('');
       setSubscribeEmail('');
-      setSubscribeModalOpen(false);
-    } catch (error: any) {
-      console.error('Subscribe error:', error);
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.error || 
-                          error.message ||
-                          (isAr ? 'حدث خطأ ما' : 'Error occurred');
-      toast.error(errorMessage); 
+      
+      // Close modal after a short delay
+      setTimeout(() => {
+        setSubscribeModalOpen(false);
+      }, 1500);
+    } catch (error: any) { 
+      console.error('❌ Subscription error:', error);
+      
+      // Handle different error cases
+      let errorMessage = isAr ? 'حدث خطأ ما. يرجى المحاولة مرة أخرى' : 'Error occurred. Please try again';
+      
+      if (error.response?.status === 409) {
+        errorMessage = isAr ? 'هذا البريد الإلكتروني مشترك بالفعل' : 'This email is already subscribed';
+      } else if (error.response?.status === 400) {
+        errorMessage = error.response?.data?.message || 
+                      (isAr ? 'بيانات غير صالحة. يرجى التحقق من الحقول' : 'Invalid data. Please check the fields');
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      toast.error(errorMessage);
     } finally { 
       setSubscribing(false); 
     }
@@ -154,36 +178,17 @@ const Landing = () => {
               <div className="flex flex-col items-center gap-3">
                 <div className="relative group">
                   <button 
-                    onClick={() => setDropdownOpen(!dropdownOpen)} 
-                    className={`w-[220px] h-[75px] border-2 ${dropdownOpen ? 'border-yellow-500 bg-yellow-500/5 text-yellow-500' : 'border-white/20 text-white bg-black'} font-black text-xl uppercase tracking-tighter hover:border-white/40 transition-all flex items-center justify-center gap-2 rounded-[20px]`}
+                    className="w-[220px] h-[75px] border-2 border-white/20 text-white bg-black font-black text-xl uppercase tracking-tighter hover:border-yellow-500/50 hover:bg-yellow-500/5 hover:text-yellow-500 transition-all flex items-center justify-center gap-2 rounded-[20px] relative overflow-hidden"
+                    disabled
                   >
-                    JOIN HIXA
-                    <div className={`w-3 h-3 rounded-full ${dropdownOpen ? 'bg-yellow-500' : 'bg-white/20'} border border-white/10 shadow-inner`} />
+                    <span className="relative z-10 group-hover:opacity-0 transition-opacity duration-300">
+                      JOIN HIXA
+                    </span>
+                    <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
+                      {isAr ? 'انتظر قريباً' : 'COMING SOON'}
+                    </span>
+                    <div className="w-3 h-3 rounded-full bg-white/20 border border-white/10 shadow-inner group-hover:bg-yellow-500 transition-colors" />
                   </button>
-                  {dropdownOpen && (
-                    <div className={`absolute top-[calc(100%+15px)] ${isAr ? 'right-0' : 'left-0'} w-72 bg-[#111]/95 border border-white/10 shadow-2xl z-[999] animate-in fade-in slide-in-from-top-5 zoom-in-95 backdrop-blur-3xl overflow-hidden rounded-2xl`}>
-                      <button 
-                        onClick={() => {
-                          setDropdownOpen(false);
-                          setPartnerTypeModalOpen(true);
-                        }} 
-                        className={`w-full ${isAr ? 'text-right' : 'text-left'} p-6 hover:bg-yellow-500/10 hover:text-yellow-500 transition-all flex justify-between items-center border-b border-white/5`}
-                      >
-                        <span className="font-bold text-xs md:text-sm uppercase tracking-[0.2em]">{isAr ? 'تسجيل كشريك' : 'JOIN AS PARTNER'}</span>
-                        <ArrowRight size={18} className={isAr ? 'rotate-180' : ''} />
-                      </button>
-                      <button 
-                        onClick={() => {
-                          setDropdownOpen(false);
-                          navigate('/client/login');
-                        }} 
-                        className={`w-full ${isAr ? 'text-right' : 'text-left'} p-6 hover:bg-yellow-500/10 hover:text-yellow-500 transition-all flex justify-between items-center`}
-                      >
-                        <span className="font-bold text-xs md:text-sm uppercase tracking-[0.2em]">{isAr ? 'بوابة العملاء' : 'CLIENT ACCESS'}</span>
-                        <ArrowRight size={18} className={isAr ? 'rotate-180' : ''} />
-                      </button>
-                    </div>
-                  )}
                 </div>
                 <span className="text-gray-500 text-xs font-bold leading-tight text-center max-w-[180px]">
                   {isAr ? 'لأصحاب المشاريع، للشركات، والمهندسين' : 'Clients, & partners Professionals'}
@@ -285,7 +290,7 @@ const Landing = () => {
             
             {/* الجزء الجانبي (صورة المبنى مع الطبقة الصفراء) */}
             <div className="hidden md:block w-5/12 relative overflow-hidden">
-              <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070" className="w-full h-full object-cover grayscale" alt="HIXA Building" />
+              <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070" className="w-full h-full object-cover grayscale" alt="Building" />
               <div className="absolute inset-0 bg-yellow-500/80 mix-blend-multiply" />
               <div className={`absolute bottom-10 ${isAr ? 'right-10' : 'left-10'} text-black font-black text-6xl opacity-30 rotate-90 origin-bottom`}>HIXA</div>
             </div>
@@ -293,16 +298,7 @@ const Landing = () => {
             {/* الجزء الخاص بالنموذج (Form) */}
             <div className="w-full md:w-7/12 p-12 md:p-20 relative bg-[#111]">
               {/* زر الإغلاق (X) */}
-              <button 
-                onClick={() => {
-                  setSubscribeModalOpen(false);
-                  setSubscribeName('');
-                  setSubscribePhone('');
-                  setSubscribeEmail('');
-                }} 
-                className={`absolute top-8 ${isAr ? 'left-8' : 'right-8'} text-white/30 hover:text-white transition-colors group z-10`}
-                disabled={subscribing}
-              >
+              <button onClick={() => setSubscribeModalOpen(false)} className={`absolute top-8 ${isAr ? 'left-8' : 'right-8'} text-white/30 hover:text-white transition-colors group`}>
                 <X size={28} className="group-hover:rotate-90 transition-transform" />
               </button>
 
@@ -326,8 +322,7 @@ const Landing = () => {
                     value={subscribeName} 
                     onChange={(e) => setSubscribeName(e.target.value)} 
                     placeholder={isAr ? "الاسم الكامل" : "FULL NAME"} 
-                    className={`w-full bg-transparent border-0 focus:ring-0 ${isAr ? 'text-right' : 'text-left'} text-xl placeholder:text-gray-700 outline-none text-white`}
-                    disabled={subscribing}
+                    className={`w-full bg-transparent border-0 focus:ring-0 ${isAr ? 'text-right' : 'text-left'} text-xl placeholder:text-gray-700 outline-none`} 
                   />
                 </div>
 
@@ -340,8 +335,7 @@ const Landing = () => {
                     value={subscribeEmail} 
                     onChange={(e) => setSubscribeEmail(e.target.value)} 
                     placeholder={isAr ? "البريد الإلكتروني" : "EMAIL ADDRESS"} 
-                    className={`w-full bg-transparent border-0 focus:ring-0 ${isAr ? 'text-right pr-10' : 'text-left pl-10'} text-xl placeholder:text-gray-700 outline-none text-white`}
-                    disabled={subscribing}
+                    className={`w-full bg-transparent border-0 focus:ring-0 ${isAr ? 'text-right pr-10' : 'text-left pl-10'} text-xl placeholder:text-gray-700 outline-none`} 
                   />
                 </div>
 
@@ -354,8 +348,7 @@ const Landing = () => {
                     onChange={(e) => setSubscribePhone(e.target.value)} 
                     placeholder={isAr ? "رقم الجوال" : "PHONE NUMBER"} 
                     dir={isAr ? "rtl" : "ltr"} 
-                    className={`w-full bg-transparent border-0 focus:ring-0 text-4xl md:text-6xl font-black text-white placeholder:text-gray-800 p-0 ${isAr ? 'text-right' : 'text-left'} outline-none`}
-                    disabled={subscribing}
+                    className={`w-full bg-transparent border-0 focus:ring-0 text-4xl md:text-6xl font-black text-white placeholder:text-gray-800 p-0 ${isAr ? 'text-right' : 'text-left'} outline-none`} 
                   />
                 </div>
                 
@@ -379,78 +372,6 @@ const Landing = () => {
                   </span>
                 </button>
               </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Partner Type Selection Modal */}
-      {partnerTypeModalOpen && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
-          <div className={`w-full max-w-2xl bg-[#111] border border-white/10 shadow-2xl relative overflow-hidden rounded-[40px] p-8 md:p-12`}>
-            {/* Close Button */}
-            <button 
-              onClick={() => setPartnerTypeModalOpen(false)} 
-              className={`absolute top-6 ${isAr ? 'left-6' : 'right-6'} text-white/30 hover:text-white transition-colors group`}
-            >
-              <X size={28} className="group-hover:rotate-90 transition-transform" />
-            </button>
-
-            {/* Modal Content */}
-            <div className={`${isAr ? 'text-right' : 'text-left'}`}>
-              <h3 className={`text-3xl md:text-4xl font-black uppercase tracking-tight mb-2 ${isAr ? 'text-right' : 'text-left'}`}>
-                <span className="text-yellow-500">{isAr ? 'اختر نوع الحساب' : 'SELECT ACCOUNT TYPE'}</span>
-              </h3>
-              <p className="text-gray-500 text-xs font-bold uppercase tracking-[0.3em] mb-8">
-                {isAr ? 'اختر نوع الحساب المناسب لك' : 'CHOOSE YOUR ACCOUNT TYPE'}
-              </p>
-
-              {/* Selection Buttons */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Engineer Option */}
-                <button
-                  onClick={() => {
-                    setPartnerTypeModalOpen(false);
-                    navigate('/engineer/login');
-                  }}
-                  className="group relative bg-[#1a1a1a] border-2 border-white/10 hover:border-yellow-500/50 hover:bg-yellow-500/5 transition-all p-8 rounded-2xl flex flex-col items-center justify-center min-h-[200px]"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/0 to-yellow-500/0 group-hover:from-yellow-500/10 group-hover:to-transparent rounded-2xl transition-all" />
-                  <Wrench className="h-12 w-12 text-yellow-500 mb-4 group-hover:scale-110 transition-transform" />
-                  <h4 className="text-xl font-black uppercase tracking-tight text-white mb-2">
-                    {isAr ? 'مهندس' : 'ENGINEER'}
-                  </h4>
-                  <p className="text-gray-500 text-xs text-center">
-                    {isAr ? 'للمهندسين والمستقلين' : 'For Engineers & Freelancers'}
-                  </p>
-                  <ArrowRight 
-                    size={20} 
-                    className={`mt-4 text-yellow-500/50 group-hover:text-yellow-500 group-hover:translate-x-1 transition-all ${isAr ? 'rotate-180' : ''}`} 
-                  />
-                </button>
-
-                {/* Company Option */}
-                <button
-                  onClick={() => {
-                    setPartnerTypeModalOpen(false);
-                    navigate('/company/login');
-                  }}
-                  className="group relative bg-[#1a1a1a] border-2 border-white/10 hover:border-yellow-500/50 hover:bg-yellow-500/5 transition-all p-8 rounded-2xl flex flex-col items-center justify-center min-h-[200px]"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/0 to-yellow-500/0 group-hover:from-yellow-500/10 group-hover:to-transparent rounded-2xl transition-all" />
-                  <Building className="h-12 w-12 text-yellow-500 mb-4 group-hover:scale-110 transition-transform" />
-                  <h4 className="text-xl font-black uppercase tracking-tight text-white mb-2">
-                    {isAr ? 'شركة' : 'COMPANY'}
-                  </h4>
-                  <p className="text-gray-500 text-xs text-center">
-                    {isAr ? 'للشركات والمقاولين' : 'For Companies & Contractors'}
-                  </p>
-                  <ArrowRight 
-                    size={20} 
-                    className={`mt-4 text-yellow-500/50 group-hover:text-yellow-500 group-hover:translate-x-1 transition-all ${isAr ? 'rotate-180' : ''}`} 
-                  />
-                </button>
-              </div>
             </div>
           </div>
         </div>

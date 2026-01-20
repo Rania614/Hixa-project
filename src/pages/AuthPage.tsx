@@ -18,7 +18,7 @@ import { ArrowLeft } from 'lucide-react';
 import { UserRole } from '@/context/AppContext';
 
 const AuthPage = () => {
-  const { setIsAuthenticated, setUserRole } = useApp();
+  const { setIsAuthenticated, setUserRole, language } = useApp();
   const navigate = useNavigate();
   const { role } = useParams<{ role: 'client' | 'partner' }>();
   const [searchParams] = useSearchParams();
@@ -28,9 +28,6 @@ const AuthPage = () => {
   // Check if mode=register is in URL, default to 'login'
   const mode = searchParams.get('mode');
   const initialMode = mode === 'register' ? 'register' : 'login';
-  
-  // Get partner type from URL (engineer or company)
-  const partnerTypeFromUrl = searchParams.get('type');
 
   /**
    * Handle successful authentication
@@ -87,6 +84,7 @@ const AuthPage = () => {
     navigate(-1);
   };
 
+  // Temporarily disable self-service registration/login UI
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Button
@@ -95,17 +93,17 @@ const AuthPage = () => {
         className="absolute top-4 left-4 flex items-center gap-2"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back
+        {language === 'ar' ? 'رجوع' : 'Back'}
       </Button>
-      <div className="w-full max-w-md">
-        <AuthModal 
-          isOpen={true}
-          onClose={handleClose}
-          onAuthSuccess={handleAuthSuccess}
-          role={authRole}
-          initialMode={initialMode}
-          initialPartnerType={partnerTypeFromUrl === 'engineer' ? 'engineer' : partnerTypeFromUrl === 'company' ? 'company' : null}
-        />
+      <div className="w-full max-w-md text-center space-y-4">
+        <h1 className="text-2xl font-bold">
+          {language === 'ar' ? 'التسجيل وتسجيل الدخول مغلقان حالياً' : 'Sign up / login are currently disabled'}
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          {language === 'ar'
+            ? 'يرجى التواصل مع إدارة النظام لفتح حساب أو الحصول على صلاحيات الدخول.'
+            : 'Please contact the platform administration to create an account or get access.'}
+        </p>
       </div>
     </div>
   );
