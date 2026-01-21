@@ -12,6 +12,7 @@ import { RoleProtectedRoute } from "@/components/routing/RoleProtectedRoute";
 import Landing from "./pages/PlatformLanding";
 import AdminLogin from "./pages/admin-dashboard/AdminLogin";
 import AdminDashboard from "./pages/admin-dashboard/AdminDashboard";
+import AdminAnalytics from "./pages/admin-dashboard/AdminAnalytics";
 import ContentManagement from "./pages/admin-dashboard/ContentManagement";
 import Orders from "./pages/admin-dashboard/Orders";
 import PartnerRequests from "./pages/admin-dashboard/PartnerRequests";
@@ -732,6 +733,14 @@ const AppRoutes = () => {
         element={
           <RoleProtectedRoute allowedRole="admin">
             <AdminDashboard />
+          </RoleProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/analytics"
+        element={
+          <RoleProtectedRoute allowedRole="admin">
+            <AdminAnalytics />
           </RoleProtectedRoute>
         }
       />

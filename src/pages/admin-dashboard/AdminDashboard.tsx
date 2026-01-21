@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { AdminSidebar } from '@/components/AdminSidebar';
 import { AdminTopBar } from '@/components/AdminTopBar';
 import { useApp } from '@/context/AppContext';
@@ -10,116 +11,221 @@ import {
   BarChart3,
   CheckCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import { HexagonIcon } from '@/components/ui/hexagon-icon';
+import { http } from '@/services/http';
+import { toast } from '@/components/ui/sonner';
 
 const AdminDashboard = () => {
   const { language } = useApp();
+  const isAr = language === 'ar';
+  
+  // State
+  const [loading, setLoading] = useState(true);
+  const [metrics, setMetrics] = useState([
+    {
+      title: isAr ? 'مستخدمون جدد' : 'New Users',
+      value: '0',
+      change: '+0%',
+      icon: Users,
+      color: 'text-cyan',
+    },
+    {
+      title: isAr ? 'مشاريع نشطة' : 'Active Projects',
+      value: '0',
+      change: '+0%',
+      icon: Briefcase,
+      color: 'text-cyan',
+    },
+    {
+      title: isAr ? 'مستندات مرفوعة' : 'Documents Uploaded',
+      value: '0',
+      change: '+0%',
+      icon: FileText,
+      color: 'text-cyan',
+    },
+    {
+      title: isAr ? 'قيد المراجعة' : 'Pending Reviews',
+      value: '0',
+      change: '+0%',
+      icon: Clock,
+      color: 'text-cyan',
+    },
+  ]);
+  
+  const [userStats, setUserStats] = useState([
+    { status: isAr ? 'مهندسين نشطين' : 'Active Engineers', count: 0, icon: CheckCircle, color: 'text-green-500' },
+    { status: isAr ? 'عملاء نشطين' : 'Active Clients', count: 0, icon: CheckCircle, color: 'text-green-500' },
+    { status: isAr ? 'قيد التحقق' : 'Pending Verification', count: 0, icon: Clock, color: 'text-yellow-500' },
+    { status: isAr ? 'معلقين' : 'Suspended', count: 0, icon: AlertCircle, color: 'text-red-500' },
+  ]);
+  
+  const [totalProjects, setTotalProjects] = useState(0);
+  const [projectsList, setProjectsList] = useState<any[]>([]);
 
-  // Overview metrics
-  // const metrics = [
-  //   {
-  //     title: language === 'en' ? 'New Users' : 'مستخدمون جدد',
-  //     value: '24',
-  //     change: '+12%',
-  //     icon: Users,
-  //     color: 'text-cyan',
-  //   },
-  //   {
-  //     title: language === 'en' ? 'Active Projects' : 'مشاريع نشطة',
-  //     value: '18',
-  //     change: '+5%',
-  //     icon: Briefcase,
-  //     color: 'text-cyan',
-  //   },
-  //   {
-  //     title: language === 'en' ? 'Documents Uploaded' : 'مستندات مرفوعة',
-  //     value: '142',
-  //     change: '+8%',
-  //     icon: FileText,
-  //     color: 'text-cyan',
-  //   },
-  //   {
-  //     title: language === 'en' ? 'Pending Reviews' : 'قيد المراجعة',
-  //     value: '7',
-  //     change: '-2%',
-  //     icon: Clock,
-  //     color: 'text-cyan',
-  //   },
-  // ];
+  // Fetch dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      setLoading(true);
+      
+      try {
+        // Fetch all data in parallel
+        const [projectsStatsRes, subscribersStatsRes, projectsRes, pendingProjectsRes, usersRes] = await Promise.all([
+          http.get('/projects/statistics').catch(() => ({ data: null })),
+          http.get('/subscribers/statistics').catch(() => ({ data: null })),
+          http.get('/projects').catch(() => ({ data: [] })), // Get all projects to display names
+          http.get('/projects/pending').catch(() => ({ data: [] })),
+          http.get('/users').catch(() => ({ data: [] })),
+        ]);
 
-  // // User management data
-  // const userStats = [
-  //   { status: language === 'en' ? 'Active Engineers' : 'مهندسين نشطين', count: 42, icon: CheckCircle, color: 'text-green-500' },
-  //   { status: language === 'en' ? 'Active Clients' : 'عملاء نشطين', count: 28, icon: CheckCircle, color: 'text-green-500' },
-  //   { status: language === 'en' ? 'Pending Verification' : 'قيد التحقق', count: 5, icon: Clock, color: 'text-yellow-500' },
-  //   { status: language === 'en' ? 'Suspended' : 'معلقين', count: 2, icon: AlertCircle, color: 'text-red-500' },
-  // ];
+        // Process Projects Statistics - GET /api/projects/statistics
+        let activeProjects = 0;
+        let activeProjectsChange = 0;
+        let pendingReviews = 0;
+        let pendingReviewsChange = 0;
+        let totalProjectsCount = 0;
+        
+        if (projectsStatsRes.data) {
+          activeProjects = projectsStatsRes.data.activeProjects || projectsStatsRes.data.totalActive || projectsStatsRes.data.count || 0;
+          activeProjectsChange = projectsStatsRes.data.activeProjectsChange || projectsStatsRes.data.change || 0;
+          pendingReviews = projectsStatsRes.data.pending || projectsStatsRes.data.pendingProjects || 0;
+          pendingReviewsChange = projectsStatsRes.data.pendingChange || -2;
+          // Get total projects from statistics
+          totalProjectsCount = projectsStatsRes.data.total || projectsStatsRes.data.totalProjects || projectsStatsRes.data.count || 0;
+        }
 
-  // // Recent projects data
-  // const recentProjects = [
-  //   { 
-  //     id: '1', 
-  //     name: language === 'en' ? 'Bridge Construction' : 'بناء الجسر', 
-  //     client: 'ABC Corp', 
-  //     status: language === 'en' ? 'In Progress' : 'قيد التنفيذ',
-  //     progress: 75 
-  //   },
-  //   { 
-  //     id: '2', 
-  //     name: language === 'en' ? 'HVAC System Design' : 'تصميم نظام التكييف', 
-  //     client: 'XYZ Ltd', 
-  //     status: language === 'en' ? 'Review' : 'مراجعة',
-  //     progress: 90 
-  //   },
-  //   { 
-  //     id: '3', 
-  //     name: language === 'en' ? 'Structural Analysis' : 'تحليل هيكلي', 
-  //     client: 'DEF Inc', 
-  //     status: language === 'en' ? 'Completed' : 'مكتمل',
-  //     progress: 100 
-  //   },
-  //   { 
-  //     id: '4', 
-  //     name: language === 'en' ? 'Electrical Plan' : 'خطة كهربائية', 
-  //     client: 'GHI Co', 
-  //     status: language === 'en' ? 'In Progress' : 'قيد التنفيذ',
-  //     progress: 40 
-  //   },
-  // ];
+        // Process Pending Projects - GET /api/projects/pending
+        if (Array.isArray(pendingProjectsRes.data)) {
+          pendingReviews = pendingProjectsRes.data.length;
+        } else if (pendingProjectsRes.data?.data && Array.isArray(pendingProjectsRes.data.data)) {
+          pendingReviews = pendingProjectsRes.data.data.length;
+        } else if (pendingProjectsRes.data?.projects && Array.isArray(pendingProjectsRes.data.projects)) {
+          pendingReviews = pendingProjectsRes.data.projects.length;
+        }
 
-  // // Recent documents
-  // const recentDocuments = [
-  //   { 
-  //     id: '1', 
-  //     name: language === 'en' ? 'Project Specification.pdf' : 'مواصفات المشروع.pdf', 
-  //     type: 'PDF', 
-  //     uploader: 'John Smith',
-  //     time: language === 'en' ? '2 hours ago' : 'منذ ساعتين'
-  //   },
-  //   { 
-  //     id: '2', 
-  //     name: language === 'en' ? 'Blueprints.zip' : 'المخططات.zip', 
-  //     type: 'ZIP', 
-  //     uploader: 'Sarah Johnson',
-  //     time: language === 'en' ? '4 hours ago' : 'منذ 4 ساعات'
-  //   },
-  //   { 
-  //     id: '3', 
-  //     name: language === 'en' ? 'Calculations.xlsx' : 'الحسابات.xlsx', 
-  //     type: 'XLSX', 
-  //     uploader: 'Mike Chen',
-  //     time: language === 'en' ? '1 day ago' : 'منذ يوم'
-  //   },
-  //   { 
-  //     id: '4', 
-  //     name: language === 'en' ? 'Safety Report.docx' : 'تقرير السلامة.docx', 
-  //     type: 'DOCX', 
-  //     uploader: 'Emma Wilson',
-  //     time: language === 'en' ? '2 days ago' : 'منذ يومين'
-  //   },
-  // ];
+        // Process Subscribers Statistics - GET /api/subscribers/statistics (for New Users)
+        let newUsers = 0;
+        let newUsersChange = 0;
+        if (subscribersStatsRes.data) {
+          newUsers = subscribersStatsRes.data.total || subscribersStatsRes.data.count || subscribersStatsRes.data.newUsers || 0;
+          newUsersChange = subscribersStatsRes.data.change || subscribersStatsRes.data.newUsersChange || 0;
+        }
+
+        // Process Projects - GET /api/projects to get total count and list
+        let allProjectsList: any[] = [];
+        if (projectsRes.data) {
+          if (Array.isArray(projectsRes.data)) {
+            allProjectsList = projectsRes.data;
+            if (totalProjectsCount === 0) totalProjectsCount = projectsRes.data.length;
+          } else if (projectsRes.data.data && Array.isArray(projectsRes.data.data)) {
+            allProjectsList = projectsRes.data.data;
+            if (totalProjectsCount === 0) totalProjectsCount = projectsRes.data.data.length;
+          } else if (projectsRes.data.projects && Array.isArray(projectsRes.data.projects)) {
+            allProjectsList = projectsRes.data.projects;
+            if (totalProjectsCount === 0) totalProjectsCount = projectsRes.data.projects.length;
+          } else if (projectsRes.data.total !== undefined) {
+            totalProjectsCount = projectsRes.data.total;
+          } else if (projectsRes.data.count !== undefined) {
+            totalProjectsCount = projectsRes.data.count;
+          }
+        }
+
+        // Sort projects from oldest to newest (by createdAt or date)
+        allProjectsList.sort((a, b) => {
+          const dateA = new Date(a.createdAt || a.date || a.created_at || 0).getTime();
+          const dateB = new Date(b.createdAt || b.date || b.created_at || 0).getTime();
+          return dateA - dateB; // Oldest first
+        });
+
+        // Process Users Statistics - GET /api/users
+        let activeEngineers = 0;
+        let activeClients = 0;
+        let pendingVerification = 0;
+        let suspended = 0;
+        
+        if (usersRes.data) {
+          let usersList: any[] = [];
+          if (Array.isArray(usersRes.data)) {
+            usersList = usersRes.data;
+          } else if (usersRes.data.data && Array.isArray(usersRes.data.data)) {
+            usersList = usersRes.data.data;
+          } else if (usersRes.data.users && Array.isArray(usersRes.data.users)) {
+            usersList = usersRes.data.users;
+          }
+
+          usersList.forEach((user: any) => {
+            const role = (user.role || '').toLowerCase();
+            const status = (user.status || user.isActive !== undefined ? (user.isActive ? 'active' : 'inactive') : 'active').toLowerCase();
+            const isVerified = user.isVerified !== false && user.verified !== false;
+
+            if (role === 'engineer' || role === 'partner') {
+              if (status === 'active' && isVerified) activeEngineers++;
+              else if (!isVerified) pendingVerification++;
+              else if (status === 'suspended' || status === 'inactive') suspended++;
+            } else if (role === 'client' || role === 'customer') {
+              if (status === 'active' && isVerified) activeClients++;
+              else if (!isVerified) pendingVerification++;
+              else if (status === 'suspended' || status === 'inactive') suspended++;
+            }
+          });
+        }
+
+        // Update metrics
+        setMetrics([
+          {
+            title: isAr ? 'مستخدمون جدد' : 'New Users',
+            value: newUsers.toString(),
+            change: newUsersChange >= 0 ? `+${newUsersChange}%` : `${newUsersChange}%`,
+            icon: Users,
+            color: 'text-cyan',
+          },
+          {
+            title: isAr ? 'مشاريع نشطة' : 'Active Projects',
+            value: activeProjects.toString(),
+            change: activeProjectsChange >= 0 ? `+${activeProjectsChange}%` : `${activeProjectsChange}%`,
+            icon: Briefcase,
+            color: 'text-cyan',
+          },
+          {
+            title: isAr ? 'مستندات مرفوعة' : 'Documents Uploaded',
+            value: '0', // TODO: No endpoint available yet
+            change: '+0%',
+            icon: FileText,
+            color: 'text-cyan',
+          },
+          {
+            title: isAr ? 'قيد المراجعة' : 'Pending Reviews',
+            value: pendingReviews.toString(),
+            change: pendingReviewsChange >= 0 ? `+${pendingReviewsChange}%` : `${pendingReviewsChange}%`,
+            icon: Clock,
+            color: 'text-cyan',
+          },
+        ]);
+
+        // Update user stats
+        setUserStats([
+          { status: isAr ? 'مهندسين نشطين' : 'Active Engineers', count: activeEngineers, icon: CheckCircle, color: 'text-green-500' },
+          { status: isAr ? 'عملاء نشطين' : 'Active Clients', count: activeClients, icon: CheckCircle, color: 'text-green-500' },
+          { status: isAr ? 'قيد التحقق' : 'Pending Verification', count: pendingVerification, icon: Clock, color: 'text-yellow-500' },
+          { status: isAr ? 'معلقين' : 'Suspended', count: suspended, icon: AlertCircle, color: 'text-red-500' },
+        ]);
+
+        // Update total projects count and list
+        setTotalProjects(totalProjectsCount);
+        setProjectsList(allProjectsList);
+
+      } catch (error: any) {
+        console.error('Error fetching dashboard data:', error);
+        toast.error(isAr ? 'حدث خطأ أثناء جلب البيانات' : 'Error fetching dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [isAr]);
 
   return (
     <div className="flex min-h-screen">
@@ -141,8 +247,26 @@ const AdminDashboard = () => {
           </div>
 
           {/* Overview Metrics */}
-          {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {metrics.map((metric, index) => (
+          {/* 
+            API Endpoints Used:
+            - GET /api/projects/statistics (Active Projects, Pending Reviews)
+            - GET /api/subscribers/statistics (New Users)
+            - GET /api/projects/pending (Pending Reviews count)
+            - Documents Uploaded: No endpoint available yet
+          */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {loading ? (
+              Array.from({ length: 4 }).map((_, index) => (
+                <Card key={index} className="glass-card">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-center h-20">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              metrics.map((metric, index) => (
               <Card key={index} className="glass-card">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -154,22 +278,35 @@ const AdminDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold">{metric.value}</div>
-                  <p className="text-xs text-muted-foreground mt-1">{metric.change} from last month</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {metric.change} {isAr ? 'من الشهر الماضي' : 'from last month'}
+                    </p>
                 </CardContent>
               </Card>
-            ))}
-          </div> */}
+              ))
+            )}
+          </div>
 
           {/* User Management and Project Status */}
+          {/* 
+            API Endpoints Used:
+            - GET /api/users (User Statistics - Active Engineers, Clients, Pending Verification, Suspended)
+            - GET /api/projects?limit=4 (Recent Projects)
+          */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             {/* User Management */}
-            {/* <Card className="glass-card">
+            <Card className="glass-card">
               <CardHeader>
                 <CardTitle>
-                  {language === 'en' ? 'User Management' : 'إدارة المستخدمين'}
+                  {isAr ? 'إدارة المستخدمين' : 'User Management'}
                 </CardTitle>
               </CardHeader>
               <CardContent>
+                {loading ? (
+                  <div className="flex items-center justify-center h-32">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
                 <div className="space-y-4">
                   {userStats.map((stat, index) => (
                     <div key={index} className="flex items-center justify-between">
@@ -183,132 +320,108 @@ const AdminDashboard = () => {
                     </div>
                   ))}
                 </div>
+                )}
               </CardContent>
-            </Card> */}
+            </Card>
 
-            {/* Project Status */}
-            {/* <Card className="glass-card">
-              <CardHeader>
+            {/* Projects List - Oldest to Newest */}
+            {/* API Endpoint: GET /api/projects (sorted by createdAt - oldest first) */}
+            <Card className="glass-card">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle>
-                  {language === 'en' ? 'Project Status' : 'حالة المشاريع'}
+                  {isAr ? 'عدد المشاريع' : 'Total Projects'}
                 </CardTitle>
+                <HexagonIcon size="sm" className="text-cyan">
+                  <Briefcase className="h-5 w-5 text-cyan" />
+                </HexagonIcon>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {recentProjects.map((project) => (
-                    <div key={project.id} className="space-y-2">
-                      <div className="flex justify-between">
-                        <h4 className="font-medium">{project.name}</h4>
-                        <span className="text-sm text-muted-foreground">{project.client}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-muted rounded-full h-2">
-                          <div 
-                            className="bg-cyan h-2 rounded-full" 
-                            style={{ width: `${project.progress}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-sm text-muted-foreground">{project.progress}%</span>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {project.status}
-                      </div>
+                {loading ? (
+                  <div className="flex items-center justify-center h-32">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="text-center pb-3 border-b border-border/50">
+                      <div className="text-3xl font-bold mb-1">{totalProjects}</div>
+                      <p className="text-xs text-muted-foreground">
+                        {isAr ? 'إجمالي المشاريع على المنصة' : 'Total projects on the platform'}
+                      </p>
                     </div>
-                  ))}
-                </div>
+                    {projectsList.length === 0 ? (
+                      <div className="text-center py-4 text-muted-foreground text-sm">
+                        {isAr ? 'لا توجد مشاريع' : 'No projects found'}
+                      </div>
+                    ) : (
+                      <div className="max-h-[400px] overflow-y-auto space-y-2 pr-2">
+                        {projectsList.map((project, index) => (
+                          <div 
+                            key={project._id || project.id || index} 
+                            className="flex items-center justify-between p-2 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-sm truncate">
+                                {project.title || project.name || (isAr ? `مشروع ${index + 1}` : `Project ${index + 1}`)}
+                              </h4>
+                              {project.createdAt && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {new Date(project.createdAt).toLocaleDateString(
+                                    isAr ? 'ar-SA' : 'en-US',
+                                    { year: 'numeric', month: 'short', day: 'numeric' }
+                                  )}
+                                </p>
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">
+                              #{index + 1}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
-            </Card> */}
+            </Card>
           </div>
 
           {/* Recent Documents and Communication */}
+          {/* 
+            TODO: API Endpoints Not Available Yet
+            - Recent Documents: No endpoint available yet
+            - Communication Overview: No endpoint available yet
+          */}
+          {/* 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Recent Documents */}
-            {/* <Card className="glass-card">
+            {/* Recent Documents - TODO: No API endpoint available yet *}
+            <Card className="glass-card">
               <CardHeader>
                 <CardTitle>
-                  {language === 'en' ? 'Recent Document Uploads' : 'أحدث المستندات المرفوعة'}
+                  {isAr ? 'أحدث المستندات المرفوعة' : 'Recent Document Uploads'}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {recentDocuments.map((doc) => (
-                    <div key={doc.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                      <div>
-                        <h4 className="font-medium text-sm">{doc.name}</h4>
-                        <p className="text-xs text-muted-foreground">{doc.uploader} • {doc.time}</p>
-                      </div>
-                      <div className="px-2 py-1 bg-background rounded text-xs font-medium">
-                        {doc.type}
-                      </div>
-                    </div>
-                  ))}
+                <div className="text-center py-8 text-muted-foreground">
+                  {isAr ? 'API غير متوفر حالياً' : 'API not available yet'}
                 </div>
               </CardContent>
-            </Card> */}
+            </Card>
 
-            {/* Communication Overview */}
-            {/* <Card className="glass-card">
+            {/* Communication Overview - TODO: No API endpoint available yet *}
+            <Card className="glass-card">
               <CardHeader>
                 <CardTitle>
-                  {language === 'en' ? 'Communication Overview' : 'نظرة عامة على التواصل'}
+                  {isAr ? 'نظرة عامة على التواصل' : 'Communication Overview'}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <HexagonIcon size="sm" className="text-cyan">
-                        <MessageSquare className="h-4 w-4" />
-                      </HexagonIcon>
-                      <div>
-                        <h4 className="font-medium text-sm">
-                          {language === 'en' ? 'Unread Messages' : 'رسائل غير مقروءة'}
-                        </h4>
-                        <p className="text-xs text-muted-foreground">
-                          {language === 'en' ? '3 engineers, 2 clients' : '3 مهندسين، 2 عملاء'}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="font-semibold">5</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <HexagonIcon size="sm" className="text-cyan">
-                        <BarChart3 className="h-4 w-4" />
-                      </HexagonIcon>
-                      <div>
-                        <h4 className="font-medium text-sm">
-                          {language === 'en' ? 'Active Discussions' : 'مناقشات نشطة'}
-                        </h4>
-                        <p className="text-xs text-muted-foreground">
-                          {language === 'en' ? '7 project threads' : '7 مواضيع مشاريع'}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="font-semibold">7</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <HexagonIcon size="sm" className="text-cyan">
-                        <Clock className="h-4 w-4" />
-                      </HexagonIcon>
-                      <div>
-                        <h4 className="font-medium text-sm">
-                          {language === 'en' ? 'Pending Responses' : 'ردود معلقة'}
-                        </h4>
-                        <p className="text-xs text-muted-foreground">
-                          {language === 'en' ? 'Average response time: 2h' : 'متوسط وقت الرد: ساعتين'}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="font-semibold">12</span>
-                  </div>
+                <div className="text-center py-8 text-muted-foreground">
+                  {isAr ? 'API غير متوفر حالياً' : 'API not available yet'}
                 </div>
               </CardContent>
-            </Card> */}
+            </Card>
           </div>
+          */}
         </main>
       </div>
     </div>

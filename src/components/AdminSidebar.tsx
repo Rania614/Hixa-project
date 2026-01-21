@@ -66,6 +66,11 @@ export const AdminSidebar = () => {
       label: language === 'en' ? 'Dashboard Overview' : 'نظرة عامة على لوحة التحكم'
     },
     {
+      to: "/admin/analytics",
+      icon: BarChart3,
+      label: language === 'en' ? 'Analytics' : 'التحليلات'
+    },
+    {
       to: "/admin/content",
       icon: FileEdit,
       label: language === 'en' ? 'Landing Page Content' : 'تحكم محتوى الصفحة الرئيسية'
