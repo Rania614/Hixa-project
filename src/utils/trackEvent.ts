@@ -83,7 +83,11 @@ export const trackEvent = async (params: TrackEventParams): Promise<void> => {
     // Send to API - use fetch directly to avoid axios interceptors
     // and ensure it fails silently
     const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
-    const url = baseURL.replace(/\/+$/, '') + '/api/track';
+    // Ensure baseURL ends with /api, then append /track
+    const cleanBaseURL = baseURL.replace(/\/+$/, '');
+    const url = cleanBaseURL.endsWith('/api') 
+      ? `${cleanBaseURL}/track` 
+      : `${cleanBaseURL}/api/track`;
     
     // Use fetch with timeout and don't wait for response
     fetch(url, {
