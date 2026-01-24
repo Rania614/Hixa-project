@@ -70,11 +70,11 @@ const AdminAnalytics = () => {
       try {
         // Fetch all analytics endpoints in parallel
         const [visitorsRes, pageViewsRes, eventsRes, activityRes, dailyRes] = await Promise.all([
-          http.get('/api/admin/analytics/visitors').catch(() => ({ data: null })),
-          http.get('/api/admin/analytics/page-views').catch(() => ({ data: [] })),
-          http.get('/api/admin/analytics/events').catch(() => ({ data: [] })),
-          http.get('/api/admin/analytics/activity').catch(() => ({ data: [] })),
-          http.get('/api/admin/analytics/daily').catch(() => ({ data: [] })),
+          http.get('/admin/analytics/visitors').catch(() => ({ data: null })),
+          http.get('/admin/analytics/page-views').catch(() => ({ data: [] })),
+          http.get('/admin/analytics/events').catch(() => ({ data: [] })),
+          http.get('/admin/analytics/activity').catch(() => ({ data: [] })),
+          http.get('/admin/analytics/daily').catch(() => ({ data: [] })),
         ]);
 
         // Set visitor stats

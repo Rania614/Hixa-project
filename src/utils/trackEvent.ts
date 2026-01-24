@@ -87,7 +87,7 @@ export const trackEvent = async (params: TrackEventParams): Promise<void> => {
     const cleanBaseURL = baseURL.replace(/\/+$/, '');
     const url = cleanBaseURL.endsWith('/api') 
       ? `${cleanBaseURL}/track` 
-      : `${cleanBaseURL}/api/track`;
+      : `${cleanBaseURL}/track`;
     
     // Use fetch with timeout and don't wait for response
     fetch(url, {
