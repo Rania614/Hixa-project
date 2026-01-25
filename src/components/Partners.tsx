@@ -45,12 +45,12 @@ export const Partners = () => {
           <div className="w-20 h-1 bg-gold mx-auto mb-6"></div>
           
           {/* Join Hixa Button */}
-          <Button
+          {/* <Button
             onClick={() => setIsRegistrationModalOpen(true)}
             className="bg-gold hover:bg-gold-dark text-black font-semibold px-8 py-6 text-lg"
           >
             {isAr ? 'انضم إلى Hixa' : 'Join Hixa'}
-          </Button>
+          </Button> */}
         </div>
 
         <div className="relative">

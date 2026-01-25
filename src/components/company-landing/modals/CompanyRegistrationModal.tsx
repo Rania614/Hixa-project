@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { X, Upload, Image as ImageIcon } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { X, Upload, Image as ImageIcon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,12 +18,30 @@ interface CompanyRegistrationModalProps {
   language: "en" | "ar";
 }
 
+type BusinessType = "Contracting" | "Design" | "Finishing" | "Consulting" | "Project Management" | "Other";
+type AdType = "عادي" | "مميز";
+
+interface PartnerRequestFormState {
+  companyName: string;
+  businessType: BusinessType | "";
+  description: string;
+  phone: string;
+  email: string;
+  city: string;
+  adType: AdType;
+}
+
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
+
 export const CompanyRegistrationModal: React.FC<CompanyRegistrationModalProps> = ({
   open,
   onClose,
   language,
 }) => {
-  const [formData, setFormData] = useState({
+  const isAr = language === "ar";
+
+  const [form, setForm] = useState<PartnerRequestFormState>({
     companyName: "",
     businessType: "",
     description: "",
@@ -33,262 +51,158 @@ export const CompanyRegistrationModal: React.FC<CompanyRegistrationModalProps> =
     adType: "عادي",
   });
 
-  const [companyLogo, setCompanyLogo] = useState<File | null>(null);
-  const [portfolioImages, setPortfolioImages] = useState<File[]>([]);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [portfolioPreviews, setPortfolioPreviews] = useState<string[]>([]);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+  const [portfolioFiles, setPortfolioFiles] = useState<File[]>([]);
+  const [portfolioPreviewUrls, setPortfolioPreviewUrls] = useState<string[]>([]);
+
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const isAr = language === "ar";
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
+  const portfolioInputRef = useRef<HTMLInputElement | null>(null);
 
-  const businessTypes = [
-    { value: "Contracting", label: { en: "Contracting", ar: "مقاولات" } },
-    { value: "Design", label: { en: "Design", ar: "تصميم" } },
-    { value: "Finishing", label: { en: "Finishing", ar: "تشطيب" } },
-    { value: "Consulting", label: { en: "Consulting", ar: "استشارات" } },
-    {
-      value: "Project Management",
-      label: { en: "Project Management", ar: "إدارة المشاريع" },
-    },
-    { value: "Other", label: { en: "Other", ar: "أخرى" } },
-  ];
+  const businessTypes = useMemo(
+    () => [
+      { value: "Contracting", label: { en: "Contracting", ar: "مقاولات" } },
+      { value: "Design", label: { en: "Design", ar: "تصميم" } },
+      { value: "Finishing", label: { en: "Finishing", ar: "تشطيب" } },
+      { value: "Consulting", label: { en: "Consulting", ar: "استشارات" } },
+      { value: "Project Management", label: { en: "Project Management", ar: "إدارة المشاريع" } },
+      { value: "Other", label: { en: "Other", ar: "أخرى" } },
+    ],
+    []
+  );
 
-  const adTypes = [
-    { value: "عادي", label: { en: "Normal", ar: "عادي" } },
-    { value: "مميز", label: { en: "Featured", ar: "مميز" } },
-  ];
+  const adTypes = useMemo(
+    () => [
+      { value: "عادي", label: { en: "Normal", ar: "عادي" } },
+      { value: "مميز", label: { en: "Featured", ar: "مميز" } },
+    ],
+    []
+  );
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }));
-    }
+  const setField = (key: keyof PartnerRequestFormState, value: string) => {
+    setForm((prev) => ({ ...prev, [key]: value } as PartnerRequestFormState));
+    if (errors[key]) setErrors((prev) => ({ ...prev, [key]: "" }));
   };
 
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }));
+  const validateImageFile = (file: File): string | null => {
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      return isAr ? "حجم الصورة كبير جداً (الحد الأقصى 5 ميجابايت)" : "Image size too large (max 5MB)";
     }
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      return isAr
+        ? "نوع الملف غير مدعوم. يرجى رفع صورة بصيغة jpeg, jpg, png, gif, أو webp"
+        : "File type not supported. Please upload jpeg, jpg, png, gif, or webp";
+    }
+    return null;
+  };
+
+  const handleLogoPicked = (file: File) => {
+    const err = validateImageFile(file);
+    if (err) {
+      toast.error(err);
+      if (logoInputRef.current) logoInputRef.current.value = "";
+      return;
+    }
+
+    setLogoFile(file);
+
+    const reader = new FileReader();
+    reader.onloadend = () => setLogoPreviewUrl(reader.result as string);
+    reader.onerror = () => toast.error(isAr ? "فشل قراءة الصورة" : "Failed to read image");
+    reader.readAsDataURL(file);
   };
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    e.stopPropagation(); // Prevent form submission or re-render issues
-    
     const file = e.target.files?.[0];
-    if (!file) {
-      return;
-    }
-
-    // Validate file size before setting state
-    if (file.size > 5 * 1024 * 1024) {
-      // 5MB limit
-      toast.error(
-        isAr
-          ? "حجم الصورة كبير جداً (الحد الأقصى 5 ميجابايت)"
-          : "Image size too large (max 5MB)"
-      );
-      // Reset file input
-      e.target.value = '';
-      return;
-    }
-
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      toast.error(
-        isAr
-          ? "نوع الملف غير مدعوم. يرجى رفع صورة بصيغة jpeg, jpg, png, gif, أو webp"
-          : "File type not supported. Please upload jpeg, jpg, png, gif, or webp"
-      );
-      e.target.value = '';
-      return;
-    }
-
-    // Set logo file (this preserves formData state)
-    setCompanyLogo(file);
-    
-    // Create preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setLogoPreview(reader.result as string);
-    };
-    reader.onerror = () => {
-      toast.error(isAr ? "فشل قراءة الصورة" : "Failed to read image");
-    };
-    reader.readAsDataURL(file);
-    
-    // Clear error if exists
-    if (errors.companyLogo) {
-      setErrors((prev) => ({ ...prev, companyLogo: "" }));
-    }
+    if (!file) return;
+    handleLogoPicked(file);
   };
 
   const handlePortfolioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    e.stopPropagation(); // Prevent form submission or re-render issues
-    
     const files = Array.from(e.target.files || []);
-    
-    if (files.length === 0) {
-      return;
-    }
+    if (files.length === 0) return;
 
-    // Validate number of files
-    if (files.length > 2) {
-      toast.error(
-        isAr
-          ? "يمكنك رفع صورة أو صورتين فقط"
-          : "You can upload 1-2 images only"
-      );
-      e.target.value = '';
-      return;
-    }
+    // enforce max 2
+    const sliced = files.slice(0, 2);
+    const valid: File[] = [];
 
-    // Validate each file (size and type)
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    const validFiles: File[] = [];
-    
-    for (const file of files) {
-      if (file.size > 5 * 1024 * 1024) {
-        // 5MB limit
-        toast.error(
-          isAr
-            ? `حجم الصورة "${file.name}" كبير جداً (الحد الأقصى 5 ميجابايت)`
-            : `Image "${file.name}" size too large (max 5MB)`
-        );
-        continue; // Skip invalid file but continue with others
+    for (const f of sliced) {
+      const err = validateImageFile(f);
+      if (err) {
+        toast.error(err);
+        continue;
       }
-      
-      if (!allowedTypes.includes(file.type)) {
-        toast.error(
-          isAr
-            ? `نوع الملف "${file.name}" غير مدعوم`
-            : `File type "${file.name}" not supported`
-        );
-        continue; // Skip invalid file but continue with others
-      }
-      
-      validFiles.push(file);
+      valid.push(f);
     }
 
-    // Only set valid files (preserves formData state)
-    if (validFiles.length > 0) {
-      setPortfolioImages(validFiles);
-      const previews = validFiles.map((file) => URL.createObjectURL(file));
-      setPortfolioPreviews(previews);
-    } else {
-      // No valid files - reset input
-      e.target.value = '';
-    }
+    // Replace current selection (simpler + matches UI text)
+    setPortfolioFiles(valid);
+    // revoke old
+    portfolioPreviewUrls.forEach((u) => URL.revokeObjectURL(u));
+    setPortfolioPreviewUrls(valid.map((f) => URL.createObjectURL(f)));
   };
 
   const removePortfolioImage = (index: number) => {
-    const newImages = portfolioImages.filter((_, i) => i !== index);
-    const newPreviews = portfolioPreviews.filter((_, i) => i !== index);
-    setPortfolioImages(newImages);
-    setPortfolioPreviews(newPreviews);
+    setPortfolioFiles((prev) => prev.filter((_, i) => i !== index));
+    setPortfolioPreviewUrls((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      // revoke removed url
+      const removed = prev[index];
+      if (removed) URL.revokeObjectURL(removed);
+      return next;
+    });
   };
 
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
+  const validate = (): boolean => {
+    const next: Record<string, string> = {};
 
-    if (!formData.companyName.trim()) {
-      newErrors.companyName = isAr
-        ? "اسم الشركة مطلوب"
-        : "Company name is required";
-    }
+    if (!form.companyName.trim()) next.companyName = isAr ? "اسم الشركة مطلوب" : "Company name is required";
+    if (!form.businessType) next.businessType = isAr ? "نوع العمل مطلوب" : "Business type is required";
+    if (!form.phone.trim()) next.phone = isAr ? "رقم الهاتف مطلوب" : "Phone number is required";
+    if (!form.email.trim()) next.email = isAr ? "البريد الإلكتروني مطلوب" : "Email is required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()))
+      next.email = isAr ? "البريد الإلكتروني غير صحيح" : "Invalid email format";
+    if (!form.city.trim()) next.city = isAr ? "المدينة مطلوبة" : "City is required";
 
-    if (!formData.businessType) {
-      newErrors.businessType = isAr
-        ? "نوع العمل مطلوب"
-        : "Business type is required";
-    }
-
-    if (!formData.phone.trim()) {
-      newErrors.phone = isAr
-        ? "رقم الهاتف مطلوب"
-        : "Phone number is required";
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = isAr ? "البريد الإلكتروني مطلوب" : "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = isAr
-        ? "البريد الإلكتروني غير صحيح"
-        : "Invalid email format";
-    }
-
-    if (!formData.city.trim()) {
-      newErrors.city = isAr ? "المدينة مطلوبة" : "City is required";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setErrors(next);
+    return Object.keys(next).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
+    if (submitting) return;
+    if (!validate()) return;
 
     try {
       setSubmitting(true);
 
-      const formDataToSend = new FormData();
-      formDataToSend.append("companyName", formData.companyName);
-      formDataToSend.append("businessType", formData.businessType);
-      formDataToSend.append("description", formData.description);
-      formDataToSend.append("phone", formData.phone);
-      formDataToSend.append("email", formData.email);
-      formDataToSend.append("city", formData.city);
-      formDataToSend.append("adType", formData.adType);
+      const fd = new FormData();
+      // These keys match what you showed from the DB record
+      fd.append("companyName", form.companyName.trim());
+      fd.append("businessType", form.businessType);
+      fd.append("description", form.description.trim());
+      fd.append("phone", form.phone.trim());
+      fd.append("email", form.email.trim());
+      fd.append("city", form.city.trim());
+      fd.append("adType", form.adType);
 
-      if (companyLogo) {
-        formDataToSend.append("logo", companyLogo);
-        console.log('📤 Adding logo to FormData:', {
-          name: companyLogo.name,
-          size: companyLogo.size,
-          type: companyLogo.type
-        });
+      // Logo: file upload (backend should store logo URL/path into `logo`)
+      if (logoFile) {
+        fd.append("logo", logoFile);
       }
 
-      // Append portfolio images with the correct field name
-      portfolioImages.forEach((image, index) => {
-        formDataToSend.append("portfolioImages", image);
-        console.log(`📤 Adding portfolio image ${index + 1} to FormData:`, {
-          name: image.name,
-          size: image.size,
-          type: image.type
-        });
-      });
+      // Optional portfolio images (0-2)
+      portfolioFiles.forEach((img) => fd.append("portfolioImages", img));
 
-      // Log FormData contents for debugging
-      console.log('📤 FormData contents:', {
-        hasLogo: !!companyLogo,
-        portfolioCount: portfolioImages.length,
-        allFields: Array.from(formDataToSend.keys())
-      });
+      await http.post("/partner-requests", fd);
 
-      // Submit to API
-      await http.post("/partner-requests", formDataToSend);
+      toast.success(isAr ? "تم إرسال الطلب بنجاح" : "Request submitted successfully");
 
-      toast.success(
-        isAr
-          ? "تم إرسال طلب التسجيل بنجاح"
-          : "Registration request submitted successfully"
-      );
-
-      // Reset form
-      setFormData({
+      // Reset on success only
+      setForm({
         companyName: "",
         businessType: "",
         description: "",
@@ -297,323 +211,275 @@ export const CompanyRegistrationModal: React.FC<CompanyRegistrationModalProps> =
         city: "",
         adType: "عادي",
       });
-      setCompanyLogo(null);
-      setPortfolioImages([]);
-      setLogoPreview(null);
-      setPortfolioPreviews([]);
+      setLogoFile(null);
+      setLogoPreviewUrl(null);
+      if (logoInputRef.current) logoInputRef.current.value = "";
+      setPortfolioFiles([]);
+      portfolioPreviewUrls.forEach((u) => URL.revokeObjectURL(u));
+      setPortfolioPreviewUrls([]);
+      if (portfolioInputRef.current) portfolioInputRef.current.value = "";
       setErrors({});
 
       onClose();
-    } catch (error: any) {
-      console.error("Error submitting registration:", error);
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        (isAr ? "فشل إرسال الطلب" : "Failed to submit registration");
-      toast.error(errorMessage);
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        (isAr ? "فشل إرسال الطلب" : "Failed to submit request");
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleClose = () => {
-    if (!submitting) {
-      onClose();
-    }
+    if (!submitting) onClose();
   };
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Dark Overlay */}
+    <div className={`fixed inset-0 z-50 ${open ? "" : "pointer-events-none opacity-0"} transition-opacity`}>
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
         onMouseDown={(e) => {
-          // Close only when clicking the overlay itself
           if (e.target === e.currentTarget) handleClose();
         }}
-      ></div>
+      />
 
-      {/* Modal Content */}
-      <div
-        className="relative z-50 w-full max-w-2xl max-h-[90vh] bg-card rounded-2xl shadow-2xl overflow-hidden flex flex-col"
-        dir={isAr ? "rtl" : "ltr"}
-        onMouseDown={(e) => {
-          // Prevent overlay close when interacting inside the modal
-          e.stopPropagation();
-        }}
-      >
-        {/* Modal Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border">
-          <h2 className="text-2xl font-bold text-card-foreground">
-            {isAr ? "تسجيل شركتك" : "Register Your Company"}
-          </h2>
-          <button
-            onClick={handleClose}
-            disabled={submitting}
-            className="text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-muted disabled:opacity-50"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Modal Body */}
-        <form
-          onSubmit={handleSubmit}
-          className="flex-1 overflow-y-auto p-6 space-y-6"
+      <div className="absolute inset-0 flex items-center justify-center p-4">
+        <div
+          className="relative z-50 w-full max-w-2xl max-h-[90vh] bg-card rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+          dir={isAr ? "rtl" : "ltr"}
+          onMouseDown={(e) => e.stopPropagation()}
         >
-          {/* Company Name */}
-          <div>
-            <label className="block text-sm font-medium text-card-foreground mb-2">
-              {isAr ? "اسم الشركة" : "Company Name"}{" "}
-              <span className="text-red-500">*</span>
-            </label>
-            <Input
-              type="text"
-              name="companyName"
-              value={formData.companyName}
-              onChange={handleInputChange}
-              required
-              className={errors.companyName ? "border-red-500" : ""}
-              placeholder={
-                isAr ? "أدخل اسم الشركة" : "Enter company name"
-              }
-            />
-            {errors.companyName && (
-              <p className="text-red-500 text-xs mt-1">{errors.companyName}</p>
-            )}
-          </div>
-
-          {/* Business Type */}
-          <div>
-            <label className="block text-sm font-medium text-card-foreground mb-2">
-              {isAr ? "نوع العمل" : "Business Type"}{" "}
-              <span className="text-red-500">*</span>
-            </label>
-            <Select
-              value={formData.businessType}
-              onValueChange={(value) => handleSelectChange("businessType", value)}
+          <div className="flex items-center justify-between p-6 border-b border-border">
+            <h2 className="text-2xl font-bold text-card-foreground">
+              {isAr ? "تسجيل شركتك" : "Register Your Company"}
+            </h2>
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={submitting}
+              className="text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-muted disabled:opacity-50"
+              aria-label="Close"
             >
-              <SelectTrigger
-                className={errors.businessType ? "border-red-500" : ""}
-              >
-                <SelectValue
-                  placeholder={
-                    isAr ? "اختر نوع العمل" : "Select business type"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {businessTypes.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label[language]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.businessType && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.businessType}
-              </p>
-            )}
+              <X className="h-5 w-5" />
+            </button>
           </div>
 
-          {/* Short Description */}
-          <div>
-            <label className="block text-sm font-medium text-card-foreground mb-2">
-              {isAr ? "وصف مختصر" : "Short Description"}
-            </label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              rows={4}
-              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
-              placeholder={
-                isAr
-                  ? "أدخل وصف مختصر عن الشركة"
-                  : "Enter a short description about the company"
-              }
-            />
-          </div>
-
-          {/* Phone Number */}
-          <div>
-            <label className="block text-sm font-medium text-card-foreground mb-2">
-              {isAr ? "رقم الهاتف" : "Phone Number"}{" "}
-              <span className="text-red-500">*</span>
-            </label>
-            <Input
-              type="tel"
-              name="phone"
-              value={formData.phone}
-              onChange={handleInputChange}
-              required
-              className={errors.phone ? "border-red-500" : ""}
-              placeholder={isAr ? "+201234567890" : "+1234567890"}
-            />
-            {errors.phone && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.phone}
-              </p>
-            )}
-          </div>
-
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-medium text-card-foreground mb-2">
-              {isAr ? "البريد الإلكتروني" : "Email"}{" "}
-              <span className="text-red-500">*</span>
-            </label>
-            <Input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              required
-              className={errors.email ? "border-red-500" : ""}
-              placeholder={isAr ? "email@example.com" : "your.email@example.com"}
-            />
-            {errors.email && (
-              <p className="text-red-500 text-xs mt-1">{errors.email}</p>
-            )}
-          </div>
-
-          {/* City */}
-          <div>
-            <label className="block text-sm font-medium text-card-foreground mb-2">
-              {isAr ? "المدينة" : "City"}{" "}
-              <span className="text-red-500">*</span>
-            </label>
-            <Input
-              type="text"
-              name="city"
-              value={formData.city}
-              onChange={handleInputChange}
-              required
-              className={errors.city ? "border-red-500" : ""}
-              placeholder={isAr ? "أدخل المدينة" : "Enter city"}
-            />
-            {errors.city && (
-              <p className="text-red-500 text-xs mt-1">{errors.city}</p>
-            )}
-          </div>
-
-          {/* Company Logo */}
-          <div>
-            <label className="block text-sm font-medium text-card-foreground mb-2">
-              {isAr ? "شعار الشركة" : "Company Logo"}
-            </label>
-            <div className="flex items-center gap-4">
-              <div 
-                className="relative flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const input = document.getElementById('logo-upload-input') as HTMLInputElement;
-                  if (input && !submitting) {
-                    input.click();
-                  }
-                }}
-              >
-                {logoPreview ? (
-                  <img
-                    src={logoPreview}
-                    alt="Logo preview"
-                    className="w-full h-full object-contain rounded-lg pointer-events-none"
-                  />
-                ) : (
-                  <>
-                    <Upload className="h-8 w-8 text-muted-foreground mb-2 pointer-events-none" />
-                    <span className="text-xs text-muted-foreground pointer-events-none">
-                      {isAr ? "رفع" : "Upload"}
-                    </span>
-                  </>
-                )}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                  onChange={handleLogoChange}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  disabled={submitting}
-                  id="logo-upload-input"
-                />
-              </div>
-              {logoPreview && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setCompanyLogo(null);
-                    setLogoPreview(null);
-                  }}
-                  disabled={submitting}
-                >
-                  {isAr ? "إزالة" : "Remove"}
-                </Button>
-              )}
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-card-foreground mb-2">
+                {isAr ? "اسم الشركة" : "Company Name"} <span className="text-red-500">*</span>
+              </label>
+              <Input
+                name="companyName"
+                value={form.companyName}
+                onChange={(e) => setField("companyName", e.target.value)}
+                disabled={submitting}
+                className={errors.companyName ? "border-red-500" : ""}
+                placeholder={isAr ? "أدخل اسم الشركة" : "Enter company name"}
+              />
+              {errors.companyName && <p className="text-red-500 text-xs mt-1">{errors.companyName}</p>}
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              {isAr
-                ? "الحد الأقصى 5 ميجابايت"
-                : "Max 5MB"}
-            </p>
-          </div>
 
-          {/* Portfolio Images */}
-          <div>
-            <label className="block text-sm font-medium text-card-foreground mb-2">
-              {isAr ? "صور المحفظة" : "Portfolio Images"} ({isAr ? "اختياري" : "Optional"})
-            </label>
-            <div className="space-y-4">
-              <div 
-                className="relative flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (submitting || portfolioImages.length >= 2) return;
-                  const input = document.getElementById('portfolio-upload-input') as HTMLInputElement;
-                  if (input) {
-                    input.click();
-                  }
-                }}
+            <div>
+              <label className="block text-sm font-medium text-card-foreground mb-2">
+                {isAr ? "نوع العمل" : "Business Type"} <span className="text-red-500">*</span>
+              </label>
+              <Select
+                value={form.businessType}
+                onValueChange={(v) => setField("businessType", v)}
+                disabled={submitting}
               >
-                <ImageIcon className="h-8 w-8 text-muted-foreground mb-2 pointer-events-none" />
-                <span className="text-sm text-muted-foreground pointer-events-none">
+                <SelectTrigger className={errors.businessType ? "border-red-500" : ""}>
+                  <SelectValue placeholder={isAr ? "اختر نوع العمل" : "Select business type"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {businessTypes.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label[language]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.businessType && <p className="text-red-500 text-xs mt-1">{errors.businessType}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-card-foreground mb-2">
+                {isAr ? "وصف مختصر" : "Short Description"}
+              </label>
+              <textarea
+                name="description"
+                value={form.description}
+                onChange={(e) => setField("description", e.target.value)}
+                disabled={submitting}
+                rows={4}
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                placeholder={isAr ? "أدخل وصف مختصر عن الشركة" : "Enter a short description about the company"}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-card-foreground mb-2">
+                  {isAr ? "رقم الهاتف" : "Phone Number"} <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  name="phone"
+                  value={form.phone}
+                  onChange={(e) => setField("phone", e.target.value)}
+                  disabled={submitting}
+                  className={errors.phone ? "border-red-500" : ""}
+                  placeholder={isAr ? "+201234567890" : "+1234567890"}
+                />
+                {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-card-foreground mb-2">
+                  {isAr ? "البريد الإلكتروني" : "Email"} <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={(e) => setField("email", e.target.value)}
+                  disabled={submitting}
+                  className={errors.email ? "border-red-500" : ""}
+                  placeholder={isAr ? "email@example.com" : "your.email@example.com"}
+                />
+                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-card-foreground mb-2">
+                {isAr ? "المدينة" : "City"} <span className="text-red-500">*</span>
+              </label>
+              <Input
+                name="city"
+                value={form.city}
+                onChange={(e) => setField("city", e.target.value)}
+                disabled={submitting}
+                className={errors.city ? "border-red-500" : ""}
+                placeholder={isAr ? "أدخل المدينة" : "Enter city"}
+              />
+              {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-card-foreground mb-2">
+                {isAr ? "نوع الإعلان" : "Ad Type"}
+              </label>
+              <Select value={form.adType} onValueChange={(v) => setField("adType", v)} disabled={submitting}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {adTypes.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label[language]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Logo upload */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-card-foreground">
+                  {isAr ? "شعار الشركة" : "Company Logo"}
+                </label>
+                <span className="text-xs text-muted-foreground">{isAr ? "اختياري" : "Optional"}</span>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <label
+                  className={`relative flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors ${
+                    submitting ? "opacity-60 cursor-not-allowed" : ""
+                  }`}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  {logoPreviewUrl ? (
+                    <img
+                      src={logoPreviewUrl}
+                      alt="Logo preview"
+                      className="w-full h-full object-contain rounded-lg"
+                    />
+                  ) : (
+                    <>
+                      <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                      <span className="text-xs text-muted-foreground">{isAr ? "رفع" : "Upload"}</span>
+                    </>
+                  )}
+
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                    onChange={handleLogoChange}
+                    disabled={submitting}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                </label>
+
+                {logoPreviewUrl && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={submitting}
+                    onClick={() => {
+                      setLogoFile(null);
+                      setLogoPreviewUrl(null);
+                      if (logoInputRef.current) logoInputRef.current.value = "";
+                    }}
+                  >
+                    {isAr ? "إزالة" : "Remove"}
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">{isAr ? "الحد الأقصى 5 ميجابايت" : "Max 5MB"}</p>
+            </div>
+
+            {/* Portfolio images (optional) */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-card-foreground">
+                {isAr ? "صور المحفظة (اختياري)" : "Portfolio Images (Optional)"}
+              </label>
+
+              <label
+                className={`relative flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors ${
+                  submitting ? "opacity-60 cursor-not-allowed" : ""
+                }`}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <ImageIcon className="h-8 w-8 text-muted-foreground mb-2" />
+                <span className="text-sm text-muted-foreground">
                   {isAr
                     ? "رفع 1-2 صور (الحد الأقصى 5 ميجابايت لكل صورة)"
                     : "Upload 1-2 images (max 5MB per image)"}
                 </span>
                 <input
+                  ref={portfolioInputRef}
                   type="file"
                   accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                   multiple
                   onChange={handlePortfolioChange}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
+                  disabled={submitting}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  disabled={submitting || portfolioImages.length >= 2}
-                  id="portfolio-upload-input"
                 />
-              </div>
+              </label>
 
-              {/* Portfolio Previews */}
-              {portfolioPreviews.length > 0 && (
+              {portfolioPreviewUrls.length > 0 && (
                 <div className="grid grid-cols-2 gap-4">
-                  {portfolioPreviews.map((preview, index) => (
-                    <div key={index} className="relative">
+                  {portfolioPreviewUrls.map((preview, idx) => (
+                    <div key={idx} className="relative">
                       <img
                         src={preview}
-                        alt={`Portfolio ${index + 1}`}
+                        alt={`Portfolio ${idx + 1}`}
                         className="w-full h-32 object-cover rounded-lg border border-border"
                       />
                       <button
@@ -621,10 +487,11 @@ export const CompanyRegistrationModal: React.FC<CompanyRegistrationModalProps> =
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          removePortfolioImage(index);
+                          removePortfolioImage(idx);
                         }}
                         disabled={submitting}
                         className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 disabled:opacity-50"
+                        aria-label="Remove portfolio image"
                       >
                         <X className="h-4 w-4" />
                       </button>
@@ -633,58 +500,33 @@ export const CompanyRegistrationModal: React.FC<CompanyRegistrationModalProps> =
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Ad Type */}
-          <div>
-            <label className="block text-sm font-medium text-card-foreground mb-2">
-              {isAr ? "نوع الإعلان" : "Ad Type"}
-            </label>
-            <Select
-              value={formData.adType}
-              onValueChange={(value) => handleSelectChange("adType", value)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {adTypes.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label[language]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Submit Button */}
-          <div className="flex justify-end gap-4 pt-4 border-t border-border">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={submitting}
-              className="px-6"
-            >
-              {isAr ? "إلغاء" : "Cancel"}
-            </Button>
-            <Button
-              type="submit"
-              disabled={submitting}
-              className="px-6 bg-gold hover:bg-gold-dark text-black font-semibold disabled:opacity-50"
-            >
-              {submitting
-                ? isAr
-                  ? "جاري الإرسال..."
-                  : "Submitting..."
-                : isAr
-                ? "سجل الآن"
-                : "Register Now"}
-            </Button>
-          </div>
-        </form>
+            <div className="flex justify-end gap-4 pt-4 border-t border-border">
+              <Button type="button" variant="outline" onClick={handleClose} disabled={submitting} className="px-6">
+                {isAr ? "إلغاء" : "Cancel"}
+              </Button>
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="px-6 bg-gold hover:bg-gold-dark text-black font-semibold disabled:opacity-50"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {isAr ? "جاري الإرسال..." : "Submitting..."}
+                  </>
+                ) : isAr ? (
+                  "سجل الآن"
+                ) : (
+                  "Register Now"
+                )}
+              </Button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
 };
+
 

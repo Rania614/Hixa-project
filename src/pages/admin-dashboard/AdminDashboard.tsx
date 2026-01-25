@@ -339,7 +339,7 @@ const AdminDashboard = () => {
                 {loading ? (
                   <div className="flex items-center justify-center h-32">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
+                      </div>
                 ) : (
                   <div className="space-y-3">
                     <div className="text-center pb-3 border-b border-border/50">
@@ -347,7 +347,7 @@ const AdminDashboard = () => {
                       <p className="text-xs text-muted-foreground">
                         {isAr ? 'إجمالي المشاريع على المنصة' : 'Total projects on the platform'}
                       </p>
-                    </div>
+                        </div>
                     {projectsList.length === 0 ? (
                       <div className="text-center py-4 text-muted-foreground text-sm">
                         {isAr ? 'لا توجد مشاريع' : 'No projects found'}
@@ -371,13 +371,13 @@ const AdminDashboard = () => {
                                   )}
                                 </p>
                               )}
-                            </div>
+                      </div>
                             <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">
                               #{index + 1}
                             </span>
-                          </div>
-                        ))}
-                      </div>
+                    </div>
+                  ))}
+                </div>
                     )}
                   </div>
                 )}
