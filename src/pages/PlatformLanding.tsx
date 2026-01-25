@@ -338,8 +338,8 @@ const Landing = () => {
                     <><span className="text-white">HIXA</span> <span className="text-yellow-500">NEWS</span></>
                   )}
                 </h3>
-                <p className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.3em]">
-                  {isAr ? 'اشترك في النشرة الإخبارية للحصول على آخر التحديثات' : 'SUBSCRIBE TO OUR NEWSLETTER FOR LATEST UPDATES'}
+                <p className="text-gray-500 text-[20px] font-bold uppercase tracking-[0.3em]">
+                  {isAr ? 'اشترك في النشرة الإخبارية للحصول على آخر المشاريع  والتحديثات' : 'SUBSCRIBE TO OUR NEWSLETTER FOR LATEST UPDATES'}
                 </p>
               </div>
 

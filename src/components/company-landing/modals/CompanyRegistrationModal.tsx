@@ -329,13 +329,20 @@ export const CompanyRegistrationModal: React.FC<CompanyRegistrationModalProps> =
       {/* Dark Overlay */}
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-        onClick={handleClose}
+        onMouseDown={(e) => {
+          // Close only when clicking the overlay itself
+          if (e.target === e.currentTarget) handleClose();
+        }}
       ></div>
 
       {/* Modal Content */}
       <div
         className="relative z-50 w-full max-w-2xl max-h-[90vh] bg-card rounded-2xl shadow-2xl overflow-hidden flex flex-col"
         dir={isAr ? "rtl" : "ltr"}
+        onMouseDown={(e) => {
+          // Prevent overlay close when interacting inside the modal
+          e.stopPropagation();
+        }}
       >
         {/* Modal Header */}
         <div className="flex items-center justify-between p-6 border-b border-border">
@@ -500,17 +507,27 @@ export const CompanyRegistrationModal: React.FC<CompanyRegistrationModalProps> =
               {isAr ? "شعار الشركة" : "Company Logo"}
             </label>
             <div className="flex items-center gap-4">
-              <div className="relative flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+              <div 
+                className="relative flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const input = document.getElementById('logo-upload-input') as HTMLInputElement;
+                  if (input && !submitting) {
+                    input.click();
+                  }
+                }}
+              >
                 {logoPreview ? (
                   <img
                     src={logoPreview}
                     alt="Logo preview"
-                    className="w-full h-full object-contain rounded-lg"
+                    className="w-full h-full object-contain rounded-lg pointer-events-none"
                   />
                 ) : (
                   <>
-                    <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                    <span className="text-xs text-muted-foreground">
+                    <Upload className="h-8 w-8 text-muted-foreground mb-2 pointer-events-none" />
+                    <span className="text-xs text-muted-foreground pointer-events-none">
                       {isAr ? "رفع" : "Upload"}
                     </span>
                   </>
@@ -519,6 +536,9 @@ export const CompanyRegistrationModal: React.FC<CompanyRegistrationModalProps> =
                   type="file"
                   accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                   onChange={handleLogoChange}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   disabled={submitting}
                   id="logo-upload-input"
@@ -554,9 +574,20 @@ export const CompanyRegistrationModal: React.FC<CompanyRegistrationModalProps> =
               {isAr ? "صور المحفظة" : "Portfolio Images"} ({isAr ? "اختياري" : "Optional"})
             </label>
             <div className="space-y-4">
-              <div className="relative flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
-                <ImageIcon className="h-8 w-8 text-muted-foreground mb-2" />
-                <span className="text-sm text-muted-foreground">
+              <div 
+                className="relative flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (submitting || portfolioImages.length >= 2) return;
+                  const input = document.getElementById('portfolio-upload-input') as HTMLInputElement;
+                  if (input) {
+                    input.click();
+                  }
+                }}
+              >
+                <ImageIcon className="h-8 w-8 text-muted-foreground mb-2 pointer-events-none" />
+                <span className="text-sm text-muted-foreground pointer-events-none">
                   {isAr
                     ? "رفع 1-2 صور (الحد الأقصى 5 ميجابايت لكل صورة)"
                     : "Upload 1-2 images (max 5MB per image)"}
@@ -566,6 +597,9 @@ export const CompanyRegistrationModal: React.FC<CompanyRegistrationModalProps> =
                   accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                   multiple
                   onChange={handlePortfolioChange}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   disabled={submitting || portfolioImages.length >= 2}
                   id="portfolio-upload-input"
