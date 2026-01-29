@@ -130,6 +130,26 @@ const AdminAnalytics = () => {
     return () => clearInterval(interval);
   }, [isAr]);
 
+  // Page name mapping
+  const getPageName = (path: string) => {
+    const mapping: Record<string, string> = isAr ? {
+      '/': 'الموقع التعريفي للشركة',
+      '/platform': 'المنصة',
+      '/auth/partner': 'بوابة الشركاء',
+      '/client/login': 'دخول العملاء',
+      '/forgot-password': 'نسيان كلمة المرور',
+      '/reset-password': 'إعادة تعيين كلمة المرور',
+    } : {
+      '/': 'Company Landing Page',
+      '/platform': 'Platform',
+      '/auth/partner': 'Partner Portal',
+      '/client/login': 'Client Login',
+      '/forgot-password': 'Forgot Password',
+      '/reset-password': 'Reset Password',
+    };
+    return mapping[path] || path;
+  };
+
   // Data Normalization & Filtering
   const normalizedPageViews = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -141,19 +161,20 @@ const AdminAnalytics = () => {
       // Ignore admin and auth pages
       if (page.startsWith('/admin') || page.startsWith('/auth')) return;
 
-      counts[page] = (counts[page] || 0) + pv.views;
+      const displayName = getPageName(page);
+      counts[displayName] = (counts[displayName] || 0) + pv.views;
     });
     return Object.entries(counts)
       .map(([page, views]) => ({ page, views }))
       .sort((a, b) => b.views - a.views);
-  }, [pageViews]);
+  }, [pageViews, isAr]);
 
   const topInteractions = useMemo(() => {
     const counts: Record<string, number> = {};
     activity.forEach(item => {
-      if (item.event === 'click' && item.data?.target) {
-        const key = item.data.target;
-        counts[key] = (counts[key] || 0) + 1;
+      if (item.event === 'click') {
+        const key = item.data?.text || item.data?.target;
+        if (key) counts[key] = (counts[key] || 0) + 1;
       }
     });
     return Object.entries(counts)
@@ -395,18 +416,18 @@ const AdminAnalytics = () => {
                           <div>
                             <div className="flex items-center gap-2 mb-1">
                               <span className={`text-xs px-2 py-0.5 rounded-full ${item.event === 'click' ? 'bg-cyan/20 text-cyan' :
-                                  item.event === 'scroll' ? 'bg-gold/20 text-gold' :
-                                    'bg-purple-500/20 text-purple-500'
+                                item.event === 'scroll' ? 'bg-gold/20 text-gold' :
+                                  'bg-purple-500/20 text-purple-500'
                                 }`}>
                                 {item.event}
                               </span>
-                              <span className="text-sm font-medium">{item.page}</span>
+                              <span className="text-sm font-medium">{getPageName(item.page)}</span>
                             </div>
                             {item.data && (
                               <p className="text-xs text-muted-foreground italic">
-                                {item.event === 'click' ? `Clicked: ${item.data.target}` :
-                                  item.event === 'scroll' ? `Reached: ${item.data.depth}%` :
-                                    `Viewed: ${item.data.section}`}
+                                {item.event === 'click' ? `${isAr ? 'تم الضغط على' : 'Clicked'}: ${item.data.text || item.data.target}` :
+                                  item.event === 'scroll' ? `${isAr ? 'وصل إلى' : 'Reached'}: ${item.data.depth}%` :
+                                    `${isAr ? 'شاهد قسم' : 'Viewed'}: ${item.data.section}`}
                               </p>
                             )}
                           </div>
@@ -426,4 +447,3 @@ const AdminAnalytics = () => {
 };
 
 export default AdminAnalytics;
-

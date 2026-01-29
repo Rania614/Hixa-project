@@ -51,13 +51,23 @@ const PageTracker = () => {
             const interactiveElement = target.closest("button, a, [role='button'], input[type='submit']");
 
             if (interactiveElement) {
-                const targetId = interactiveElement.id;
-                const targetClass = interactiveElement.className;
-                const targetText = interactiveElement.textContent?.trim().slice(0, 50);
+                const targetId = (interactiveElement.id || "").toLowerCase();
+                const targetClass = (interactiveElement.className || "").toLowerCase();
+                const targetText = (interactiveElement.textContent?.trim() || "").toLowerCase();
+
+                // Ignore "Close" buttons
+                const isCloseButton =
+                    targetId.includes("close") ||
+                    targetClass.includes("close") ||
+                    targetText === "close" ||
+                    targetText === "إغلاق" ||
+                    targetText === "x";
+
+                if (isCloseButton) return;
 
                 sendEvent("click", {
-                    target: targetId || targetClass.split(' ')[0] || interactiveElement.tagName.toLowerCase(),
-                    text: targetText
+                    target: interactiveElement.id || interactiveElement.className.split(' ')[0] || interactiveElement.tagName.toLowerCase(),
+                    text: interactiveElement.textContent?.trim().slice(0, 50)
                 });
             }
         };
