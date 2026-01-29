@@ -1,10 +1,10 @@
-import { 
-  LayoutDashboard, 
-  Users, 
-  Briefcase, 
-  FileText, 
-  MessageSquare, 
-  BarChart3, 
+import {
+  LayoutDashboard,
+  Users,
+  Briefcase,
+  FileText,
+  MessageSquare,
+  BarChart3,
   Settings,
   LogOut,
   FileEdit,
@@ -65,11 +65,11 @@ export const AdminSidebar = () => {
       icon: LayoutDashboard,
       label: language === 'en' ? 'Dashboard Overview' : 'نظرة عامة على لوحة التحكم'
     },
-    // {
-    //   to: "/admin/analytics",
-    //   icon: BarChart3,
-    //   label: language === 'en' ? 'Analytics' : 'التحليلات'
-    // },
+    {
+      to: "/admin/analytics",
+      icon: BarChart3,
+      label: language === 'en' ? 'Analytics' : 'التحليلات'
+    },
     {
       to: "/admin/content",
       icon: FileEdit,
@@ -110,8 +110,8 @@ export const AdminSidebar = () => {
       icon: MessageSquare,
       label: language === 'en' ? 'Messages' : 'الرسائل'
     },
-    
-    
+
+
     // {
     //   to: "/admin/settings",
     //   icon: Settings,

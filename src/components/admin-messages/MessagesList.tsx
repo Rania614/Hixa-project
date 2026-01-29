@@ -44,24 +44,24 @@ export const MessagesList: React.FC<MessagesListProps> = ({
                   const senderObj = typeof msg.sender === 'object' ? msg.sender : null;
                   const senderRole = msg.senderRole || senderObj?.role || (senderObj as any)?.role;
                   // Check if sender is admin - also check if sender name contains admin or if it's a system message
-                  const isAdmin = senderRole === 'admin' || 
-                                (senderObj as any)?.role === 'admin' ||
-                                msg.type === 'system' ||
-                                (msg.senderName && typeof msg.senderName === 'string' && msg.senderName.toLowerCase().includes('admin'));
+                  const isAdmin = senderRole === 'admin' ||
+                    (senderObj as any)?.role === 'admin' ||
+                    msg.type === 'system' ||
+                    (msg.senderName && typeof msg.senderName === 'string' && msg.senderName.toLowerCase().includes('admin'));
                   const isSystem = msg.type === 'system';
-                  
+
                   // Handle sender comparison (can be string or object)
-                  const prevSender = idx > 0 ? (typeof messages[idx - 1].sender === 'object' 
-                    ? (messages[idx - 1].sender as any)?._id 
+                  const prevSender = idx > 0 ? (typeof messages[idx - 1].sender === 'object'
+                    ? (messages[idx - 1].sender as any)?._id
                     : messages[idx - 1].sender) : null;
-                  const currentSender = typeof msg.sender === 'object' 
-                    ? (msg.sender as any)?._id 
+                  const currentSender = typeof msg.sender === 'object'
+                    ? (msg.sender as any)?._id
                     : msg.sender;
                   const isSameSender = prevSender === currentSender;
                   const senderName = msg.senderName || (typeof msg.sender === 'object' ? msg.sender?.name : msg.sender) || senderRole || 'Unknown';
                   const senderAvatar = typeof senderName === 'string' ? senderName.charAt(0) : 'U';
                   const showAvatar = !isAdmin && !isSystem && !isSameSender;
-                
+
                   return (
                     <MessageItem
                       key={msg._id}

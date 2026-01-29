@@ -31,14 +31,14 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       {attachments.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-1.5">
           {attachments.map((file, idx) => {
-            const fileSize = file.size > 1024 * 1024 
+            const fileSize = file.size > 1024 * 1024
               ? `${(file.size / (1024 * 1024)).toFixed(2)} MB`
               : `${(file.size / 1024).toFixed(2)} KB`;
             const fileType = file.type || 'application/octet-stream';
             const isImage = fileType.startsWith('image/');
             const isPDF = fileType === 'application/pdf';
             const isDocument = fileType.includes('word') || fileType.includes('excel') || fileType.includes('powerpoint');
-            
+
             return (
               <div
                 key={idx}

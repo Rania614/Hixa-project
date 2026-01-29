@@ -2,97 +2,22 @@ import { useState, useEffect } from 'react';
 import { AdminSidebar } from '@/components/AdminSidebar';
 import { AdminTopBar } from '@/components/AdminTopBar';
 import { useApp } from '@/context/AppContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Users, 
-  Search, 
-  Plus,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  MoreHorizontal,
-  Briefcase,
-  Building2,
-  UserCheck,
-  UserX,
-  Edit,
-  Trash2,
-  Mail,
-  Phone,
-  MapPin,
-  Loader2,
-  Filter
-} from 'lucide-react';
-import { HexagonIcon } from '@/components/ui/hexagon-icon';
+import { Briefcase, Building2, Users } from 'lucide-react';
 import { http } from '@/services/http';
 import { toast } from '@/components/ui/sonner';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 
-interface User {
-  _id?: string;
-  id?: string;
-  name?: string;
-  fullName?: string;
-  email: string;
-  phone?: string;
-  countryCode?: string;
-  role: 'engineer' | 'client' | 'company' | 'admin';
-  status: 'active' | 'pending' | 'suspended' | 'inactive';
-  joinDate?: string;
-  createdAt?: string;
-  avatar?: string;
-  companyName?: string; // For companies
-  contactPersonName?: string; // For companies
-  location?: string;
-  verified?: boolean;
-  specialization?: string; // For engineers
-  licenseNumber?: string; // For engineers
-  bio?: string;
-  country?: string;
-  city?: string;
-  nationalId?: string;
-}
+// Sub-components
+import { UserStats } from '@/components/admin-users/UserStats';
+import { UserFilters } from '@/components/admin-users/UserFilters';
+import { UserTable } from '@/components/admin-users/UserTable';
+import { AddUserModal } from '@/components/admin-users/AddUserModal';
+import { EditUserModal } from '@/components/admin-users/EditUserModal';
+import { ViewUserModal } from '@/components/admin-users/ViewUserModal';
 
-// Helper function to get user ID (supports both _id and id)
-const getUserId = (user: User): string => {
-  return user._id || user.id || '';
-};
-
-// Helper function to check if user is active (supports both status string and isActive boolean)
-const isUserActive = (user: User | any): boolean => {
-  if (user.status === 'active') return true;
-  if (user.status === 'inactive' || user.status === 'suspended' || user.status === 'pending') return false;
-  // Fallback to isActive if status doesn't exist
-  if (user.isActive !== undefined) return user.isActive === true;
-  // Default to active if neither exists
-  return true;
-};
+// Types and Helpers
+import { User, getUserId, isUserActive } from '@/types/user';
 
 const AdminUsers = () => {
   const { language } = useApp();
@@ -181,6 +106,10 @@ const AdminUsers = () => {
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'suspended'>('all');
+  const [countryFilter, setCountryFilter] = useState<string[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
+  const [countriesMeta, setCountriesMeta] = useState<{ key: string; value: string }[]>([]);
+  const [businessScopesMeta, setBusinessScopesMeta] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -191,6 +120,7 @@ const AdminUsers = () => {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [updating, setUpdating] = useState(false);
   const [loadingUser, setLoadingUser] = useState(false);
+
   const [userForm, setUserForm] = useState({
     name: '',
     email: '',
@@ -201,10 +131,11 @@ const AdminUsers = () => {
     country: '',
     city: '',
     companyName: '',
-    contactPersonName: '', // For companies
-    specialization: '', // For engineers
-    nationalId: '', // For engineers (license number)
+    contactPersonName: '',
+    specialization: '',
+    nationalId: '',
   });
+
   const [editForm, setEditForm] = useState({
     name: '',
     email: '',
@@ -214,6 +145,7 @@ const AdminUsers = () => {
     location: '',
     companyName: '',
   });
+
   const [statistics, setStatistics] = useState({
     total: 0,
     engineers: { total: 0, active: 0, pending: 0, suspended: 0 },
@@ -225,53 +157,46 @@ const AdminUsers = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      // Try different possible endpoints
-      let response;
-      const endpoints = ['/users', '/admin/users', '/users/all'];
-      
-      for (const endpoint of endpoints) {
-        try {
-          response = await http.get(endpoint);
-          if (response.data) break;
-        } catch (err: any) {
-          if (err.response?.status !== 404) throw err;
-        }
-      }
+      const params: any = {
+        page: 1,
+        limit: 100,
+      };
 
-      if (!response) {
-        // Fallback to empty array if no endpoint works
-        setUsers([]);
-        return;
-      }
+      if (activeTab === 'engineers') params.role = 'engineer';
+      else if (activeTab === 'clients') params.role = 'client';
+      else if (activeTab === 'companies') params.role = 'company';
 
+      if (searchTerm) params.search = searchTerm;
+
+      if (statusFilter === 'active') params.isActive = true;
+      else if (statusFilter === 'suspended' || (statusFilter as string) === 'inactive') params.isActive = false;
+
+      if (countryFilter.length > 0) params.country = countryFilter.join(',');
+      if (categoryFilter.length > 0) params.category = categoryFilter.join(',');
+
+      const response = await http.get('/users', { params });
       const usersData = response.data?.data || response.data?.users || response.data || [];
-      // Normalize user IDs and status - ensure _id and status exist
-      const normalizedUsers = Array.isArray(usersData) 
+
+      const normalizedUsers = Array.isArray(usersData)
         ? usersData.map((user: any) => {
-            // Normalize ID
-            const normalizedId = user._id || user.id;
-            
-            // Normalize status - convert isActive (boolean) to status (string)
-            let normalizedStatus = user.status;
-            if (!normalizedStatus && user.isActive !== undefined) {
-              // If API returns isActive (boolean), convert to status (string)
-              normalizedStatus = user.isActive ? 'active' : 'inactive';
-            } else if (!normalizedStatus) {
-              // Default to active if no status or isActive
-              normalizedStatus = 'active';
-            }
-            
-            return {
-              ...user,
-              _id: normalizedId,
-              status: normalizedStatus,
-            };
-          })
+          const normalizedId = user._id || user.id;
+          let normalizedStatus = user.status;
+          if (!normalizedStatus && user.isActive !== undefined) {
+            normalizedStatus = user.isActive ? 'active' : 'inactive';
+          } else if (!normalizedStatus) {
+            normalizedStatus = 'active';
+          }
+
+          return {
+            ...user,
+            _id: normalizedId,
+            status: normalizedStatus,
+          };
+        })
         : [];
       setUsers(normalizedUsers);
     } catch (error: any) {
       console.error('Error fetching users:', error);
-      // Don't show error for 404 - endpoint might not exist yet
       if (error.response?.status !== 404) {
         toast.error(language === 'en' ? 'Failed to load users' : 'فشل تحميل المستخدمين');
       }
@@ -281,19 +206,30 @@ const AdminUsers = () => {
     }
   };
 
+  // Fetch filter metadata
+  const fetchFilterMeta = async () => {
+    try {
+      const response = await http.get('/users/filters/meta');
+      if (response.data?.data) {
+        setCountriesMeta(response.data.data.countries || []);
+        setBusinessScopesMeta(response.data.data.businessScopes || []);
+      }
+    } catch (error) {
+      console.error('Error fetching filter metadata:', error);
+    }
+  };
+
   // Fetch statistics
   const fetchStatistics = async () => {
     try {
       const response = await http.get('/users/statistics');
       setStatistics(response.data?.data || response.data || statistics);
     } catch (error: any) {
-      // Silently handle 400/404 errors - endpoint might not exist yet
       if (error.response?.status === 400 || error.response?.status === 404) {
-        // Calculate from users if API fails
         const engineers = users.filter(u => u.role === 'engineer');
         const clients = users.filter(u => u.role === 'client');
         const companies = users.filter(u => u.role === 'company');
-        
+
         setStatistics({
           total: users.length,
           engineers: {
@@ -316,7 +252,6 @@ const AdminUsers = () => {
           },
         });
       } else {
-        // Only log non-400/404 errors
         console.error('Error fetching statistics:', error);
       }
     }
@@ -327,15 +262,10 @@ const AdminUsers = () => {
     try {
       setLoadingUser(true);
       const response = await http.get(`/users/${userId}`);
-      const userData = response.data?.data || response.data?.user || response.data;
-      return userData;
+      return response.data?.data || response.data?.user || response.data;
     } catch (error: any) {
       console.error('Error fetching user details:', error);
-      toast.error(
-        language === 'en' 
-          ? 'Failed to load user details' 
-          : 'فشل تحميل تفاصيل المستخدم'
-      );
+      toast.error(language === 'en' ? 'Failed to load user details' : 'فشل تحميل تفاصيل المستخدم');
       throw error;
     } finally {
       setLoadingUser(false);
@@ -350,15 +280,12 @@ const AdminUsers = () => {
     }
     try {
       const userData = await fetchUserDetails(userId);
-      // Normalize user ID
       if (userData && !userData._id && userData.id) {
         userData._id = userData.id;
       }
       setViewingUser(userData);
       setShowViewModal(true);
-    } catch (error) {
-      // Error already handled in fetchUserDetails
-    }
+    } catch (error) { }
   };
 
   // Open edit modal and load user data
@@ -369,13 +296,11 @@ const AdminUsers = () => {
     }
     try {
       const userData = await fetchUserDetails(userId);
-      // Normalize user ID
       if (userData && !userData._id && userData.id) {
         userData._id = userData.id;
       }
       setEditingUser(userData);
-      // Map isActive (boolean) to status (string) for form
-      const userStatus = userData.isActive !== undefined 
+      const userStatus = userData.isActive !== undefined
         ? (userData.isActive ? 'active' : 'inactive')
         : (userData.status || 'active');
       setEditForm({
@@ -388,9 +313,7 @@ const AdminUsers = () => {
         companyName: userData.companyName || '',
       });
       setShowEditModal(true);
-    } catch (error) {
-      // Error already handled in fetchUserDetails
-    }
+    } catch (error) { }
   };
 
   // Update user
@@ -420,56 +343,38 @@ const AdminUsers = () => {
         return;
       }
       await http.put(`/users/${userId}`, updateData);
-      toast.success(
-        language === 'en' 
-          ? 'User updated successfully' 
-          : 'تم تحديث المستخدم بنجاح'
-      );
+      toast.success(language === 'en' ? 'User updated successfully' : 'تم تحديث المستخدم بنجاح');
       setShowEditModal(false);
       setEditingUser(null);
       fetchUsers();
       fetchStatistics();
     } catch (error: any) {
       console.error('Error updating user:', error);
-      toast.error(
-        language === 'en' 
-          ? error.response?.data?.message || 'Failed to update user' 
-          : error.response?.data?.message || 'فشل تحديث المستخدم'
-      );
+      toast.error(language === 'en' ? error.response?.data?.message || 'Failed to update user' : error.response?.data?.message || 'فشل تحديث المستخدم');
     } finally {
       setUpdating(false);
     }
   };
 
-  // Toggle user activation (using new endpoint)
+  // Toggle user activation
   const updateUserStatus = async (userId: string) => {
     try {
       await http.patch(`/users/${userId}/toggle-activation`);
-      toast.success(
-        language === 'en' 
-          ? 'User status updated successfully' 
-          : 'تم تحديث حالة المستخدم بنجاح'
-      );
+      toast.success(language === 'en' ? 'User status updated successfully' : 'تم تحديث حالة المستخدم بنجاح');
       fetchUsers();
       fetchStatistics();
     } catch (error: any) {
       console.error('Error updating user status:', error);
-      toast.error(
-        language === 'en' 
-          ? 'Failed to update user status' 
-          : 'فشل تحديث حالة المستخدم'
-      );
+      toast.error(language === 'en' ? 'Failed to update user status' : 'فشل تحديث حالة المستخدم');
     }
   };
 
   // Delete user
   const deleteUser = async (userId: string) => {
-    if (!confirm(language === 'en' 
-      ? 'Are you sure you want to delete this user?' 
-      : 'هل أنت متأكد من حذف هذا المستخدم؟')) {
+    if (!confirm(language === 'en' ? 'Are you sure you want to delete this user?' : 'هل أنت متأكد من حذف هذا المستخدم؟')) {
       return;
     }
-    
+
     try {
       await http.delete(`/users/${userId}`);
       toast.success(language === 'en' ? 'User deleted successfully' : 'تم حذف المستخدم بنجاح');
@@ -485,46 +390,30 @@ const AdminUsers = () => {
   // Bulk delete users
   const handleBulkDelete = async () => {
     if (selectedUsers.length === 0) {
-      toast.error(
-        language === 'en' 
-          ? 'Please select users to delete' 
-          : 'يرجى اختيار المستخدمين للحذف'
-      );
+      toast.error(language === 'en' ? 'Please select users to delete' : 'يرجى اختيار المستخدمين للحذف');
       return;
     }
 
-    if (!confirm(
-      language === 'en' 
-        ? `Are you sure you want to delete ${selectedUsers.length} user(s)?` 
-        : `هل أنت متأكد من حذف ${selectedUsers.length} مستخدم؟`
-    )) {
+    if (!confirm(language === 'en' ? `Are you sure you want to delete ${selectedUsers.length} user(s)?` : `هل أنت متأكد من حذف ${selectedUsers.length} مستخدم؟`)) {
       return;
     }
 
     try {
       await http.post('/users/bulk-delete', { ids: selectedUsers });
-      toast.success(
-        language === 'en' 
-          ? `${selectedUsers.length} user(s) deleted successfully` 
-          : `تم حذف ${selectedUsers.length} مستخدم بنجاح`
-      );
+      toast.success(language === 'en' ? `${selectedUsers.length} user(s) deleted successfully` : `تم حذف ${selectedUsers.length} مستخدم بنجاح`);
       setSelectedUsers([]);
       fetchUsers();
       fetchStatistics();
     } catch (error: any) {
       console.error('Error deleting users:', error);
-      toast.error(
-        language === 'en' 
-          ? 'Failed to delete users' 
-          : 'فشل حذف المستخدمين'
-      );
+      toast.error(language === 'en' ? 'Failed to delete users' : 'فشل حذف المستخدمين');
     }
   };
 
   // Toggle user selection
   const toggleUserSelection = (userId: string) => {
-    setSelectedUsers(prev => 
-      prev.includes(userId) 
+    setSelectedUsers(prev =>
+      prev.includes(userId)
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
     );
@@ -535,40 +424,32 @@ const AdminUsers = () => {
     if (selectedUsers.length === filteredUsers.length) {
       setSelectedUsers([]);
     } else {
-      setSelectedUsers(filteredUsers.map(u => u._id));
+      setSelectedUsers(filteredUsers.map(u => getUserId(u)));
     }
   };
 
   // Add new user
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Basic validation
+
     if (!userForm.email || !userForm.password) {
       toast.error(language === 'en' ? 'Please fill all required fields' : 'يرجى ملء جميع الحقول المطلوبة');
       return;
     }
 
-    // Role-specific validation
     if (userForm.role === 'engineer') {
       if (!userForm.name || !userForm.specialization || !userForm.nationalId) {
-        toast.error(language === 'en' 
-          ? 'Please fill all required fields for engineer (Name, Specialization, License Number)' 
-          : 'يرجى ملء جميع الحقول المطلوبة للمهندس (الاسم، التخصص، رقم الترخيص)');
+        toast.error(language === 'en' ? 'Please fill all required fields for engineer' : 'يرجى ملء جميع الحقول المطلوبة للمهندس');
         return;
       }
     } else if (userForm.role === 'company') {
       if (!userForm.companyName || !userForm.contactPersonName) {
-        toast.error(language === 'en' 
-          ? 'Please fill all required fields for company (Company Name, Contact Person Name)' 
-          : 'يرجى ملء جميع الحقول المطلوبة للشركة (اسم الشركة، اسم الشخص المسؤول)');
+        toast.error(language === 'en' ? 'Please fill all required fields for company' : 'يرجى ملء جميع الحقول المطلوبة للشركة');
         return;
       }
     } else if (userForm.role === 'client') {
       if (!userForm.name) {
-        toast.error(language === 'en' 
-          ? 'Please fill all required fields for client (Name)' 
-          : 'يرجى ملء جميع الحقول المطلوبة للعميل (الاسم)');
+        toast.error(language === 'en' ? 'Please fill all required fields for client' : 'يرجى ملء جميع الحقول المطلوبة للعميل');
         return;
       }
     }
@@ -581,39 +462,31 @@ const AdminUsers = () => {
         role: userForm.role,
       };
 
-      // Set name based on role
       if (userForm.role === 'company') {
         userData.name = userForm.companyName;
       } else {
         userData.name = userForm.name;
       }
 
-      // Set nationalId (required for validation, can be empty string for non-engineers)
       userData.nationalId = userForm.role === 'engineer' ? userForm.nationalId : '';
 
       if (userForm.phone) userData.phone = userForm.phone;
       if (userForm.country) userData.country = userForm.country;
       if (userForm.city) userData.city = userForm.city;
-      // Auto-generate location if country/city provided
+
       if (userForm.country && userForm.city) {
         const countryName = countries.find(c => c.value === userForm.country)?.label || userForm.country;
         const citiesForCountry = getCitiesForCountry(userForm.country);
         const cityName = citiesForCountry.find(c => c.value === userForm.city)?.label[language] || userForm.city;
         userData.location = `${cityName}, ${countryName}`;
       }
-      
-      // Role-specific fields
-      if (userForm.role === 'company') {
-        if (userForm.contactPersonName) {
-          userData.bio = `Contact Person: ${userForm.contactPersonName}`;
-        }
-      } else if (userForm.role === 'engineer') {
-        if (userForm.specialization) {
-          userData.specializations = [userForm.specialization];
-        }
+
+      if (userForm.role === 'company' && userForm.contactPersonName) {
+        userData.bio = `Contact Person: ${userForm.contactPersonName}`;
+      } else if (userForm.role === 'engineer' && userForm.specialization) {
+        userData.specializations = [userForm.specialization];
       }
-      
-      // Set isActive from status
+
       userData.isActive = userForm.status === 'active';
 
       await http.post('/users', userData);
@@ -624,11 +497,7 @@ const AdminUsers = () => {
       fetchStatistics();
     } catch (error: any) {
       console.error('Error adding user:', error);
-      toast.error(
-        language === 'en' 
-          ? error.response?.data?.message || 'Failed to add user'
-          : error.response?.data?.message || 'فشل إضافة المستخدم'
-      );
+      toast.error(language === 'en' ? error.response?.data?.message || 'Failed to add user' : error.response?.data?.message || 'فشل إضافة المستخدم');
     } finally {
       setAdding(false);
     }
@@ -652,7 +521,6 @@ const AdminUsers = () => {
     });
   };
 
-  // Update form role when tab changes
   useEffect(() => {
     if (showAddModal) {
       setUserForm(prev => ({
@@ -662,37 +530,16 @@ const AdminUsers = () => {
     }
   }, [activeTab, showAddModal]);
 
-  // Filter users
   useEffect(() => {
-    let filtered = users.filter(user => {
-      // Filter by role
-      if (activeTab === 'engineers' && user.role !== 'engineer') return false;
-      if (activeTab === 'clients' && user.role !== 'client') return false;
-      if (activeTab === 'companies' && user.role !== 'company') return false;
-      
-      // Filter by status
-      if (statusFilter !== 'all' && user.status !== statusFilter) return false;
-      
-      // Filter by search term
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        return (
-          user.name?.toLowerCase().includes(searchLower) ||
-          user.email?.toLowerCase().includes(searchLower) ||
-          user.phone?.toLowerCase().includes(searchLower) ||
-          user.companyName?.toLowerCase().includes(searchLower) ||
-          user.location?.toLowerCase().includes(searchLower)
-        );
-      }
-      
-      return true;
-    });
-    
-    setFilteredUsers(filtered);
-  }, [users, activeTab, statusFilter, searchTerm]);
+    setFilteredUsers(users);
+  }, [users]);
 
   useEffect(() => {
     fetchUsers();
+  }, [activeTab, statusFilter, searchTerm, countryFilter, categoryFilter]);
+
+  useEffect(() => {
+    fetchFilterMeta();
   }, []);
 
   useEffect(() => {
@@ -729,12 +576,6 @@ const AdminUsers = () => {
     );
   };
 
-  const getRoleIcon = (role: string) => {
-    if (role === 'engineer') return Briefcase;
-    if (role === 'company') return Building2;
-    return Users;
-  };
-
   const getRoleLabel = (role: string) => {
     const roleMap: Record<string, { en: string; ar: string }> = {
       engineer: { en: 'Engineer', ar: 'مهندس' },
@@ -745,21 +586,13 @@ const AdminUsers = () => {
     return roleMap[role]?.[language as 'en' | 'ar'] || role;
   };
 
-  const getCurrentStats = () => {
-    if (activeTab === 'engineers') return statistics.engineers;
-    if (activeTab === 'clients') return statistics.clients;
-    return statistics.companies;
-  };
-
-  const currentStats = getCurrentStats();
-
   return (
     <div className="flex min-h-screen">
       <AdminSidebar />
-      
+
       <div className="flex-1">
         <AdminTopBar />
-        
+
         <main className="p-8">
           <div className="mb-8">
             <h2 className="text-3xl font-bold mb-2">
@@ -772,66 +605,8 @@ const AdminUsers = () => {
             </p>
           </div>
 
-          {/* Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <Card className="glass-card">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {language === 'en' ? 'Total Users' : 'إجمالي المستخدمين'}
-                </CardTitle>
-                <HexagonIcon size="sm" className="text-cyan">
-                  <Users className="h-5 w-5 text-cyan" />
-                </HexagonIcon>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{statistics.total}</div>
-              </CardContent>
-            </Card>
-            
-            <Card className="glass-card">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {language === 'en' ? 'Active' : 'نشط'}
-                </CardTitle>
-                <HexagonIcon size="sm" className="text-green-500">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                </HexagonIcon>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{currentStats.active}</div>
-              </CardContent>
-            </Card>
-            
-            <Card className="glass-card">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {language === 'en' ? 'Pending' : 'قيد الانتظار'}
-                </CardTitle>
-                <HexagonIcon size="sm" className="text-yellow-500">
-                  <Clock className="h-5 w-5 text-yellow-500" />
-                </HexagonIcon>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{currentStats.pending}</div>
-              </CardContent>
-            </Card>
-            
-            <Card className="glass-card">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {language === 'en' ? 'Suspended' : 'معلقون'}
-                </CardTitle>
-                <HexagonIcon size="sm" className="text-red-500">
-                  <AlertCircle className="h-5 w-5 text-red-500" />
-                </HexagonIcon>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{currentStats.suspended}</div>
-              </CardContent>
-            </Card>
-          </div>
+          <UserStats statistics={statistics} activeTab={activeTab} />
 
-          {/* Tabs */}
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-6">
             <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
               <TabsList>
@@ -849,1225 +624,108 @@ const AdminUsers = () => {
                 </TabsTrigger>
               </TabsList>
 
-              {/* Toolbar */}
-              <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-                <div className="relative flex-1 md:max-w-md">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    placeholder={language === 'en' ? "Search..." : "البحث..."} 
-                    className="pl-10"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline">
-                      <Filter className="h-4 w-4 mr-2" />
-                      {language === 'en' ? 'Filter' : 'فلترة'}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => setStatusFilter('all')}>
-                      {language === 'en' ? 'All' : 'الكل'}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setStatusFilter('active')}>
-                      {language === 'en' ? 'Active' : 'نشط'}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setStatusFilter('pending')}>
-                      {language === 'en' ? 'Pending' : 'قيد الانتظار'}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setStatusFilter('suspended')}>
-                      {language === 'en' ? 'Suspended' : 'معلق'}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                {selectedUsers.length > 0 && (
-                  <Button 
-                    variant="destructive"
-                    onClick={handleBulkDelete}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    {language === 'en' 
-                      ? `Delete (${selectedUsers.length})` 
-                      : `حذف (${selectedUsers.length})`}
-                  </Button>
-                )}
-                <Button 
-                  className="bg-cyan hover:bg-cyan-dark"
-                  onClick={() => {
-                    resetForm();
-                    setShowAddModal(true);
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  {language === 'en' ? 'Add User' : 'إضافة مستخدم'}
-                </Button>
-              </div>
+              <UserFilters
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                countryFilter={countryFilter}
+                setCountryFilter={setCountryFilter}
+                countriesMeta={countriesMeta}
+                categoryFilter={categoryFilter}
+                setCategoryFilter={setCategoryFilter}
+                businessScopesMeta={businessScopesMeta}
+                statusFilter={statusFilter}
+                setStatusFilter={setStatusFilter}
+                selectedUsersCount={selectedUsers.length}
+                handleBulkDelete={handleBulkDelete}
+                onAddUser={() => {
+                  resetForm();
+                  setShowAddModal(true);
+                }}
+              />
             </div>
 
-            {/* Engineers Tab */}
             <TabsContent value="engineers">
-              <Card className="glass-card">
-                <CardHeader>
-                  <CardTitle>
-                    {language === 'en' ? 'Engineers' : 'المهندسين'} ({filteredUsers.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {loading ? (
-                    <div className="flex items-center justify-center py-12">
-                      <Loader2 className="h-8 w-8 animate-spin text-cyan" />
-                    </div>
-                  ) : filteredUsers.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      {language === 'en' ? 'No engineers found' : 'لا يوجد مهندسين'}
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-border">
-                            <th className="text-left py-3 px-4 font-medium text-muted-foreground w-12">
-                              <Checkbox
-                                checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
-                                onCheckedChange={toggleAllUsersSelection}
-                              />
-                            </th>
-                            <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                              {language === 'en' ? 'Engineer' : 'المهندس'}
-                            </th>
-                            <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                              {language === 'en' ? 'Contact' : 'التواصل'}
-                            </th>
-                            <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                              {language === 'en' ? 'Status' : 'الحالة'}
-                            </th>
-                            <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                              {language === 'en' ? 'Join Date' : 'تاريخ الانضمام'}
-                            </th>
-                            <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                              {language === 'en' ? 'Actions' : 'الإجراءات'}
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredUsers.map((user, index) => {
-                            const RoleIcon = getRoleIcon(user.role);
-                            const userId = getUserId(user);
-                            return (
-                              <tr key={userId || `user-${index}`} className="border-b border-border/50 hover:bg-muted/30">
-                                <td className="py-4 px-4">
-                                  <Checkbox
-                                    checked={selectedUsers.includes(userId)}
-                                    onCheckedChange={() => toggleUserSelection(userId)}
-                                  />
-                                </td>
-                                <td className="py-4 px-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-cyan flex items-center justify-center text-white font-semibold">
-                                      {user.avatar ? (
-                                        <img src={typeof user.avatar === 'string' ? user.avatar : user.avatar?.url} alt={user.name} className="w-full h-full rounded-full object-cover" />
-                                      ) : (
-                                        <RoleIcon className="h-5 w-5" />
-                                      )}
-                                    </div>
-                                    <div>
-                                      <div className="font-medium flex items-center gap-2">
-                                        {user.name}
-                                        {user.verified && (
-                                          <UserCheck className="h-4 w-4 text-green-500" />
-                                        )}
-                                      </div>
-                                      <div className="text-sm text-muted-foreground">{user.email}</div>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className="py-4 px-4">
-                                  <div className="space-y-1">
-                                    {user.phone && (
-                                      <div className="flex items-center gap-2 text-sm">
-                                        <Phone className="h-3 w-3 text-muted-foreground" />
-                                        {user.phone}
-                                      </div>
-                                    )}
-                                    {user.location && (
-                                      <div className="flex items-center gap-2 text-sm">
-                                        <MapPin className="h-3 w-3 text-muted-foreground" />
-                                        {user.location}
-                                      </div>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="py-4 px-4">
-                                  {getStatusBadge(user.status)}
-                                </td>
-                                <td className="py-4 px-4 text-muted-foreground">
-                                  {new Date(user.joinDate).toLocaleDateString()}
-                                </td>
-                                <td className="py-4 px-4">
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="sm">
-                                        <MoreHorizontal className="h-4 w-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem onClick={() => userId && handleViewUser(userId)}>
-                                        <UserCheck className="h-4 w-4 mr-2" />
-                                        {language === 'en' ? 'View Details' : 'عرض التفاصيل'}
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => userId && handleEditUser(userId)}>
-                                        <Edit className="h-4 w-4 mr-2" />
-                                        {language === 'en' ? 'Edit' : 'تعديل'}
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => userId && updateUserStatus(userId)}>
-                                        {isUserActive(user) ? (
-                                          <>
-                                            <UserX className="h-4 w-4 mr-2" />
-                                            {language === 'en' ? 'Deactivate' : 'تعطيل'}
-                                          </>
-                                        ) : (
-                                          <>
-                                            <UserCheck className="h-4 w-4 mr-2" />
-                                            {language === 'en' ? 'Activate' : 'تفعيل'}
-                                          </>
-                                        )}
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem 
-                                        onClick={() => userId && deleteUser(userId)}
-                                        className="text-destructive"
-                                      >
-                                        <Trash2 className="h-4 w-4 mr-2" />
-                                        {language === 'en' ? 'Delete' : 'حذف'}
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <UserTable
+                users={filteredUsers}
+                loading={loading}
+                selectedUsers={selectedUsers}
+                toggleUserSelection={toggleUserSelection}
+                toggleAllUsersSelection={toggleAllUsersSelection}
+                handleViewUser={handleViewUser}
+                handleEditUser={handleEditUser}
+                updateUserStatus={updateUserStatus}
+                deleteUser={deleteUser}
+                getUserId={getUserId}
+                isUserActive={isUserActive}
+                roleLabel={language === 'en' ? 'Engineer' : 'المهندس'}
+              />
             </TabsContent>
 
-            {/* Clients Tab */}
             <TabsContent value="clients">
-              <Card className="glass-card">
-                <CardHeader>
-                  <CardTitle>
-                    {language === 'en' ? 'Clients' : 'العملاء'} ({filteredUsers.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {loading ? (
-                    <div className="flex items-center justify-center py-12">
-                      <Loader2 className="h-8 w-8 animate-spin text-cyan" />
-                    </div>
-                  ) : filteredUsers.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      {language === 'en' ? 'No clients found' : 'لا يوجد عملاء'}
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-border">
-                            <th className="text-left py-3 px-4 font-medium text-muted-foreground w-12">
-                              <Checkbox
-                                checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
-                                onCheckedChange={toggleAllUsersSelection}
-                              />
-                            </th>
-                            <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                              {language === 'en' ? 'Client' : 'العميل'}
-                            </th>
-                            <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                              {language === 'en' ? 'Contact' : 'التواصل'}
-                            </th>
-                            <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                              {language === 'en' ? 'Status' : 'الحالة'}
-                            </th>
-                            <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                              {language === 'en' ? 'Join Date' : 'تاريخ الانضمام'}
-                            </th>
-                            <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                              {language === 'en' ? 'Actions' : 'الإجراءات'}
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredUsers.map((user, index) => {
-                            const RoleIcon = getRoleIcon(user.role);
-                            const userId = getUserId(user);
-                            return (
-                              <tr key={userId || `user-${index}`} className="border-b border-border/50 hover:bg-muted/30">
-                                <td className="py-4 px-4">
-                                  <Checkbox
-                                    checked={selectedUsers.includes(userId)}
-                                    onCheckedChange={() => toggleUserSelection(userId)}
-                                  />
-                                </td>
-                                <td className="py-4 px-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-cyan flex items-center justify-center text-white font-semibold">
-                                      {user.avatar ? (
-                                        <img src={typeof user.avatar === 'string' ? user.avatar : user.avatar?.url} alt={user.name} className="w-full h-full rounded-full object-cover" />
-                                      ) : (
-                                        <RoleIcon className="h-5 w-5" />
-                                      )}
-                                    </div>
-                                    <div>
-                                      <div className="font-medium flex items-center gap-2">
-                                        {user.name}
-                                        {user.verified && (
-                                          <UserCheck className="h-4 w-4 text-green-500" />
-                                        )}
-                                      </div>
-                                      <div className="text-sm text-muted-foreground">{user.email}</div>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className="py-4 px-4">
-                                  <div className="space-y-1">
-                                    {user.phone && (
-                                      <div className="flex items-center gap-2 text-sm">
-                                        <Phone className="h-3 w-3 text-muted-foreground" />
-                                        {user.phone}
-                                      </div>
-                                    )}
-                                    {user.location && (
-                                      <div className="flex items-center gap-2 text-sm">
-                                        <MapPin className="h-3 w-3 text-muted-foreground" />
-                                        {user.location}
-                                      </div>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="py-4 px-4">
-                                  {getStatusBadge(user.status)}
-                                </td>
-                                <td className="py-4 px-4 text-muted-foreground">
-                                  {new Date(user.joinDate).toLocaleDateString()}
-                                </td>
-                                <td className="py-4 px-4">
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="sm">
-                                        <MoreHorizontal className="h-4 w-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem onClick={() => userId && handleViewUser(userId)}>
-                                        <UserCheck className="h-4 w-4 mr-2" />
-                                        {language === 'en' ? 'View Details' : 'عرض التفاصيل'}
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => userId && handleEditUser(userId)}>
-                                        <Edit className="h-4 w-4 mr-2" />
-                                        {language === 'en' ? 'Edit' : 'تعديل'}
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => userId && updateUserStatus(userId)}>
-                                        {isUserActive(user) ? (
-                                          <>
-                                            <UserX className="h-4 w-4 mr-2" />
-                                            {language === 'en' ? 'Deactivate' : 'تعطيل'}
-                                          </>
-                                        ) : (
-                                          <>
-                                            <UserCheck className="h-4 w-4 mr-2" />
-                                            {language === 'en' ? 'Activate' : 'تفعيل'}
-                                          </>
-                                        )}
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem 
-                                        onClick={() => userId && deleteUser(userId)}
-                                        className="text-destructive"
-                                      >
-                                        <Trash2 className="h-4 w-4 mr-2" />
-                                        {language === 'en' ? 'Delete' : 'حذف'}
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <UserTable
+                users={filteredUsers}
+                loading={loading}
+                selectedUsers={selectedUsers}
+                toggleUserSelection={toggleUserSelection}
+                toggleAllUsersSelection={toggleAllUsersSelection}
+                handleViewUser={handleViewUser}
+                handleEditUser={handleEditUser}
+                updateUserStatus={updateUserStatus}
+                deleteUser={deleteUser}
+                getUserId={getUserId}
+                isUserActive={isUserActive}
+                roleLabel={language === 'en' ? 'Client' : 'العميل'}
+              />
             </TabsContent>
 
-            {/* Companies Tab */}
             <TabsContent value="companies">
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle>
-                    {language === 'en' ? 'Companies' : 'الشركات'} ({filteredUsers.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-                  {loading ? (
-                    <div className="flex items-center justify-center py-12">
-                      <Loader2 className="h-8 w-8 animate-spin text-cyan" />
-                    </div>
-                  ) : filteredUsers.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      {language === 'en' ? 'No companies found' : 'لا توجد شركات'}
-                    </div>
-                  ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground w-12">
-                        <Checkbox
-                          checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
-                          onCheckedChange={toggleAllUsersSelection}
-                        />
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                              {language === 'en' ? 'Company' : 'الشركة'}
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                              {language === 'en' ? 'Contact' : 'التواصل'}
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                        {language === 'en' ? 'Status' : 'الحالة'}
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                        {language === 'en' ? 'Join Date' : 'تاريخ الانضمام'}
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                        {language === 'en' ? 'Actions' : 'الإجراءات'}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                          {filteredUsers.map((user, index) => {
-                            const RoleIcon = getRoleIcon(user.role);
-                            const userId = getUserId(user);
-                            return (
-                              <tr key={userId || `user-${index}`} className="border-b border-border/50 hover:bg-muted/30">
-                        <td className="py-4 px-4">
-                          <Checkbox
-                            checked={selectedUsers.includes(userId)}
-                            onCheckedChange={() => toggleUserSelection(userId)}
-                          />
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-cyan flex items-center justify-center text-white font-semibold">
-                                      {user.avatar ? (
-                                        <img src={typeof user.avatar === 'string' ? user.avatar : user.avatar?.url} alt={user.name} className="w-full h-full rounded-full object-cover" />
-                                      ) : (
-                                        <Building2 className="h-5 w-5" />
-                                      )}
-                            </div>
-                            <div>
-                                      <div className="font-medium flex items-center gap-2">
-                                        {user.companyName || user.name}
-                                        {user.verified && (
-                                          <UserCheck className="h-4 w-4 text-green-500" />
-                                        )}
-                                      </div>
-                              <div className="text-sm text-muted-foreground">{user.email}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-4 px-4">
-                                  <div className="space-y-1">
-                                    {user.phone && (
-                                      <div className="flex items-center gap-2 text-sm">
-                                        <Phone className="h-3 w-3 text-muted-foreground" />
-                                        {user.phone}
-                                      </div>
-                                    )}
-                                    {user.location && (
-                                      <div className="flex items-center gap-2 text-sm">
-                                        <MapPin className="h-3 w-3 text-muted-foreground" />
-                                        {user.location}
-                                      </div>
-                                    )}
-                                  </div>
-                        </td>
-                        <td className="py-4 px-4">
-                                  {getStatusBadge(user.status)}
-                        </td>
-                        <td className="py-4 px-4 text-muted-foreground">
-                                  {new Date(user.joinDate).toLocaleDateString()}
-                        </td>
-                        <td className="py-4 px-4">
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem onClick={() => userId && handleViewUser(userId)}>
-                                        <UserCheck className="h-4 w-4 mr-2" />
-                                        {language === 'en' ? 'View Details' : 'عرض التفاصيل'}
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => userId && handleEditUser(userId)}>
-                                        <Edit className="h-4 w-4 mr-2" />
-                                        {language === 'en' ? 'Edit' : 'تعديل'}
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => userId && updateUserStatus(userId)}>
-                                        {isUserActive(user) ? (
-                                          <>
-                                            <UserX className="h-4 w-4 mr-2" />
-                                            {language === 'en' ? 'Deactivate' : 'تعطيل'}
-                                          </>
-                                        ) : (
-                                          <>
-                                            <UserCheck className="h-4 w-4 mr-2" />
-                                            {language === 'en' ? 'Activate' : 'تفعيل'}
-                                          </>
-                                        )}
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem 
-                                        onClick={() => userId && deleteUser(userId)}
-                                        className="text-destructive"
-                                      >
-                                        <Trash2 className="h-4 w-4 mr-2" />
-                                        {language === 'en' ? 'Delete' : 'حذف'}
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                        </td>
-                      </tr>
-                            );
-                          })}
-                  </tbody>
-                </table>
-              </div>
-                  )}
-            </CardContent>
-          </Card>
+              <UserTable
+                users={filteredUsers}
+                loading={loading}
+                selectedUsers={selectedUsers}
+                toggleUserSelection={toggleUserSelection}
+                toggleAllUsersSelection={toggleAllUsersSelection}
+                handleViewUser={handleViewUser}
+                handleEditUser={handleEditUser}
+                updateUserStatus={updateUserStatus}
+                deleteUser={deleteUser}
+                getUserId={getUserId}
+                isUserActive={isUserActive}
+                roleLabel={language === 'en' ? 'Company' : 'الشركة'}
+              />
             </TabsContent>
           </Tabs>
 
-          {/* Add User Modal */}
-          <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {language === 'en' ? 'Add New User' : 'إضافة مستخدم جديد'}
-                </DialogTitle>
-                <DialogDescription>
-                  {language === 'en' 
-                    ? 'Fill in the information to create a new user account'
-                    : 'املأ المعلومات لإنشاء حساب مستخدم جديد'}
-                </DialogDescription>
-              </DialogHeader>
-              
-              <form onSubmit={handleAddUser} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Name field - shown for engineer and client, hidden for company */}
-                  {userForm.role !== 'company' && (
-                    <div className="space-y-2">
-                      <Label htmlFor="name">
-                        {language === 'en' ? 'Name' : 'الاسم'} *
-                      </Label>
-                      <Input
-                        id="name"
-                        value={userForm.name}
-                        onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
-                        required={userForm.role !== 'company'}
-                        placeholder={language === 'en' ? 'Full name' : 'الاسم الكامل'}
-                      />
-                    </div>
-                  )}
-                  {userForm.role === 'company' && <div />}
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="email">
-                      {language === 'en' ? 'Email' : 'البريد الإلكتروني'} *
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={userForm.email}
-                      onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                      required
-                      placeholder="email@example.com"
-                    />
-                  </div>
-                </div>
+          <AddUserModal
+            open={showAddModal}
+            onOpenChange={setShowAddModal}
+            userForm={userForm}
+            setUserForm={setUserForm}
+            handleAddUser={handleAddUser}
+            adding={adding}
+            countries={countries}
+            getCitiesForCountry={getCitiesForCountry}
+          />
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="password">
-                      {language === 'en' ? 'Password' : 'كلمة المرور'} *
-                    </Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={userForm.password}
-                      onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                      required
-                      placeholder={language === 'en' ? 'Password' : 'كلمة المرور'}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">
-                      {language === 'en' ? 'Phone' : 'الهاتف'}
-                    </Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={userForm.phone}
-                      onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
-                      placeholder={language === 'en' ? 'Phone number' : 'رقم الهاتف'}
-                    />
-                  </div>
-                </div>
+          <EditUserModal
+            open={showEditModal}
+            onOpenChange={setShowEditModal}
+            editForm={editForm}
+            setEditForm={setEditForm}
+            handleUpdateUser={handleUpdateUser}
+            updating={updating}
+          />
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="role">
-                      {language === 'en' ? 'Role' : 'الدور'} *
-                    </Label>
-                    <Select
-                      value={userForm.role}
-                      onValueChange={(value: 'engineer' | 'client' | 'company') => {
-                        // Reset role-specific fields when role changes
-                        setUserForm({ 
-                          ...userForm, 
-                          role: value,
-                          specialization: '',
-                          nationalId: '',
-                          companyName: '',
-                          contactPersonName: '',
-                          city: '', // Reset city when role changes
-                        });
-                      }}
-                    >
-                      <SelectTrigger className="bg-hexa-bg border-hexa-border text-hexa-text-dark h-10">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-hexa-card border-hexa-border">
-                        <SelectItem value="engineer" className="text-hexa-text-dark hover:bg-hexa-secondary/20 focus:bg-hexa-secondary/20 cursor-pointer">
-                          {language === 'en' ? 'Engineer' : 'مهندس'}
-                        </SelectItem>
-                        <SelectItem value="client" className="text-hexa-text-dark hover:bg-hexa-secondary/20 focus:bg-hexa-secondary/20 cursor-pointer">
-                          {language === 'en' ? 'Client' : 'عميل'}
-                        </SelectItem>
-                        <SelectItem value="company" className="text-hexa-text-dark hover:bg-hexa-secondary/20 focus:bg-hexa-secondary/20 cursor-pointer">
-                          {language === 'en' ? 'Company' : 'شركة'}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="status">
-                      {language === 'en' ? 'Status' : 'الحالة'} *
-                    </Label>
-                    <Select
-                      value={userForm.status}
-                      onValueChange={(value: 'active' | 'pending' | 'suspended') => 
-                        setUserForm({ ...userForm, status: value })
-                      }
-                    >
-                      <SelectTrigger className="bg-hexa-bg border-hexa-border text-hexa-text-dark h-10">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-hexa-card border-hexa-border">
-                        <SelectItem value="active" className="text-hexa-text-dark hover:bg-hexa-secondary/20 focus:bg-hexa-secondary/20 cursor-pointer">
-                          {language === 'en' ? 'Active' : 'نشط'}
-                        </SelectItem>
-                        <SelectItem value="pending" className="text-hexa-text-dark hover:bg-hexa-secondary/20 focus:bg-hexa-secondary/20 cursor-pointer">
-                          {language === 'en' ? 'Pending' : 'قيد الانتظار'}
-                        </SelectItem>
-                        <SelectItem value="suspended" className="text-hexa-text-dark hover:bg-hexa-secondary/20 focus:bg-hexa-secondary/20 cursor-pointer">
-                          {language === 'en' ? 'Suspended' : 'معلق'}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Engineer-specific fields */}
-                {userForm.role === 'engineer' && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="specialization">
-                        {language === 'en' ? 'Specialization' : 'التخصص'} *
-                      </Label>
-                      <Input
-                        id="specialization"
-                        value={userForm.specialization}
-                        onChange={(e) => setUserForm({ ...userForm, specialization: e.target.value })}
-                        required={userForm.role === 'engineer'}
-                        placeholder={language === 'en' ? 'e.g., Civil Engineering' : 'مثال: الهندسة المدنية'}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="nationalId">
-                        {language === 'en' ? 'License Number' : 'رقم الترخيص'} *
-                      </Label>
-                      <Input
-                        id="nationalId"
-                        value={userForm.nationalId}
-                        onChange={(e) => setUserForm({ ...userForm, nationalId: e.target.value })}
-                        required={userForm.role === 'engineer'}
-                        placeholder={language === 'en' ? 'License number' : 'رقم الترخيص'}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Company-specific fields */}
-                {userForm.role === 'company' && (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="companyName">
-                        {language === 'en' ? 'Company Name' : 'اسم الشركة'} *
-                      </Label>
-                      <Input
-                        id="companyName"
-                        value={userForm.companyName}
-                        onChange={(e) => setUserForm({ ...userForm, companyName: e.target.value })}
-                        required={userForm.role === 'company'}
-                        placeholder={language === 'en' ? 'Company name' : 'اسم الشركة'}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="contactPersonName">
-                        {language === 'en' ? 'Contact Person Name' : 'اسم الشخص المسؤول'} *
-                      </Label>
-                      <Input
-                        id="contactPersonName"
-                        value={userForm.contactPersonName}
-                        onChange={(e) => setUserForm({ ...userForm, contactPersonName: e.target.value })}
-                        required={userForm.role === 'company'}
-                        placeholder={language === 'en' ? 'Contact person name' : 'اسم الشخص المسؤول'}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Location - Country and City */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="country">
-                      {language === 'en' ? 'Country' : 'الدولة'}
-                    </Label>
-                    <Select
-                      value={userForm.country}
-                      onValueChange={(value) => {
-                        setUserForm({ 
-                          ...userForm, 
-                          country: value,
-                          city: '', // Reset city when country changes
-                        });
-                      }}
-                    >
-                      <SelectTrigger className="bg-hexa-bg border-hexa-border text-hexa-text-dark h-10">
-                        <SelectValue placeholder={language === 'en' ? 'Select country' : 'اختر الدولة'} />
-                      </SelectTrigger>
-                      <SelectContent className="bg-hexa-card border-hexa-border">
-                        {countries.map((country) => (
-                          <SelectItem 
-                            key={country.value} 
-                            value={country.value}
-                            className="text-hexa-text-dark hover:bg-hexa-secondary/20 focus:bg-hexa-secondary/20 cursor-pointer"
-                          >
-                            {country.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="city">
-                      {language === 'en' ? 'City' : 'المدينة'}
-                    </Label>
-                    <Select
-                      value={userForm.city}
-                      onValueChange={(value) => setUserForm({ ...userForm, city: value })}
-                      disabled={!userForm.country}
-                    >
-                      <SelectTrigger className="bg-hexa-bg border-hexa-border text-hexa-text-dark h-10 disabled:opacity-50 disabled:cursor-not-allowed">
-                        <SelectValue placeholder={language === 'en' ? 'Select city' : 'اختر المدينة'} />
-                      </SelectTrigger>
-                      <SelectContent className="bg-hexa-card border-hexa-border">
-                        {getCitiesForCountry(userForm.country).map((city) => (
-                          <SelectItem 
-                            key={city.value} 
-                            value={city.value}
-                            className="text-hexa-text-dark hover:bg-hexa-secondary/20 focus:bg-hexa-secondary/20 cursor-pointer"
-                          >
-                            {city.label[language]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setShowAddModal(false);
-                      resetForm();
-                    }}
-                    disabled={adding}
-                  >
-                    {language === 'en' ? 'Cancel' : 'إلغاء'}
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="bg-cyan hover:bg-cyan-dark"
-                    disabled={adding}
-                  >
-                    {adding ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        {language === 'en' ? 'Adding...' : 'جاري الإضافة...'}
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="h-4 w-4 mr-2" />
-                        {language === 'en' ? 'Add User' : 'إضافة مستخدم'}
-                      </>
-                    )}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-
-          {/* View User Details Modal */}
-          <Dialog open={showViewModal} onOpenChange={setShowViewModal}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {language === 'en' ? 'User Details' : 'تفاصيل المستخدم'}
-                </DialogTitle>
-                <DialogDescription>
-                  {language === 'en' 
-                    ? 'View user information and details'
-                    : 'عرض معلومات وتفاصيل المستخدم'}
-                </DialogDescription>
-              </DialogHeader>
-              
-              {loadingUser ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-cyan" />
-                </div>
-              ) : viewingUser ? (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4 pb-4 border-b">
-                    <div className="w-16 h-16 rounded-full bg-cyan flex items-center justify-center text-white font-semibold text-xl">
-                      {viewingUser.avatar ? (
-                        <img 
-                          src={typeof viewingUser.avatar === 'string' ? viewingUser.avatar : viewingUser.avatar?.url} 
-                          alt={viewingUser.name || viewingUser.fullName || viewingUser.contactPersonName || 'User'} 
-                          className="w-full h-full rounded-full object-cover" 
-                        />
-                      ) : (
-                        <span className="text-2xl">
-                          {(viewingUser.name || viewingUser.fullName || viewingUser.contactPersonName || 'U').charAt(0).toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-                    <div>
-                      <div className="text-xl font-semibold flex items-center gap-2">
-                        {viewingUser.name || viewingUser.fullName || viewingUser.contactPersonName || 'N/A'}
-                        {viewingUser.verified && (
-                          <UserCheck className="h-5 w-5 text-green-500" />
-                        )}
-                      </div>
-                      <div className="text-sm text-muted-foreground">{viewingUser.email}</div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    {/* Basic Information */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-muted-foreground">{language === 'en' ? 'Role' : 'الدور'}</Label>
-                        <div className="mt-1 font-medium">{getRoleLabel(viewingUser.role)}</div>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">{language === 'en' ? 'Status' : 'الحالة'}</Label>
-                        <div className="mt-1">{getStatusBadge(viewingUser.status)}</div>
-                      </div>
-                    </div>
-
-                    {/* Contact Information */}
-                    <div className="border-t pt-4">
-                      <h4 className="font-semibold mb-3 text-sm">{language === 'en' ? 'Contact Information' : 'معلومات الاتصال'}</h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label className="text-muted-foreground">{language === 'en' ? 'Email' : 'البريد الإلكتروني'}</Label>
-                          <div className="mt-1 flex items-center gap-2">
-                            <Mail className="h-4 w-4 text-muted-foreground" />
-                            {viewingUser.email}
-                          </div>
-                        </div>
-                        {viewingUser.phone && (
-                          <div>
-                            <Label className="text-muted-foreground">{language === 'en' ? 'Phone' : 'الهاتف'}</Label>
-                            <div className="mt-1 flex items-center gap-2">
-                              <Phone className="h-4 w-4 text-muted-foreground" />
-                              {viewingUser.countryCode && <span className="text-muted-foreground">{viewingUser.countryCode}</span>}
-                              {viewingUser.phone}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Personal Information */}
-                    <div className="border-t pt-4">
-                      <h4 className="font-semibold mb-3 text-sm">{language === 'en' ? 'Personal Information' : 'المعلومات الشخصية'}</h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        {(viewingUser.name || viewingUser.fullName) && (
-                          <div>
-                            <Label className="text-muted-foreground">{language === 'en' ? 'Full Name' : 'الاسم الكامل'}</Label>
-                            <div className="mt-1 font-medium">{viewingUser.name || viewingUser.fullName}</div>
-                          </div>
-                        )}
-                        {viewingUser.nationalId && (
-                          <div>
-                            <Label className="text-muted-foreground">{language === 'en' ? 'National ID' : 'الهوية الوطنية'}</Label>
-                            <div className="mt-1">{viewingUser.nationalId}</div>
-                          </div>
-                        )}
-                        {viewingUser.country && (
-                          <div>
-                            <Label className="text-muted-foreground">{language === 'en' ? 'Country' : 'الدولة'}</Label>
-                            <div className="mt-1 flex items-center gap-2">
-                              <MapPin className="h-4 w-4 text-muted-foreground" />
-                              {viewingUser.country}
-                            </div>
-                          </div>
-                        )}
-                        {viewingUser.city && (
-                          <div>
-                            <Label className="text-muted-foreground">{language === 'en' ? 'City' : 'المدينة'}</Label>
-                            <div className="mt-1">{viewingUser.city}</div>
-                          </div>
-                        )}
-                        {viewingUser.location && (
-                          <div className="col-span-2">
-                            <Label className="text-muted-foreground">{language === 'en' ? 'Location' : 'الموقع'}</Label>
-                            <div className="mt-1 flex items-center gap-2">
-                              <MapPin className="h-4 w-4 text-muted-foreground" />
-                              {viewingUser.location}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Company Information (for companies) */}
-                    {viewingUser.role === 'company' && (viewingUser.companyName || viewingUser.contactPersonName) && (
-                      <div className="border-t pt-4">
-                        <h4 className="font-semibold mb-3 text-sm">{language === 'en' ? 'Company Information' : 'معلومات الشركة'}</h4>
-                        <div className="grid grid-cols-2 gap-4">
-                          {viewingUser.companyName && (
-                            <div>
-                              <Label className="text-muted-foreground">{language === 'en' ? 'Company Name' : 'اسم الشركة'}</Label>
-                              <div className="mt-1 font-medium">{viewingUser.companyName}</div>
-                            </div>
-                          )}
-                          {viewingUser.contactPersonName && (
-                            <div>
-                              <Label className="text-muted-foreground">{language === 'en' ? 'Contact Person' : 'الشخص المسؤول'}</Label>
-                              <div className="mt-1">{viewingUser.contactPersonName}</div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Engineer Information (for engineers) */}
-                    {viewingUser.role === 'engineer' && (viewingUser.specialization || viewingUser.licenseNumber) && (
-                      <div className="border-t pt-4">
-                        <h4 className="font-semibold mb-3 text-sm">{language === 'en' ? 'Professional Information' : 'المعلومات المهنية'}</h4>
-                        <div className="grid grid-cols-2 gap-4">
-                          {viewingUser.specialization && (
-                            <div>
-                              <Label className="text-muted-foreground">{language === 'en' ? 'Specialization' : 'التخصص'}</Label>
-                              <div className="mt-1 font-medium">{viewingUser.specialization}</div>
-                            </div>
-                          )}
-                          {viewingUser.licenseNumber && (
-                            <div>
-                              <Label className="text-muted-foreground">{language === 'en' ? 'License Number' : 'رقم الرخصة'}</Label>
-                              <div className="mt-1">{viewingUser.licenseNumber}</div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Bio */}
-                    {viewingUser.bio && (
-                      <div className="border-t pt-4">
-                        <Label className="text-muted-foreground">{language === 'en' ? 'Bio' : 'نبذة'}</Label>
-                        <div className="mt-1 text-sm">{viewingUser.bio}</div>
-                      </div>
-                    )}
-
-                    {/* Account Information */}
-                    <div className="border-t pt-4">
-                      <h4 className="font-semibold mb-3 text-sm">{language === 'en' ? 'Account Information' : 'معلومات الحساب'}</h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        {(viewingUser.joinDate || viewingUser.createdAt) && (
-                          <div>
-                            <Label className="text-muted-foreground">{language === 'en' ? 'Join Date' : 'تاريخ الانضمام'}</Label>
-                            <div className="mt-1">
-                              {viewingUser.joinDate 
-                                ? new Date(viewingUser.joinDate).toLocaleDateString(language === 'en' ? 'en-US' : 'ar-SA')
-                                : viewingUser.createdAt 
-                                ? new Date(viewingUser.createdAt).toLocaleDateString(language === 'en' ? 'en-US' : 'ar-SA')
-                                : 'N/A'}
-                            </div>
-                          </div>
-                        )}
-                        {viewingUser.verified !== undefined && (
-                          <div>
-                            <Label className="text-muted-foreground">{language === 'en' ? 'Verified' : 'متحقق'}</Label>
-                            <div className="mt-1">
-                              {viewingUser.verified ? (
-                                <Badge className="bg-green-500/20 text-green-500">
-                                  {language === 'en' ? 'Yes' : 'نعم'}
-                                </Badge>
-                              ) : (
-                                <Badge className="bg-gray-500/20 text-gray-500">
-                                  {language === 'en' ? 'No' : 'لا'}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowViewModal(false)}
-                >
-                  {language === 'en' ? 'Close' : 'إغلاق'}
-                </Button>
-                {viewingUser && (
-                  <Button
-                    type="button"
-                    className="bg-cyan hover:bg-cyan-dark"
-                    onClick={() => {
-                      if (viewingUser) {
-                        const userId = getUserId(viewingUser);
-                        if (userId) {
-                          setShowViewModal(false);
-                          handleEditUser(userId);
-                        }
-                      }
-                    }}
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    {language === 'en' ? 'Edit User' : 'تعديل المستخدم'}
-                  </Button>
-                )}
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          {/* Edit User Modal */}
-          <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {language === 'en' ? 'Edit User' : 'تعديل المستخدم'}
-                </DialogTitle>
-                <DialogDescription>
-                  {language === 'en' 
-                    ? 'Update user information'
-                    : 'تحديث معلومات المستخدم'}
-                </DialogDescription>
-              </DialogHeader>
-              
-              <form onSubmit={handleUpdateUser} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-name">
-                      {language === 'en' ? 'Name' : 'الاسم'} *
-                    </Label>
-                    <Input
-                      id="edit-name"
-                      value={editForm.name}
-                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                      required
-                      placeholder={language === 'en' ? 'Full name' : 'الاسم الكامل'}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-email">
-                      {language === 'en' ? 'Email' : 'البريد الإلكتروني'} *
-                    </Label>
-                    <Input
-                      id="edit-email"
-                      type="email"
-                      value={editForm.email}
-                      onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                      required
-                      placeholder="email@example.com"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-phone">
-                      {language === 'en' ? 'Phone' : 'الهاتف'}
-                    </Label>
-                    <Input
-                      id="edit-phone"
-                      type="tel"
-                      value={editForm.phone}
-                      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                      placeholder={language === 'en' ? 'Phone number' : 'رقم الهاتف'}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-location">
-                      {language === 'en' ? 'Location' : 'الموقع'}
-                    </Label>
-                    <Input
-                      id="edit-location"
-                      value={editForm.location}
-                      onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
-                      placeholder={language === 'en' ? 'City, Country' : 'المدينة، الدولة'}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-role">
-                      {language === 'en' ? 'Role' : 'الدور'} *
-                    </Label>
-                    <Select
-                      value={editForm.role}
-                      onValueChange={(value: 'engineer' | 'client' | 'company') => 
-                        setEditForm({ ...editForm, role: value })
-                      }
-                    >
-                      <SelectTrigger className="bg-background border border-input text-foreground">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border border-border">
-                        <SelectItem value="engineer" className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
-                          {language === 'en' ? 'Engineer' : 'مهندس'}
-                        </SelectItem>
-                        <SelectItem value="client" className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
-                          {language === 'en' ? 'Client' : 'عميل'}
-                        </SelectItem>
-                        <SelectItem value="company" className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
-                          {language === 'en' ? 'Company' : 'شركة'}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-status">
-                      {language === 'en' ? 'Status' : 'الحالة'} *
-                    </Label>
-                    <Select
-                      value={editForm.status}
-                      onValueChange={(value: 'active' | 'pending' | 'suspended') => 
-                        setEditForm({ ...editForm, status: value })
-                      }
-                    >
-                      <SelectTrigger className="bg-background border border-input text-foreground">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border border-border">
-                        <SelectItem value="active" className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
-                          {language === 'en' ? 'Active' : 'نشط'}
-                        </SelectItem>
-                        <SelectItem value="pending" className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
-                          {language === 'en' ? 'Pending' : 'قيد الانتظار'}
-                        </SelectItem>
-                        <SelectItem value="suspended" className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
-                          {language === 'en' ? 'Suspended' : 'معلق'}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {editForm.role === 'company' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-companyName">
-                      {language === 'en' ? 'Company Name' : 'اسم الشركة'} *
-                    </Label>
-                    <Input
-                      id="edit-companyName"
-                      value={editForm.companyName}
-                      onChange={(e) => setEditForm({ ...editForm, companyName: e.target.value })}
-                      required={editForm.role === 'company'}
-                      placeholder={language === 'en' ? 'Company name' : 'اسم الشركة'}
-                    />
-                  </div>
-                )}
-
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setShowEditModal(false);
-                      setEditingUser(null);
-                    }}
-                    disabled={updating}
-                  >
-                    {language === 'en' ? 'Cancel' : 'إلغاء'}
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="bg-cyan hover:bg-cyan-dark"
-                    disabled={updating}
-                  >
-                    {updating ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        {language === 'en' ? 'Updating...' : 'جاري التحديث...'}
-                      </>
-                    ) : (
-                      <>
-                        <Edit className="h-4 w-4 mr-2" />
-                        {language === 'en' ? 'Update User' : 'تحديث المستخدم'}
-                      </>
-                    )}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <ViewUserModal
+            open={showViewModal}
+            onOpenChange={setShowViewModal}
+            viewingUser={viewingUser}
+            loadingUser={loadingUser}
+            getRoleLabel={getRoleLabel}
+            getStatusBadge={getStatusBadge}
+            getUserId={getUserId}
+            handleEditUser={handleEditUser}
+          />
         </main>
       </div>
     </div>

@@ -55,7 +55,7 @@ export const ChatRoomsList: React.FC<ChatRoomsListProps> = ({
     // Group chats should be visible to admin (they can observe but not participate)
     // Only filter out group chats if filter is set to 'client' or 'engineer'
     if (filter !== 'all' && room.type === 'group') return false;
-    
+
     // Filter by search term
     const title = getChatRoomTitle(room);
     if (!title || typeof title !== 'string') return true; // Include if title is invalid
@@ -67,7 +67,7 @@ export const ChatRoomsList: React.FC<ChatRoomsListProps> = ({
       <CardHeader className="flex-shrink-0 pb-2 px-3 pt-3">
         <div className="flex items-center justify-between mb-2">
           <CardTitle className="text-sm font-semibold truncate">
-            {viewMode === 'all' 
+            {viewMode === 'all'
               ? (language === "en" ? "All Chats" : "جميع المحادثات")
               : (selectedProjectRoom ? selectedProjectRoom.projectTitle : (language === "en" ? "Chats" : "المحادثات"))}
           </CardTitle>
@@ -133,24 +133,21 @@ export const ChatRoomsList: React.FC<ChatRoomsListProps> = ({
                 return (
                   <div
                     key={room._id}
-                    className={`p-1 rounded-md transition-all mb-0.5 ${
-                      selectedChatRoom?._id === room._id
+                    className={`p-1 rounded-md transition-all mb-0.5 ${selectedChatRoom?._id === room._id
                         ? "bg-yellow-400/8 border-l-2 border-yellow-400/50"
                         : "hover:bg-muted/40"
-                    }`}
+                      }`}
                   >
-                    <div 
+                    <div
                       onClick={() => onSelectChatRoom(room)}
                       className="flex items-start gap-1.5 cursor-pointer"
                     >
-                      <div className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${
-                        room.type === 'admin-client' ? 'bg-muted/50' :
-                        'bg-yellow-400/10'
-                      }`}>
-                        <Icon className={`h-2.5 w-2.5 ${
-                          room.type === 'admin-client' ? 'text-foreground/60' :
-                          'text-yellow-400/80'
-                        }`} />
+                      <div className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${room.type === 'admin-client' ? 'bg-muted/50' :
+                          'bg-yellow-400/10'
+                        }`}>
+                        <Icon className={`h-2.5 w-2.5 ${room.type === 'admin-client' ? 'text-foreground/60' :
+                            'text-yellow-400/80'
+                          }`} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1 mb-0.5">

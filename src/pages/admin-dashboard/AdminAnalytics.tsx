@@ -3,10 +3,10 @@ import { AdminSidebar } from '@/components/AdminSidebar';
 import { AdminTopBar } from '@/components/AdminTopBar';
 import { useApp } from '@/context/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Users, 
-  Eye, 
-  Activity, 
+import {
+  Users,
+  Eye,
+  Activity,
   BarChart3,
   Loader2,
   TrendingUp
@@ -24,13 +24,10 @@ interface VisitorStats {
 interface PageView {
   page: string;
   views: number;
-  uniqueViews: number;
 }
 
 interface EventData {
   event: string;
-  count: number;
-  lastOccurrence: string;
 }
 
 interface ActivityItem {
@@ -51,7 +48,7 @@ interface DailyStat {
 const AdminAnalytics = () => {
   const { language } = useApp();
   const isAr = language === 'ar';
-  
+
   // State
   const [loading, setLoading] = useState(true);
   const [visitorStats, setVisitorStats] = useState<VisitorStats | null>(null);
@@ -66,7 +63,7 @@ const AdminAnalytics = () => {
     const fetchAnalytics = async () => {
       setLoading(true);
       setError(null);
-      
+
       try {
         // Fetch all analytics endpoints in parallel
         const [visitorsRes, pageViewsRes, eventsRes, activityRes, dailyRes] = await Promise.all([
@@ -78,35 +75,41 @@ const AdminAnalytics = () => {
         ]);
 
         // Set visitor stats
-        if (visitorsRes.data) {
-          setVisitorStats({
-            total: visitorsRes.data.total || visitorsRes.data.totalVisitors || 0,
-            unique: visitorsRes.data.unique || visitorsRes.data.uniqueVisitors || 0,
-          });
-        } else {
-          setVisitorStats({ total: 0, unique: 0 });
-        }
+        const visitorsData = visitorsRes.data?.data || {};
+        setVisitorStats({
+          total: visitorsData.totalVisitors || 0,
+          unique: visitorsData.totalSessions || 0,
+        });
 
         // Set page views
-        const pageViewsData = pageViewsRes.data || [];
+        const pageViewsData = pageViewsRes.data?.data || [];
         setPageViews(Array.isArray(pageViewsData) ? pageViewsData : []);
 
         // Set events
-        const eventsData = eventsRes.data || [];
+        const eventsData = eventsRes.data?.data || [];
         setEvents(Array.isArray(eventsData) ? eventsData : []);
 
         // Set activity
-        const activityData = activityRes.data || [];
-        setActivity(Array.isArray(activityData) ? activityData : []);
+        const activityData = activityRes.data?.data || [];
+        const mappedActivity = Array.isArray(activityData)
+          ? activityData.map((item: any) => ({
+            id: item._id,
+            event: item.event,
+            page: item.page,
+            userId: item.userId,
+            timestamp: item.createdAt
+          }))
+          : [];
+        setActivity(mappedActivity);
 
         // Set daily stats
-        const dailyData = dailyRes.data || [];
+        const dailyData = dailyRes.data?.data || [];
         setDailyStats(Array.isArray(dailyData) ? dailyData : []);
 
       } catch (err: any) {
         console.error('Error fetching analytics:', err);
         setError(
-          err.response?.data?.message || 
+          err.response?.data?.message ||
           (isAr ? 'حدث خطأ أثناء جلب البيانات' : 'Error fetching analytics data')
         );
       } finally {
@@ -149,10 +152,10 @@ const AdminAnalytics = () => {
   return (
     <div className="flex min-h-screen">
       <AdminSidebar />
-      
+
       <div className="flex-1">
         <AdminTopBar />
-        
+
         <main className="p-8">
           <div className="mb-8">
             <h2 className="text-3xl font-bold mb-2">
@@ -247,9 +250,6 @@ const AdminAnalytics = () => {
                               <TableHead className="text-right">
                                 {isAr ? 'المشاهدات' : 'Views'}
                               </TableHead>
-                              <TableHead className="text-right">
-                                {isAr ? 'فريدة' : 'Unique'}
-                              </TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -260,9 +260,6 @@ const AdminAnalytics = () => {
                                 </TableCell>
                                 <TableCell className="text-right">
                                   {pv.views || 0}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  {pv.uniqueViews || 0}
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -292,12 +289,6 @@ const AdminAnalytics = () => {
                           <TableHeader>
                             <TableRow>
                               <TableHead>{isAr ? 'الحدث' : 'Event'}</TableHead>
-                              <TableHead className="text-right">
-                                {isAr ? 'العدد' : 'Count'}
-                              </TableHead>
-                              <TableHead>
-                                {isAr ? 'آخر مرة' : 'Last Occurrence'}
-                              </TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -305,12 +296,6 @@ const AdminAnalytics = () => {
                               <TableRow key={index}>
                                 <TableCell className="font-medium">
                                   {event.event || (isAr ? 'غير معروف' : 'Unknown')}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  {event.count || 0}
-                                </TableCell>
-                                <TableCell className="text-sm text-muted-foreground">
-                                  {event.lastOccurrence ? formatDate(event.lastOccurrence) : '-'}
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -379,8 +364,8 @@ const AdminAnalytics = () => {
                       <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
                       <p>{isAr ? 'لا توجد بيانات للإحصائيات اليومية' : 'No daily statistics data available'}</p>
                       <p className="text-xs mt-2">
-                        {isAr 
-                          ? 'سيتم عرض الرسوم البيانية هنا قريباً' 
+                        {isAr
+                          ? 'سيتم عرض الرسوم البيانية هنا قريباً'
                           : 'Charts will be displayed here soon'}
                       </p>
                     </div>
@@ -394,13 +379,13 @@ const AdminAnalytics = () => {
                             {isAr ? 'مخطط الإحصائيات اليومية' : 'Daily Statistics Chart'}
                           </p>
                           <p className="text-xs text-muted-foreground mt-2">
-                            {isAr 
-                              ? 'سيتم دمج مكتبة الرسوم البيانية هنا' 
+                            {isAr
+                              ? 'سيتم دمج مكتبة الرسوم البيانية هنا'
                               : 'Chart library integration coming soon'}
                           </p>
                         </div>
                       </div>
-                      
+
                       {/* Display daily stats as a simple list */}
                       <div className="space-y-2">
                         {dailyStats.slice(0, 7).map((stat, index) => (

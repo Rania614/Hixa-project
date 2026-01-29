@@ -35,7 +35,7 @@ import { ObserverBanner } from "@/components/admin-messages/ObserverBanner";
 const AdminMessages = () => {
   const { language } = useApp();
   const navigate = useNavigate();
-  
+
   // State
   const [projectRooms, setProjectRooms] = useState<ProjectRoom[]>([]);
   const [selectedProjectRoom, setSelectedProjectRoom] = useState<ProjectRoom | null>(null);
@@ -60,10 +60,10 @@ const AdminMessages = () => {
   const [startingChat, setStartingChat] = useState(false);
   const [project, setProject] = useState<Project | null>(null);
   const [loadingProject, setLoadingProject] = useState(false);
-  
+
   // Unread messages count
   const { unreadCount } = useUnreadMessagesCount(60000); // Refresh every 60 seconds / 1 minute
-  
+
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -382,7 +382,7 @@ const AdminMessages = () => {
     try {
       console.log('📥 [Admin] Loading messages for chatRoom:', chatRoomId, 'page:', pageNum);
       setLoadingMessages(true);
-      
+
       // Add timeout to prevent hanging (10 seconds for admin)
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
@@ -390,17 +390,17 @@ const AdminMessages = () => {
           reject(new Error('Request timeout'));
         }, 10000);
       });
-      
+
       console.log('📥 [Admin] Calling messagesApi.getMessages...');
       const apiCall = messagesApi.getMessages(chatRoomId, pageNum, 50);
       console.log('📥 [Admin] API call started, waiting for response...');
-      
+
       const result = await Promise.race([
         apiCall,
         timeoutPromise
       ]) as { messages: any[]; total: number; page: number; totalPages: number };
-      
-      
+
+
       if (!result) {
         console.error('❌ [Admin] No result returned from API');
         setMessages([]);
@@ -408,7 +408,7 @@ const AdminMessages = () => {
         setPage(pageNum);
         return;
       }
-      
+
       if (!result.messages || !Array.isArray(result.messages)) {
         console.error('❌ [Admin] Invalid response structure:', {
           result,
@@ -421,9 +421,9 @@ const AdminMessages = () => {
         setPage(pageNum);
         return;
       }
-      
+
       console.log('✅ [Admin] Valid response, processing', result.messages.length, 'messages');
-      
+
       if (append) {
         // When appending (loading older messages), add them to the beginning
         setMessages((prev) => {
@@ -445,8 +445,8 @@ const AdminMessages = () => {
         }, 200);
       }
     } catch (error: any) {
-      
-      
+
+
       // If timeout or network error, keep existing messages (from Socket.io)
       if (error.message === 'Request timeout' || error.code === 'ERR_NETWORK') {
         console.warn('⚠️ [Admin] Request timeout or network error, keeping existing messages');
@@ -474,37 +474,37 @@ const AdminMessages = () => {
 
   const handleSendMessage = async () => {
     if (!selectedChatRoom || (!message.trim() && attachments.length === 0)) return;
-    
+
     // Prevent admin from sending messages in observer mode
     if (selectedChatRoom.type === 'group' && selectedChatRoom.adminObserver) {
       toast.error(
-        language === 'en' 
-          ? 'You are in observer mode and cannot send messages in this chat' 
+        language === 'en'
+          ? 'You are in observer mode and cannot send messages in this chat'
           : 'أنت في وضع المراقبة ولا يمكنك إرسال رسائل في هذه الدردشة'
       );
       return;
     }
-    
+
     // Validate attachments before sending
     const maxSize = 50 * 1024 * 1024; // 50MB
     const invalidFiles = attachments.filter(file => file.size > maxSize);
-    
+
     if (invalidFiles.length > 0) {
       toast.error(
-        language === 'en' 
+        language === 'en'
           ? `Cannot send files larger than 50MB: ${invalidFiles.map(f => f.name).join(', ')}`
           : `لا يمكن إرسال ملفات أكبر من 50 ميجابايت: ${invalidFiles.map(f => f.name).join(', ')}`
       );
       return;
     }
-    
+
     try {
       setSending(true);
       const messageType = attachments.length > 0 ? 'file' : 'text';
-      const messageContent = message.trim() || (attachments.length > 0 
+      const messageContent = message.trim() || (attachments.length > 0
         ? (language === 'en' ? `Sent ${attachments.length} file(s)` : `تم إرسال ${attachments.length} ملف(ات)`)
         : '');
-      
+
       console.log('📤 Sending message:', {
         chatRoomId: selectedChatRoom._id,
         content: messageContent,
@@ -512,16 +512,16 @@ const AdminMessages = () => {
         attachmentsCount: attachments.length,
         fileNames: attachments.map(f => f.name)
       });
-      
+
       const sentMessage = await messagesApi.sendMessage(
         selectedChatRoom._id,
         messageContent,
         messageType,
         attachments.length > 0 ? attachments : undefined
       );
-      
+
       console.log('✅ Message sent successfully:', sentMessage);
-      
+
       // Clear input immediately for better UX
       setMessage("");
       setAttachments([]);
@@ -529,7 +529,7 @@ const AdminMessages = () => {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-      
+
       // Don't add message manually - wait for Socket.io event
       // But if Socket.io fails, add it optimistically after 1 second
       setTimeout(() => {
@@ -544,10 +544,10 @@ const AdminMessages = () => {
           return prev;
         });
       }, 1000);
-      
+
       toast.success(
-        language === 'en' 
-          ? attachments.length > 0 
+        language === 'en'
+          ? attachments.length > 0
             ? `Sent ${attachments.length} file(s) successfully`
             : 'Message sent successfully'
           : attachments.length > 0
@@ -556,7 +556,7 @@ const AdminMessages = () => {
       );
     } catch (error: any) {
       console.error('❌ Error sending message:', error);
-      const errorMessage = error.response?.data?.message || error.message || 
+      const errorMessage = error.response?.data?.message || error.message ||
         (language === 'en' ? 'Failed to send message' : 'فشل إرسال الرسالة');
       toast.error(errorMessage);
       setUploadProgress(0);
@@ -567,14 +567,14 @@ const AdminMessages = () => {
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    
+
     // Validate file size (50MB max per file)
     const maxSize = 50 * 1024 * 1024; // 50MB
     const invalidFiles = files.filter(file => file.size > maxSize);
-    
+
     if (invalidFiles.length > 0) {
       toast.error(
-        language === 'en' 
+        language === 'en'
           ? `File size exceeds 50MB: ${invalidFiles.map(f => f.name).join(', ')}`
           : `حجم الملف يتجاوز 50 ميجابايت: ${invalidFiles.map(f => f.name).join(', ')}`
       );
@@ -587,7 +587,7 @@ const AdminMessages = () => {
       // All files are valid
       setAttachments((prev) => [...prev, ...files]);
     }
-    
+
     // Reset input to allow selecting the same file again
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -604,7 +604,7 @@ const AdminMessages = () => {
     try {
       setStartingChat(true);
       const updatedChatRoom = await messagesApi.startChat(selectedChatRoom._id);
-      
+
       // Update chat room in state
       setChatRooms((prev) =>
         prev.map((room) =>
@@ -613,20 +613,20 @@ const AdminMessages = () => {
             : room
         )
       );
-      
+
       // Update selected chat room
       setSelectedChatRoom({ ...selectedChatRoom, ...updatedChatRoom, adminStartedChat: true });
-      
+
       toast.success(
-        language === 'en' 
-          ? 'Chat started successfully' 
+        language === 'en'
+          ? 'Chat started successfully'
           : 'تم بدء الدردشة بنجاح'
       );
     } catch (error: any) {
       console.error('Error starting chat:', error);
       toast.error(
-        language === 'en' 
-          ? 'Failed to start chat' 
+        language === 'en'
+          ? 'Failed to start chat'
           : 'فشل بدء الدردشة'
       );
     } finally {
@@ -640,23 +640,23 @@ const AdminMessages = () => {
       toast.error(language === 'en' ? 'Please select a chat room and project' : 'يرجى اختيار غرفة محادثة ومشروع');
       return;
     }
-    
+
     if (selectedChatRoom.type !== 'admin-engineer' && selectedChatRoom.type !== 'admin-company') {
       toast.error(language === 'en' ? 'Can only assign from engineer/company chat' : 'يمكن التعيين فقط من محادثة المهندس/الشركة');
       return;
     }
-    
+
     try {
       setAssigning(true);
-      
+
       // Try to get engineer ID from multiple sources
       let engineerId: any = selectedChatRoom.engineer;
-      
+
       // If engineer field is populated (object), extract _id
       if (engineerId && typeof engineerId === 'object' && engineerId !== null) {
         engineerId = (engineerId as any)._id || (engineerId as any).id || engineerId;
       }
-      
+
       // If engineer field is not available, try to get from participants
       if (!engineerId && selectedChatRoom.participants && selectedChatRoom.participants.length > 0) {
         const engineerParticipant = selectedChatRoom.participants.find(
@@ -670,7 +670,7 @@ const AdminMessages = () => {
           }
         }
       }
-      
+
       // Log for debugging
       console.log('🔍 Assign Engineer Debug:', {
         chatRoomId: selectedChatRoom._id,
@@ -679,7 +679,7 @@ const AdminMessages = () => {
         participants: selectedChatRoom.participants,
         foundEngineerId: engineerId
       });
-      
+
       if (!engineerId) {
         toast.error(language === 'en' ? 'Engineer ID not found in chat room' : 'لم يتم العثور على معرف المهندس في غرفة المحادثة');
         setAssigning(false);
@@ -687,8 +687,8 @@ const AdminMessages = () => {
       }
 
       // Get engineer ID as string (final conversion)
-      const engineerIdStr = typeof engineerId === 'string' 
-        ? engineerId 
+      const engineerIdStr = typeof engineerId === 'string'
+        ? engineerId
         : String(engineerId);
 
       console.log('📤 Calling assignEngineerFromChat:', {
@@ -698,21 +698,21 @@ const AdminMessages = () => {
 
       // Call API directly
       const result = await messagesApi.assignEngineerFromChat(selectedChatRoom._id, engineerIdStr);
-      
+
       console.log('✅ Assign engineer result:', result);
-      
+
       toast.success(language === 'en' ? 'Engineer assigned successfully' : 'تم تعيين المهندس بنجاح');
-      
+
       // Reload chat rooms to show the new group chat
       if (selectedProjectRoom) {
         await loadChatRooms(selectedProjectRoom._id);
       }
-      
+
       // Optionally select the new group chat
       if (result?.groupChatRoom) {
         setSelectedChatRoom(result.groupChatRoom as ChatRoom);
       }
-      
+
       setShowAssignModal(false);
     } catch (error: any) {
       console.error('❌ Error assigning engineer:', error);
@@ -721,10 +721,10 @@ const AdminMessages = () => {
         response: error.response?.data,
         status: error.response?.status
       });
-      
-      const errorMessage = error.response?.data?.message || 
-                          error.message ||
-                          (language === 'en' ? 'Failed to assign engineer' : 'فشل تعيين المهندس');
+
+      const errorMessage = error.response?.data?.message ||
+        error.message ||
+        (language === 'en' ? 'Failed to assign engineer' : 'فشل تعيين المهندس');
       toast.error(errorMessage);
     } finally {
       setAssigning(false);
@@ -736,26 +736,26 @@ const AdminMessages = () => {
       toast.error(language === 'en' ? 'Please provide a rejection reason' : 'يرجى إدخال سبب الرفض');
       return;
     }
-    
+
     try {
       if (!selectedChatRoom || !selectedProjectRoom || selectedChatRoom.type !== 'admin-engineer') return;
-      
+
       setRejecting(true);
       const engineerId = selectedChatRoom.engineer || selectedChatRoom.participants.find(p => p.role === 'engineer')?.user;
       if (!engineerId) {
         toast.error(language === 'en' ? 'Engineer ID not found' : 'لم يتم العثور على معرف المهندس');
         return;
       }
-      
+
       await http.post(`/projects/${selectedProjectRoom.project}/chat/${selectedChatRoom._id}/reject`, {
         reason: rejectReason,
         engineerId: engineerId,
       });
-      
+
       toast.success(language === 'en' ? 'Engineer rejected successfully' : 'تم رفض المهندس بنجاح');
       setShowRejectModal(false);
       setRejectReason("");
-      
+
       // Refresh chat rooms
       if (selectedProjectRoom) {
         loadChatRooms(selectedProjectRoom._id);
@@ -789,8 +789,8 @@ const AdminMessages = () => {
       }
       // If user is string (ID) or name is not available, try to get from project
       if (project && project.client) {
-        const clientName = typeof project.client === 'object' 
-          ? project.client.name 
+        const clientName = typeof project.client === 'object'
+          ? project.client.name
           : null;
         if (clientName && typeof clientName === 'string' && clientName.trim() !== '') {
           return clientName;
@@ -907,7 +907,7 @@ const AdminMessages = () => {
   useEffect(() => {
     selectedChatRoomRef.current = selectedChatRoom;
   }, [selectedChatRoom]);
-  
+
   // Load project info when chat room is selected
   useEffect(() => {
     const loadProjectInfo = async () => {
@@ -915,17 +915,17 @@ const AdminMessages = () => {
         setProject(null);
         return;
       }
-      
+
       // Get project ID from chat room
-      const projectId = typeof selectedChatRoom.project === 'string' 
-        ? selectedChatRoom.project 
+      const projectId = typeof selectedChatRoom.project === 'string'
+        ? selectedChatRoom.project
         : selectedChatRoom.project?._id;
-      
+
       if (!projectId) {
         setProject(null);
         return;
       }
-      
+
       try {
         setLoadingProject(true);
         const projectData = await projectsApi.getProjectById(projectId);
@@ -937,20 +937,20 @@ const AdminMessages = () => {
         setLoadingProject(false);
       }
     };
-    
+
     loadProjectInfo();
   }, [selectedChatRoom]);
-  
+
   // Check if engineer is assigned to the project
   const isEngineerAssigned = (chatRoom: ChatRoom): boolean => {
     if (!project || !project.assignedEngineer) return false;
-    
+
     // Get engineer ID from chat room
     let engineerId: any = chatRoom.engineer;
     if (engineerId && typeof engineerId === 'object' && engineerId !== null) {
       engineerId = (engineerId as any)._id || (engineerId as any).id || engineerId;
     }
-    
+
     if (!engineerId && chatRoom.participants && chatRoom.participants.length > 0) {
       const engineerParticipant = chatRoom.participants.find(
         p => p.role === 'engineer' || p.role === 'company'
@@ -962,13 +962,13 @@ const AdminMessages = () => {
         }
       }
     }
-    
+
     if (!engineerId) return false;
-    
+
     const assignedEngineerId = typeof project.assignedEngineer === 'string'
       ? project.assignedEngineer
       : project.assignedEngineer?._id;
-    
+
     return String(engineerId) === String(assignedEngineerId);
   };
 
@@ -993,7 +993,7 @@ const AdminMessages = () => {
           console.log('⚠️ Message already exists, skipping');
           return prev;
         }
-        
+
         if (data.chatRoomId === currentChatRoomId) {
           console.log('✅ Adding message to current chat room');
           // Add new message and sort by createdAt (oldest first)
@@ -1014,8 +1014,8 @@ const AdminMessages = () => {
       setChatRooms((prev) =>
         prev.map((room) => {
           if (room._id === data.chatRoomId) {
-            const senderId = typeof data.message.sender === 'string' 
-              ? data.message.sender 
+            const senderId = typeof data.message.sender === 'string'
+              ? data.message.sender
               : (typeof data.message.sender === 'object' && data.message.sender !== null
                 ? (data.message.sender._id || String(data.message.sender))
                 : String(data.message.sender));
@@ -1048,11 +1048,11 @@ const AdminMessages = () => {
 
   // Use ref to prevent multiple loads for the same chat room
   const loadAttemptedRef = React.useRef<string | null>(null);
-  
+
   useEffect(() => {
     if (selectedChatRoom) {
       const chatRoomId = selectedChatRoom._id;
-      
+
       // Only load if we haven't loaded for this chat room yet
       if (loadAttemptedRef.current !== chatRoomId) {
         console.log('🔄 ChatRoom selected, loading messages:', chatRoomId);
@@ -1066,7 +1066,7 @@ const AdminMessages = () => {
       } else {
         console.log('⏭️ [Admin] Skipping load - already loaded for chat room:', chatRoomId);
       }
-      
+
       return () => {
         socketService.leaveChatRoom(chatRoomId);
       };
@@ -1083,7 +1083,7 @@ const AdminMessages = () => {
     // Group chats should be visible to admin (they can observe but not participate)
     // Only filter out group chats if filter is set to 'client' or 'engineer'
     if (filter !== 'all' && room.type === 'group') return false;
-    
+
     // Filter by search term
     const title = getChatRoomTitle(room);
     if (!title || typeof title !== 'string') return true; // Include if title is invalid
@@ -1095,197 +1095,197 @@ const AdminMessages = () => {
       <AdminSidebar />
       <div className="flex-1 flex flex-col overflow-hidden h-full">
         <AdminTopBar />
-          <main className="flex-1 overflow-hidden flex flex-col p-4 min-h-0">
-           {/* Header */}
-            <div className="mb-4 flex-shrink-0">
-             <h2 className="text-2xl font-bold mb-1">
-                {language === "en" ? "Messages" : "الرسائل"}
-              </h2>
-             <p className="text-sm text-muted-foreground">
-               {language === "en"
-                 ? "Communicate with engineers and clients"
-                 : "التواصل مع المهندسين والعملاء"}
-              </p>
-            </div>
+        <main className="flex-1 overflow-hidden flex flex-col p-4 min-h-0">
+          {/* Header */}
+          <div className="mb-4 flex-shrink-0">
+            <h2 className="text-2xl font-bold mb-1">
+              {language === "en" ? "Messages" : "الرسائل"}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {language === "en"
+                ? "Communicate with engineers and clients"
+                : "التواصل مع المهندسين والعملاء"}
+            </p>
+          </div>
 
-           {/* Main Content - 2 Columns */}
-           <div className="flex-1 flex gap-2 overflow-hidden min-h-0">
-             {/* Left Sidebar - Projects or View Mode Toggle */}
-             {viewMode === 'project' ? (
-               <ProjectRoomsList
-                 projectRooms={projectRooms}
-                 selectedProjectRoom={selectedProjectRoom}
-                 loading={loading}
-                 language={language}
-                 onSelectProjectRoom={setSelectedProjectRoom}
-                 formatTime={formatTime}
-               />
+          {/* Main Content - 2 Columns */}
+          <div className="flex-1 flex gap-2 overflow-hidden min-h-0">
+            {/* Left Sidebar - Projects or View Mode Toggle */}
+            {viewMode === 'project' ? (
+              <ProjectRoomsList
+                projectRooms={projectRooms}
+                selectedProjectRoom={selectedProjectRoom}
+                loading={loading}
+                language={language}
+                onSelectProjectRoom={setSelectedProjectRoom}
+                formatTime={formatTime}
+              />
             ) : (
-               <ViewModeToggle
-                 viewMode={viewMode}
-                 language={language}
-                 onViewModeChange={setViewMode}
-               />
+              <ViewModeToggle
+                viewMode={viewMode}
+                language={language}
+                onViewModeChange={setViewMode}
+              />
             )}
 
-             {/* Main Area - Chats & Messages */}
-             <div className="flex-1 flex gap-2 overflow-hidden min-h-0">
-               {/* Chat Rooms List */}
-               <ChatRoomsList
-                 chatRooms={chatRooms}
-                 selectedChatRoom={selectedChatRoom}
-                 selectedProjectRoom={selectedProjectRoom}
-                 viewMode={viewMode}
-                 filter={filter}
-                 searchTerm={searchTerm}
-                 language={language}
-                 onSelectChatRoom={setSelectedChatRoom}
-                 onFilterChange={setFilter}
-                 onSearchChange={setSearchTerm}
-                 getChatRoomTitle={getChatRoomTitle}
-                 getChatRoomSubtitle={getChatRoomSubtitle}
-                 getChatRoomTypeBadge={getChatRoomTypeBadge}
-                 getChatRoomIcon={getChatRoomIcon}
-                 getChatRoomStatus={getChatRoomStatus}
-                 getProjectTitle={getProjectTitle}
-                 getUnreadCount={getUnreadCount}
-                 formatTime={formatTime}
-               />
+            {/* Main Area - Chats & Messages */}
+            <div className="flex-1 flex gap-2 overflow-hidden min-h-0">
+              {/* Chat Rooms List */}
+              <ChatRoomsList
+                chatRooms={chatRooms}
+                selectedChatRoom={selectedChatRoom}
+                selectedProjectRoom={selectedProjectRoom}
+                viewMode={viewMode}
+                filter={filter}
+                searchTerm={searchTerm}
+                language={language}
+                onSelectChatRoom={setSelectedChatRoom}
+                onFilterChange={setFilter}
+                onSearchChange={setSearchTerm}
+                getChatRoomTitle={getChatRoomTitle}
+                getChatRoomSubtitle={getChatRoomSubtitle}
+                getChatRoomTypeBadge={getChatRoomTypeBadge}
+                getChatRoomIcon={getChatRoomIcon}
+                getChatRoomStatus={getChatRoomStatus}
+                getProjectTitle={getProjectTitle}
+                getUnreadCount={getUnreadCount}
+                formatTime={formatTime}
+              />
 
               {/* Messages Area */}
               <Card className="flex-1 flex flex-col overflow-hidden bg-black border-gray-800 h-full">
                 {selectedChatRoom ? (
                   <>
-                     {/* Chat Header */}
-                     <div className="flex-shrink-0 border-b border-gray-800 bg-gray-900/50 px-4 py-3">
-                       <div className="flex items-center justify-between">
-                         {/* Left Side - Action Buttons */}
-                         <div className="flex gap-2">
-                           {/* Start Chat Button - Show if chat hasn't started yet */}
-                           {!selectedChatRoom.adminStartedChat && selectedChatRoom.type !== 'group' && (
-                             <Button
-                               onClick={handleStartChat}
-                               disabled={startingChat}
-                               className="bg-green-500 hover:bg-green-600 text-white h-7 px-3 text-xs font-medium rounded"
-                               size="sm"
-                             >
-                               {startingChat ? (
-                                 <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                               ) : (
-                                 <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
-                               )}
-                               {language === 'en' ? 'Start Chat' : 'بدء الدردشة'}
-                             </Button>
-                           )}
-                           
-                           {/* Assign/Reject Buttons - Show only for admin-engineer/admin-company chats after chat started */}
-                           {selectedChatRoom.adminStartedChat && (selectedChatRoom.type === 'admin-engineer' || selectedChatRoom.type === 'admin-company') && (
-                             <>
-                               {isEngineerAssigned(selectedChatRoom) ? (
-                                 // Show badge if engineer is assigned
-                                 <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs px-3 py-1 h-7 flex items-center gap-1.5">
-                                   <CheckCircle className="h-3.5 w-3.5" />
-                                   {language === 'en' ? 'Assigned - Working on Project' : 'معيّن - يعمل على المشروع'}
-                                 </Badge>
-                               ) : (
-                                 // Show assign/reject buttons if engineer is not assigned
-                                 <>
-                                   <Button
-                                     onClick={() => setShowRejectModal(true)}
-                                     className="bg-red-500 hover:bg-red-600 text-white h-7 px-3 text-xs font-medium rounded"
-                                     size="sm"
-                                   >
-                                     <X className="h-3.5 w-3.5 mr-1.5" />
-                                     {language === 'en' ? 'Reject' : 'رفض'}
-                                   </Button>
-                                   <Button
-                                     onClick={handleAssignEngineer}
-                                     disabled={assigning || loadingProject}
-                                     className="bg-yellow-400 hover:bg-yellow-500 text-black h-7 px-3 text-xs font-medium rounded"
-                                     size="sm"
-                                   >
-                                     {assigning || loadingProject ? (
-                                       <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                                     ) : (
-                                       <UserCheck className="h-3.5 w-3.5 mr-1.5" />
-                                     )}
-                                     {language === 'en' ? 'Assign' : 'تعيين'}
-                                   </Button>
-                                 </>
-                               )}
-                             </>
-                           )}
-                           
-                           {selectedChatRoom.type === 'admin-client' && <div />}
-                         </div>
-                         
-                         {/* Right Side - Participant Info */}
-                         <div className="flex items-center gap-3">
-                           {selectedChatRoom.type === 'admin-engineer' && (
-                             <>
-                               <Badge className="bg-yellow-400/20 text-yellow-400 border-0 text-xs px-2.5 py-1 h-6">
-                                 {language === 'en' ? 'Engineer' : 'مهندس'}
-                               </Badge>
-                               <div className="flex flex-col items-end">
-                                 <span className="text-sm font-semibold text-white">
-                                   {getChatRoomTitle(selectedChatRoom)}
-                                 </span>
-                                 <span className="text-xs text-gray-400">
-                                   {getChatRoomSubtitle(selectedChatRoom)} • {selectedProjectRoom?.projectTitle}
-                                 </span>
-                               </div>
-                               <div className="w-8 h-8 rounded-md bg-yellow-400/20 flex items-center justify-center">
-                                 <Briefcase className="h-4 w-4 text-yellow-400/80" />
-                               </div>
-                             </>
-                           )}
-                           {selectedChatRoom.type === 'admin-client' && (
-                             <>
-                               <div className="flex flex-col items-end">
-                                 <span className="text-sm font-semibold text-white">
-                                   {getChatRoomTitle(selectedChatRoom)}
-                                 </span>
-                                 <span className="text-xs text-gray-400">
-                                   {getChatRoomSubtitle(selectedChatRoom)} • {selectedProjectRoom?.projectTitle}
-                                 </span>
-                               </div>
-                               <div className="w-8 h-8 rounded-md bg-gray-700 flex items-center justify-center">
-                                 <User className="h-4 w-4 text-gray-300" />
-                               </div>
-                             </>
-                           )}
-                         </div>
-                       </div>
-                     </div>
+                    {/* Chat Header */}
+                    <div className="flex-shrink-0 border-b border-gray-800 bg-gray-900/50 px-4 py-3">
+                      <div className="flex items-center justify-between">
+                        {/* Left Side - Action Buttons */}
+                        <div className="flex gap-2">
+                          {/* Start Chat Button - Show if chat hasn't started yet */}
+                          {!selectedChatRoom.adminStartedChat && selectedChatRoom.type !== 'group' && (
+                            <Button
+                              onClick={handleStartChat}
+                              disabled={startingChat}
+                              className="bg-green-500 hover:bg-green-600 text-white h-7 px-3 text-xs font-medium rounded"
+                              size="sm"
+                            >
+                              {startingChat ? (
+                                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                              ) : (
+                                <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+                              )}
+                              {language === 'en' ? 'Start Chat' : 'بدء الدردشة'}
+                            </Button>
+                          )}
 
-                     {/* Admin Observer Banner - Show for group chats */}
-                     {selectedChatRoom.type === 'group' && selectedChatRoom.adminObserver && (
-                       <ObserverBanner language={language} />
-                     )}
+                          {/* Assign/Reject Buttons - Show only for admin-engineer/admin-company chats after chat started */}
+                          {selectedChatRoom.adminStartedChat && (selectedChatRoom.type === 'admin-engineer' || selectedChatRoom.type === 'admin-company') && (
+                            <>
+                              {isEngineerAssigned(selectedChatRoom) ? (
+                                // Show badge if engineer is assigned
+                                <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs px-3 py-1 h-7 flex items-center gap-1.5">
+                                  <CheckCircle className="h-3.5 w-3.5" />
+                                  {language === 'en' ? 'Assigned - Working on Project' : 'معيّن - يعمل على المشروع'}
+                                </Badge>
+                              ) : (
+                                // Show assign/reject buttons if engineer is not assigned
+                                <>
+                                  <Button
+                                    onClick={() => setShowRejectModal(true)}
+                                    className="bg-red-500 hover:bg-red-600 text-white h-7 px-3 text-xs font-medium rounded"
+                                    size="sm"
+                                  >
+                                    <X className="h-3.5 w-3.5 mr-1.5" />
+                                    {language === 'en' ? 'Reject' : 'رفض'}
+                                  </Button>
+                                  <Button
+                                    onClick={handleAssignEngineer}
+                                    disabled={assigning || loadingProject}
+                                    className="bg-yellow-400 hover:bg-yellow-500 text-black h-7 px-3 text-xs font-medium rounded"
+                                    size="sm"
+                                  >
+                                    {assigning || loadingProject ? (
+                                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                    ) : (
+                                      <UserCheck className="h-3.5 w-3.5 mr-1.5" />
+                                    )}
+                                    {language === 'en' ? 'Assign' : 'تعيين'}
+                                  </Button>
+                                </>
+                              )}
+                            </>
+                          )}
 
-                     {/* Messages */}
-                     <MessagesList
-                       messages={messages}
-                       loadingMessages={loadingMessages}
-                       page={page}
-                       language={language}
-                       messagesContainerRef={messagesContainerRef}
-                       messagesEndRef={messagesEndRef}
-                     />
+                          {selectedChatRoom.type === 'admin-client' && <div />}
+                        </div>
 
-                     {/* Message Input */}
-                     <MessageInput
-                       message={message}
-                       setMessage={setMessage}
-                       attachments={attachments}
-                       sending={sending}
-                       language={language}
-                       fileInputRef={fileInputRef}
-                       onFileSelect={handleFileSelect}
-                       onRemoveAttachment={removeAttachment}
-                       onSendMessage={handleSendMessage}
-                     />
-                      </>
+                        {/* Right Side - Participant Info */}
+                        <div className="flex items-center gap-3">
+                          {selectedChatRoom.type === 'admin-engineer' && (
+                            <>
+                              <Badge className="bg-yellow-400/20 text-yellow-400 border-0 text-xs px-2.5 py-1 h-6">
+                                {language === 'en' ? 'Engineer' : 'مهندس'}
+                              </Badge>
+                              <div className="flex flex-col items-end">
+                                <span className="text-sm font-semibold text-white">
+                                  {getChatRoomTitle(selectedChatRoom)}
+                                </span>
+                                <span className="text-xs text-gray-400">
+                                  {getChatRoomSubtitle(selectedChatRoom)} • {selectedProjectRoom?.projectTitle}
+                                </span>
+                              </div>
+                              <div className="w-8 h-8 rounded-md bg-yellow-400/20 flex items-center justify-center">
+                                <Briefcase className="h-4 w-4 text-yellow-400/80" />
+                              </div>
+                            </>
+                          )}
+                          {selectedChatRoom.type === 'admin-client' && (
+                            <>
+                              <div className="flex flex-col items-end">
+                                <span className="text-sm font-semibold text-white">
+                                  {getChatRoomTitle(selectedChatRoom)}
+                                </span>
+                                <span className="text-xs text-gray-400">
+                                  {getChatRoomSubtitle(selectedChatRoom)} • {selectedProjectRoom?.projectTitle}
+                                </span>
+                              </div>
+                              <div className="w-8 h-8 rounded-md bg-gray-700 flex items-center justify-center">
+                                <User className="h-4 w-4 text-gray-300" />
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Admin Observer Banner - Show for group chats */}
+                    {selectedChatRoom.type === 'group' && selectedChatRoom.adminObserver && (
+                      <ObserverBanner language={language} />
+                    )}
+
+                    {/* Messages */}
+                    <MessagesList
+                      messages={messages}
+                      loadingMessages={loadingMessages}
+                      page={page}
+                      language={language}
+                      messagesContainerRef={messagesContainerRef}
+                      messagesEndRef={messagesEndRef}
+                    />
+
+                    {/* Message Input */}
+                    <MessageInput
+                      message={message}
+                      setMessage={setMessage}
+                      attachments={attachments}
+                      sending={sending}
+                      language={language}
+                      fileInputRef={fileInputRef}
+                      onFileSelect={handleFileSelect}
+                      onRemoveAttachment={removeAttachment}
+                      onSendMessage={handleSendMessage}
+                    />
+                  </>
                 ) : (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
@@ -1302,7 +1302,7 @@ const AdminMessages = () => {
                     </div>
                   </div>
                 )}
-                </Card>
+              </Card>
             </div>
           </div>
         </main>
@@ -1314,7 +1314,7 @@ const AdminMessages = () => {
           <DialogHeader>
             <DialogTitle>{language === 'en' ? 'Reject Engineer' : 'رفض المهندس'}</DialogTitle>
             <DialogDescription>
-              {language === 'en' 
+              {language === 'en'
                 ? 'Please provide a reason for rejecting this engineer.'
                 : 'يرجى إدخال سبب رفض هذا المهندس.'}
             </DialogDescription>
@@ -1339,7 +1339,7 @@ const AdminMessages = () => {
             }}>
               {language === 'en' ? 'Cancel' : 'إلغاء'}
             </Button>
-            <Button 
+            <Button
               onClick={handleRejectEngineer}
               disabled={rejecting || !rejectReason.trim()}
               className="bg-red-500 hover:bg-red-600 text-white"
@@ -1368,7 +1368,7 @@ const AdminMessages = () => {
               {language === 'en' ? 'Assign Engineer to Project' : 'تعيين المهندس للمشروع'}
             </DialogTitle>
             <DialogDescription>
-              {language === 'en' 
+              {language === 'en'
                 ? 'You will be redirected to the project details page to complete the assignment.'
                 : 'سيتم توجيهك إلى صفحة تفاصيل المشروع لإكمال التعيين.'}
             </DialogDescription>
@@ -1394,7 +1394,7 @@ const AdminMessages = () => {
               <div className="p-3 bg-yellow-400/8 border border-yellow-400/15 rounded-lg">
                 <p className="text-sm text-yellow-400/80">
                   <strong>{language === 'en' ? 'Note:' : 'ملاحظة:'}</strong>{' '}
-                  {language === 'en' 
+                  {language === 'en'
                     ? 'You can review proposals and assign the engineer from the project details page.'
                     : 'يمكنك مراجعة العروض وتعيين المهندس من صفحة تفاصيل المشروع.'}
                 </p>
@@ -1402,8 +1402,8 @@ const AdminMessages = () => {
             </div>
           )}
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setShowAssignModal(false)}
             >
               {language === 'en' ? 'Cancel' : 'إلغاء'}
