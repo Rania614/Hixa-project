@@ -88,7 +88,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     
     const role = userData.role.toLowerCase();
     // Normalize role to match backend values
-    if (role === 'client' || role === 'customer') return 'client';
+    if (role === 'client') return 'client';
     if (role === 'engineer' || role === 'partner') return 'engineer';
     if (role === 'company') return 'company';
     if (role === 'admin') return 'admin';

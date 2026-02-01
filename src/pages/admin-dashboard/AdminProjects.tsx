@@ -302,7 +302,7 @@ const AdminProjects = () => {
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      // If filtering by pending, use the pending endpoint
+      // If filtering by pending (card or dropdown), use the pending endpoint
       if (statusFilter === 'pending') {
         try {
           const response = await http.get('/projects/pending', {
@@ -344,18 +344,31 @@ const AdminProjects = () => {
     }
   };
 
-  // Fetch statistics
+  // Fetch statistics (تطابق أرقام الباك‌اند مع الكاردات)
   const fetchStatistics = async () => {
     try {
       const response = await http.get('/projects/statistics');
-      setStatistics(response.data?.data || response.data || statistics);
+      const data = response.data?.data || response.data || {};
+      // الباك‌اند يعيد: pendingReviewCount, activeCount, assignedCount, rejectedArchivedCount أو القيم القديمة
+      const pendingReview = Number(data.pendingReviewCount ?? (data.draft ?? 0) + (data.pendingReview ?? 0));
+      const active = Number(data.activeCount ?? data.waitingForEngineers ?? 0);
+      const assigned = Number(data.assignedCount ?? data.inProgress ?? 0);
+      const rejected = Number(data.rejectedArchivedCount ?? (data.rejected ?? 0) + (data.cancelled ?? 0));
+      const total = Number(data.total ?? 0);
+      setStatistics({
+        pendingReview,
+        active,
+        assigned,
+        rejected,
+        total,
+      });
     } catch (error: any) {
-      // Calculate from projects
-      const pendingReview = projects.filter(p => p.status === 'pending_review' || p.status === 'draft').length;
-      const active = projects.filter(p => p.status === 'approved' || p.status === 'published').length;
-      const assigned = projects.filter(p => p.status === 'assigned' || p.status === 'in_progress').length;
-      const rejected = projects.filter(p => p.status === 'rejected' || p.status === 'archived').length;
-      
+      // Fallback: احسب من قائمة المشاريع المحمّلة
+      const statusNorm = (s: string) => (s || '').toLowerCase().replace(/\s+/g, '_');
+      const pendingReview = projects.filter(p => ['pending_review', 'draft', 'pending review'].includes(statusNorm(p.status))).length;
+      const active = projects.filter(p => ['waitingforengineers', 'waiting_for_engineers', 'approved', 'published'].includes(statusNorm(p.status))).length;
+      const assigned = projects.filter(p => ['in_progress', 'in progress', 'assigned'].includes(statusNorm(p.status))).length;
+      const rejected = projects.filter(p => ['rejected', 'archived', 'cancelled'].includes(statusNorm(p.status))).length;
       setStatistics({
         pendingReview,
         active,
@@ -576,11 +589,20 @@ const AdminProjects = () => {
     if (statusFilter !== 'all') {
       if (statusFilter === 'pending') {
         // Check for pending review status (both old and new formats)
-        const isPending = project.status === 'Pending Review' || 
-                         project.status === 'pending_review' || 
+        const isPending = project.status === 'Pending Review' ||
+                         project.status === 'pending_review' ||
                          project.status === 'draft' ||
                          project.adminApproval?.status === 'pending';
         if (!isPending) return false;
+      } else if (statusFilter === 'active') {
+        const isActive = project.status === 'approved' || project.status === 'published';
+        if (!isActive) return false;
+      } else if (statusFilter === 'assigned_in_progress') {
+        const isAssignedOrInProgress = project.status === 'assigned' || project.status === 'in_progress';
+        if (!isAssignedOrInProgress) return false;
+      } else if (statusFilter === 'rejected_archived') {
+        const isRejectedOrArchived = project.status === 'rejected' || project.status === 'archived';
+        if (!isRejectedOrArchived) return false;
       } else if (project.status !== statusFilter) return false;
     }
 
@@ -711,9 +733,12 @@ const AdminProjects = () => {
             </p>
           </div>
 
-          {/* Statistics Cards */}
+          {/* Statistics Cards - clickable to filter list */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <Card className="glass-card">
+            <Card
+              className={`glass-card cursor-pointer transition-all hover:ring-2 hover:ring-yellow-500/50 ${statusFilter === 'pending' ? 'ring-2 ring-yellow-500' : ''}`}
+              onClick={() => setStatusFilter(statusFilter === 'pending' ? 'all' : 'pending')}
+            >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {language === 'en' ? 'Pending Review' : 'قيد المراجعة'}
@@ -729,8 +754,11 @@ const AdminProjects = () => {
                 </p>
               </CardContent>
             </Card>
-            
-            <Card className="glass-card">
+
+            <Card
+              className={`glass-card cursor-pointer transition-all hover:ring-2 hover:ring-green-500/50 ${statusFilter === 'active' ? 'ring-2 ring-green-500' : ''}`}
+              onClick={() => setStatusFilter(statusFilter === 'active' ? 'all' : 'active')}
+            >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {language === 'en' ? 'Active Projects' : 'المشاريع النشطة'}
@@ -746,8 +774,11 @@ const AdminProjects = () => {
                 </p>
               </CardContent>
             </Card>
-            
-            <Card className="glass-card">
+
+            <Card
+              className={`glass-card cursor-pointer transition-all hover:ring-2 hover:ring-cyan/50 ${statusFilter === 'assigned_in_progress' ? 'ring-2 ring-cyan' : ''}`}
+              onClick={() => setStatusFilter(statusFilter === 'assigned_in_progress' ? 'all' : 'assigned_in_progress')}
+            >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {language === 'en' ? 'Assigned Projects' : 'المشاريع المعيّنة'}
@@ -763,8 +794,11 @@ const AdminProjects = () => {
                 </p>
               </CardContent>
             </Card>
-            
-            <Card className="glass-card">
+
+            <Card
+              className={`glass-card cursor-pointer transition-all hover:ring-2 hover:ring-red-500/50 ${statusFilter === 'rejected_archived' ? 'ring-2 ring-red-500' : ''}`}
+              onClick={() => setStatusFilter(statusFilter === 'rejected_archived' ? 'all' : 'rejected_archived')}
+            >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {language === 'en' ? 'Rejected / Archived' : 'مرفوضة / مؤرشفة'}

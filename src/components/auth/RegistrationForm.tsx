@@ -140,7 +140,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
       setIsAuthenticated(true);
       
       const userRole = response.user?.role?.toLowerCase();
-      const normalizedRole = userRole === 'client' || userRole === 'customer' ? 'client' : null;
+      const normalizedRole = userRole === 'client' ? 'client' : null;
       setUserRole(normalizedRole);
       
       toast.success(

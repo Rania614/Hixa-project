@@ -35,6 +35,7 @@ export interface ChatRoom {
     _id: string;
     title: string;
     status: string;
+    client?: string | { _id: string; name?: string; email?: string };
   };
   projectRoom: string | {
     _id: string;
@@ -48,6 +49,8 @@ export interface ChatRoom {
   adminStartedChat?: boolean; // Admin has started the chat
   adminObserver?: boolean; // Admin is observer only (for group chats)
   createdAt: string;
+  /** Server-computed display name (client/engineer actual name) */
+  displayTitle?: string;
 }
 
 export interface MessageAttachment {
@@ -346,6 +349,19 @@ export const messagesApi = {
     groupChatRoom: ChatRoom;
   }> => {
     const response = await http.post(`/chat-rooms/${chatRoomId}/assign-engineer`, {
+      engineerId,
+    });
+    return response.data?.data || response.data;
+  },
+
+  // Reject engineer from chat room (admin only)
+  rejectEngineerFromChat: async (
+    chatRoomId: string,
+    reason: string,
+    engineerId?: string
+  ): Promise<{ proposalId: string; status: string }> => {
+    const response = await http.post(`/chat-rooms/${chatRoomId}/reject-engineer`, {
+      reason,
       engineerId,
     });
     return response.data?.data || response.data;

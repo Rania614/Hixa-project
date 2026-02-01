@@ -1,6 +1,7 @@
 import React, { useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, ChevronUp } from "lucide-react";
 import { Message } from "@/services/messagesApi";
 import { MessageItem } from "./MessageItem";
 
@@ -11,6 +12,8 @@ interface MessagesListProps {
   language: string;
   messagesContainerRef: React.RefObject<HTMLDivElement>;
   messagesEndRef: React.RefObject<HTMLDivElement>;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
 }
 
 export const MessagesList: React.FC<MessagesListProps> = ({
@@ -20,6 +23,8 @@ export const MessagesList: React.FC<MessagesListProps> = ({
   language,
   messagesContainerRef,
   messagesEndRef,
+  hasMore = false,
+  onLoadMore,
 }) => {
   return (
     <div className="flex-1 overflow-hidden flex flex-col bg-black min-h-0">
@@ -34,6 +39,25 @@ export const MessagesList: React.FC<MessagesListProps> = ({
             </div>
           ) : (
             <div className="space-y-2 pb-6">
+              {hasMore && onLoadMore && (
+                <div className="flex justify-center py-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs border-gray-600 text-gray-300 hover:bg-gray-800"
+                    onClick={onLoadMore}
+                    disabled={loadingMessages}
+                  >
+                    {loadingMessages && page > 1 ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                    ) : (
+                      <ChevronUp className="h-3.5 w-3.5 mr-1.5" />
+                    )}
+                    {language === "en" ? "Load older messages" : "تحميل رسائل أقدم"}
+                  </Button>
+                </div>
+              )}
               {messages.length === 0 ? (
                 <div className="flex items-center justify-center py-12 text-gray-400">
                   {language === 'en' ? 'No messages yet' : 'لا توجد رسائل بعد'}
@@ -58,7 +82,13 @@ export const MessagesList: React.FC<MessagesListProps> = ({
                     ? (msg.sender as any)?._id
                     : msg.sender;
                   const isSameSender = prevSender === currentSender;
-                  const senderName = msg.senderName || (typeof msg.sender === 'object' ? msg.sender?.name : msg.sender) || senderRole || 'Unknown';
+                  const rawName = msg.senderName || (typeof msg.sender === 'object' ? (msg.sender as any)?.name : null) || '';
+                  const isPlaceholderName = !rawName || typeof rawName !== 'string' || rawName.trim() === '' || rawName === 'اسم المستخدم';
+                  const senderName = isAdmin && isPlaceholderName
+                    ? (language === 'en' ? 'Admin' : 'الأدمن')
+                    : isSystem
+                      ? (language === 'en' ? 'System' : 'نظام')
+                      : (rawName || (language === 'en' ? 'Unknown' : 'غير معروف'));
                   const senderAvatar = typeof senderName === 'string' ? senderName.charAt(0) : 'U';
                   const showAvatar = !isAdmin && !isSystem && !isSameSender;
 
@@ -71,6 +101,7 @@ export const MessagesList: React.FC<MessagesListProps> = ({
                       isSameSender={isSameSender}
                       showAvatar={showAvatar}
                       senderAvatar={senderAvatar}
+                      senderDisplayName={senderName}
                       language={language}
                     />
                   );

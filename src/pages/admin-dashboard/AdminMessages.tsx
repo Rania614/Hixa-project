@@ -23,7 +23,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { http } from "@/services/http";
 import { ChatHeader } from "@/components/admin-messages/ChatHeader";
 import { MessagesList } from "@/components/admin-messages/MessagesList";
 import { MessageInput } from "@/components/admin-messages/MessageInput";
@@ -71,208 +70,6 @@ const AdminMessages = () => {
   const selectedChatRoomRef = useRef<ChatRoom | null>(null);
   const [attachments, setAttachments] = useState<File[]>([]);
 
-  // Mock Data
-  const getMockProjectRooms = (): ProjectRoom[] => [
-    {
-      _id: '1',
-      project: 'proj1',
-      projectTitle: 'بناء مركز تجاري - الرياض',
-      lastActivityAt: new Date().toISOString(),
-      status: 'active',
-      createdAt: new Date(Date.now() - 86400000).toISOString(),
-    },
-    {
-      _id: '2',
-      project: 'proj2',
-      projectTitle: 'تصميم فيلا فاخرة - دبي',
-      lastActivityAt: new Date(Date.now() - 3600000).toISOString(),
-      status: 'active',
-      createdAt: new Date(Date.now() - 172800000).toISOString(),
-    },
-    {
-      _id: '3',
-      project: 'proj3',
-      projectTitle: 'New Villa Project',
-      lastActivityAt: new Date(Date.now() - 7200000).toISOString(),
-      status: 'active',
-      createdAt: new Date(Date.now() - 259200000).toISOString(),
-    },
-  ];
-
-  const getMockChatRooms = (projectRoomId: string): ChatRoom[] => {
-    if (projectRoomId === '1') {
-      return [
-        {
-          _id: 'chat1',
-          project: 'proj1',
-          projectRoom: '1',
-          type: 'admin-client',
-          participants: [
-            { user: 'أحمد السعيد', role: 'client', joinedAt: new Date().toISOString() },
-            { user: 'Admin', role: 'admin', joinedAt: new Date().toISOString() },
-          ],
-          lastMessage: {
-            content: language === 'en' ? 'Thank you for the update' : 'شكراً على التحديث',
-            sender: 'client1',
-            createdAt: new Date(Date.now() - 1800000).toISOString(),
-          },
-          status: 'active',
-          createdAt: new Date(Date.now() - 86400000).toISOString(),
-        },
-        {
-          _id: 'chat2',
-          project: 'proj1',
-          projectRoom: '1',
-          type: 'admin-engineer',
-          engineer: 'eng1',
-          participants: [
-            { user: 'محمد علي', role: 'engineer', joinedAt: new Date().toISOString() },
-            { user: 'Admin', role: 'admin', joinedAt: new Date().toISOString() },
-          ],
-          lastMessage: {
-            content: language === 'en' ? 'I can start next week' : 'يمكنني البدء الأسبوع القادم',
-            sender: 'eng1',
-            createdAt: new Date(Date.now() - 3600000).toISOString(),
-          },
-          status: 'active',
-          createdAt: new Date(Date.now() - 172800000).toISOString(),
-        },
-      ];
-    }
-    if (projectRoomId === '2') {
-      return [
-        {
-          _id: 'chat3',
-          project: 'proj2',
-          projectRoom: '2',
-          type: 'admin-client',
-          participants: [
-            { user: 'فاطمة الزهراء', role: 'client', joinedAt: new Date().toISOString() },
-            { user: 'Admin', role: 'admin', joinedAt: new Date().toISOString() },
-          ],
-          lastMessage: {
-            content: language === 'en' ? 'When can we meet?' : 'متى يمكننا الاجتماع؟',
-            sender: 'client2',
-            createdAt: new Date(Date.now() - 7200000).toISOString(),
-          },
-          status: 'active',
-          createdAt: new Date(Date.now() - 259200000).toISOString(),
-        },
-      ];
-    }
-    if (projectRoomId === '3') {
-      return [
-        {
-          _id: 'chat5',
-          project: 'proj3',
-          projectRoom: '3',
-          type: 'admin-client',
-          participants: [
-            { user: 'John Smith', role: 'client', joinedAt: new Date().toISOString() },
-            { user: 'Admin', role: 'admin', joinedAt: new Date().toISOString() },
-          ],
-          lastMessage: {
-            content: 'I need to discuss the budget',
-            sender: 'client3',
-            createdAt: new Date(Date.now() - 14400000).toISOString(),
-          },
-          status: 'active',
-          createdAt: new Date(Date.now() - 432000000).toISOString(),
-        },
-      ];
-    }
-    return [];
-  };
-
-  const getMockMessages = (chatRoomId: string): Message[] => {
-    if (chatRoomId === 'chat1') {
-      return [
-        {
-          _id: 'msg1',
-          chatRoom: 'chat1',
-          sender: 'admin',
-          senderName: 'Admin',
-          senderRole: 'admin',
-          content: language === 'en' ? 'Hello, how can I help you with the project?' : 'مرحباً، كيف يمكنني مساعدتك في المشروع؟',
-          type: 'text',
-          readBy: [],
-          createdAt: new Date(Date.now() - 3600000).toISOString(),
-        },
-        {
-          _id: 'msg2',
-          chatRoom: 'chat1',
-          sender: 'client1',
-          senderName: 'أحمد السعيد',
-          senderRole: 'client',
-          content: language === 'en' ? 'I need to update the project requirements' : 'أحتاج تحديث متطلبات المشروع',
-          type: 'text',
-          readBy: [],
-          createdAt: new Date(Date.now() - 1800000).toISOString(),
-        },
-        {
-          _id: 'msg3',
-          chatRoom: 'chat1',
-          sender: 'admin',
-          senderName: 'Admin',
-          senderRole: 'admin',
-          content: language === 'en' ? 'Sure, please send me the updated requirements' : 'بالطبع، يرجى إرسال المتطلبات المحدثة',
-          type: 'text',
-          readBy: [],
-          createdAt: new Date(Date.now() - 900000).toISOString(),
-        },
-        {
-          _id: 'msg4',
-          chatRoom: 'chat1',
-          sender: 'client1',
-          senderName: 'أحمد السعيد',
-          senderRole: 'client',
-          content: language === 'en' ? 'Thank you for the update' : 'شكراً على التحديث',
-          type: 'text',
-          readBy: [],
-          createdAt: new Date(Date.now() - 300000).toISOString(),
-        },
-      ];
-    }
-    if (chatRoomId === 'chat2') {
-      return [
-        {
-          _id: 'msg5',
-          chatRoom: 'chat2',
-          sender: 'eng1',
-          senderName: 'محمد علي',
-          senderRole: 'engineer',
-          content: language === 'en' ? 'Hello, I am interested in this project' : 'مرحباً، أنا مهتم بهذا المشروع',
-          type: 'text',
-          readBy: [],
-          createdAt: new Date(Date.now() - 7200000).toISOString(),
-        },
-        {
-          _id: 'msg6',
-          chatRoom: 'chat2',
-          sender: 'admin',
-          senderName: 'Admin',
-          senderRole: 'admin',
-          content: language === 'en' ? 'Great! When can you start?' : 'رائع! متى يمكنك البدء؟',
-          type: 'text',
-          readBy: [],
-          createdAt: new Date(Date.now() - 3600000).toISOString(),
-        },
-        {
-          _id: 'msg7',
-          chatRoom: 'chat2',
-          sender: 'eng1',
-          senderName: 'محمد علي',
-          senderRole: 'engineer',
-          content: language === 'en' ? 'I can start next week' : 'يمكنني البدء الأسبوع القادم',
-          type: 'text',
-          readBy: [],
-          createdAt: new Date(Date.now() - 1800000).toISOString(),
-        },
-      ];
-    }
-    return [];
-  };
-
   // Functions
   const scrollToBottom = React.useCallback(() => {
     setTimeout(() => {
@@ -285,24 +82,19 @@ const AdminMessages = () => {
       setLoading(true);
       const rooms = await messagesApi.getProjectRooms();
       if (!rooms || rooms.length === 0) {
-        const mockRooms = getMockProjectRooms();
-        setProjectRooms(mockRooms);
-        setSelectedProjectRoom(mockRooms[0]);
+        setProjectRooms([]);
+        setSelectedProjectRoom(null);
       } else {
         setProjectRooms(rooms);
         setSelectedProjectRoom((prev) => {
-          if (!prev && rooms.length > 0) {
-            return rooms[0];
-          }
+          if (!prev && rooms.length > 0) return rooms[0];
           return prev;
         });
       }
     } catch (error: any) {
-      if (error.response?.status === 404 || error.code === 'ERR_NETWORK') {
-        const mockRooms = getMockProjectRooms();
-        setProjectRooms(mockRooms);
-        setSelectedProjectRoom(mockRooms[0]);
-      } else {
+      setProjectRooms([]);
+      setSelectedProjectRoom(null);
+      if (error.response?.status !== 404 && error.code !== 'ERR_NETWORK') {
         toast.error(language === 'en' ? 'Failed to load projects' : 'فشل تحميل المشاريع');
       }
     } finally {
@@ -337,43 +129,19 @@ const AdminMessages = () => {
     try {
       const rooms = await messagesApi.getChatRooms(projectRoomId);
       if (!rooms || rooms.length === 0) {
-        // Use mock data if API returns empty or 404
-        const mockRooms = getMockChatRooms(projectRoomId);
-        setChatRooms(mockRooms);
-        setSelectedChatRoom((prev) => {
-          if (!prev && mockRooms.length > 0) {
-            return mockRooms[0];
-          }
-          return prev;
-        });
+        setChatRooms([]);
+        setSelectedChatRoom((prev) => (prev ? prev : null));
       } else {
         setChatRooms(rooms);
         setSelectedChatRoom((prev) => {
-          if (!prev && rooms.length > 0) {
-            return rooms[0];
-          }
+          if (!prev && rooms.length > 0) return rooms[0];
           return prev;
         });
       }
     } catch (error: any) {
-      // Handle other errors (not 404, as that's handled in messagesApi)
-      if (error.code === 'ERR_NETWORK') {
-        const mockRooms = getMockChatRooms(projectRoomId);
-        setChatRooms(mockRooms);
-        setSelectedChatRoom((prev) => {
-          if (!prev && mockRooms.length > 0) {
-            return mockRooms[0];
-          }
-          return prev;
-        });
-      } else {
-        // Only show error for non-404 errors
-        if (error.response?.status !== 404) {
-          toast.error(language === 'en' ? 'Failed to load chats' : 'فشل تحميل المحادثات');
-        }
-        // Fallback to mock data
-        const mockRooms = getMockChatRooms(projectRoomId);
-        setChatRooms(mockRooms);
+      setChatRooms([]);
+      if (error.response?.status !== 404 && error.code !== 'ERR_NETWORK') {
+        toast.error(language === 'en' ? 'Failed to load chats' : 'فشل تحميل المحادثات');
       }
     }
   }, [language]);
@@ -424,6 +192,12 @@ const AdminMessages = () => {
 
       console.log('✅ [Admin] Valid response, processing', result.messages.length, 'messages');
 
+      // Only apply result if still viewing this chat room (avoid showing wrong room messages)
+      const currentRoomId = selectedChatRoomRef.current?._id;
+      if (currentRoomId !== chatRoomId) {
+        return;
+      }
+
       if (append) {
         // When appending (loading older messages), add them to the beginning
         setMessages((prev) => {
@@ -433,16 +207,12 @@ const AdminMessages = () => {
         });
       } else {
         // Messages come from backend oldest first, we want newest at bottom
-        // So we keep them as is (oldest first = top to bottom, newest at bottom)
         setMessages(result.messages);
       }
       setHasMore(result.page < result.totalPages);
       setPage(result.page);
       if (!append) {
-        // Scroll to bottom after messages are rendered
-        setTimeout(() => {
-          scrollToBottom();
-        }, 200);
+        setTimeout(() => scrollToBottom(), 200);
       }
     } catch (error: any) {
 
@@ -738,85 +508,91 @@ const AdminMessages = () => {
     }
 
     try {
-      if (!selectedChatRoom || !selectedProjectRoom || selectedChatRoom.type !== 'admin-engineer') return;
+      if (
+        !selectedChatRoom ||
+        (selectedChatRoom.type !== 'admin-engineer' && selectedChatRoom.type !== 'admin-company')
+      ) {
+        return;
+      }
 
       setRejecting(true);
-      const engineerId = selectedChatRoom.engineer || selectedChatRoom.participants.find(p => p.role === 'engineer')?.user;
+      let engineerId: any = selectedChatRoom.engineer || selectedChatRoom.participants.find(
+        (p) => p.role === 'engineer' || p.role === 'company'
+      )?.user;
       if (!engineerId) {
         toast.error(language === 'en' ? 'Engineer ID not found' : 'لم يتم العثور على معرف المهندس');
         return;
       }
+      const engineerIdStr = typeof engineerId === 'object' && engineerId !== null
+        ? (engineerId._id || engineerId.id || engineerId).toString()
+        : String(engineerId);
 
-      await http.post(`/projects/${selectedProjectRoom.project}/chat/${selectedChatRoom._id}/reject`, {
-        reason: rejectReason,
-        engineerId: engineerId,
-      });
+      await messagesApi.rejectEngineerFromChat(
+        selectedChatRoom._id,
+        rejectReason.trim(),
+        engineerIdStr
+      );
 
       toast.success(language === 'en' ? 'Engineer rejected successfully' : 'تم رفض المهندس بنجاح');
       setShowRejectModal(false);
-      setRejectReason("");
+      setRejectReason('');
 
-      // Refresh chat rooms
       if (selectedProjectRoom) {
-        loadChatRooms(selectedProjectRoom._id);
-        // Clear selected chat room if it was rejected
-        if (selectedChatRoom) {
-          setSelectedChatRoom(null);
-          setMessages([]);
+        if (viewMode === 'project') {
+          loadChatRooms(selectedProjectRoom._id);
+        } else {
+          loadAllChatRooms();
         }
+        setSelectedChatRoom(null);
+        setMessages([]);
       }
     } catch (error: any) {
       console.error('Error rejecting engineer:', error);
-      toast.error(language === 'en' ? 'Failed to reject engineer' : 'فشل رفض المهندس');
+      const msg = error.response?.data?.message || error.message;
+      toast.error(msg || (language === 'en' ? 'Failed to reject engineer' : 'فشل رفض المهندس'));
     } finally {
       setRejecting(false);
     }
   };
 
   const getChatRoomTitle = (chatRoom: ChatRoom): string => {
+    // Use server-provided displayTitle first (actual client/engineer names)
+    if (chatRoom.displayTitle && typeof chatRoom.displayTitle === 'string' && chatRoom.displayTitle.trim() !== '') {
+      return chatRoom.displayTitle.trim();
+    }
     if (chatRoom.type === 'group') {
       return language === 'en' ? 'Group Chat' : 'الدردشة الجماعية';
     }
     if (chatRoom.type === 'admin-client') {
       const clientParticipant = chatRoom.participants.find((p) => p.role === 'client');
       const user = clientParticipant?.user;
-      // Handle both string and object (populated) user
       if (user && typeof user === 'object' && 'name' in user) {
         const userName = (user as any).name;
-        if (userName && typeof userName === 'string' && userName.trim() !== '') {
-          return userName;
-        }
+        if (userName && typeof userName === 'string' && userName.trim() !== '') return userName;
       }
-      // If user is string (ID) or name is not available, try to get from project
+      const roomProject = chatRoom.project;
+      if (roomProject && typeof roomProject === 'object' && roomProject.client) {
+        const client = roomProject.client;
+        const clientName = typeof client === 'object' && client !== null && 'name' in client ? (client as any).name : null;
+        if (clientName && typeof clientName === 'string' && clientName.trim() !== '') return clientName;
+      }
       if (project && project.client) {
-        const clientName = typeof project.client === 'object'
-          ? project.client.name
-          : null;
-        if (clientName && typeof clientName === 'string' && clientName.trim() !== '') {
-          return clientName;
-        }
+        const clientName = typeof project.client === 'object' ? project.client.name : null;
+        if (clientName && typeof clientName === 'string' && clientName.trim() !== '') return clientName;
       }
-      // Fallback to default
       return language === 'en' ? 'Client' : 'العميل';
     }
-    if (chatRoom.type === 'admin-engineer') {
+    if (chatRoom.type === 'admin-engineer' || chatRoom.type === 'admin-company') {
       const engineerParticipant = chatRoom.participants.find((p) => p.role === 'engineer' || p.role === 'company');
       const user = engineerParticipant?.user;
-      // Handle both string and object (populated) user
       if (user && typeof user === 'object' && 'name' in user) {
         const userName = (user as any).name;
-        if (userName && typeof userName === 'string' && userName.trim() !== '') {
-          return userName;
-        }
+        if (userName && typeof userName === 'string' && userName.trim() !== '') return userName;
       }
-      // If user is string (ID) or name is not available, try to get from engineer field
       if (chatRoom.engineer && typeof chatRoom.engineer === 'object' && chatRoom.engineer !== null) {
         const engineer = (chatRoom.engineer as { name?: string }).name;
-        if (engineer && typeof engineer === 'string' && engineer.trim() !== '') {
-          return engineer;
-        }
+        if (engineer && typeof engineer === 'string' && engineer.trim() !== '') return engineer;
       }
-      // Fallback to default
       return language === 'en' ? 'Engineer' : 'المهندس';
     }
     return language === 'en' ? 'Chat' : 'محادثة';
@@ -907,6 +683,11 @@ const AdminMessages = () => {
   useEffect(() => {
     selectedChatRoomRef.current = selectedChatRoom;
   }, [selectedChatRoom]);
+
+  // Clear messages as soon as the selected room changes (so we never show previous room's messages)
+  useEffect(() => {
+    setMessages([]);
+  }, [selectedChatRoom?._id]);
 
   // Load project info when chat room is selected
   useEffect(() => {
@@ -1075,6 +856,14 @@ const AdminMessages = () => {
       loadAttemptedRef.current = null;
     }
   }, [selectedChatRoom?._id]); // Remove loadMessages from dependencies
+
+  // Show only messages that belong to the current chat room (avoid wrong room messages)
+  const messagesToShow = selectedChatRoom
+    ? messages.filter((m) => {
+        const msgRoomId = typeof m.chatRoom === 'string' ? m.chatRoom : (m.chatRoom as any)?._id;
+        return String(msgRoomId) === String(selectedChatRoom._id);
+      })
+    : [];
 
   const filteredChatRooms = chatRooms.filter((room) => {
     // Filter by type
@@ -1265,12 +1054,18 @@ const AdminMessages = () => {
 
                     {/* Messages */}
                     <MessagesList
-                      messages={messages}
+                      messages={messagesToShow}
                       loadingMessages={loadingMessages}
                       page={page}
                       language={language}
                       messagesContainerRef={messagesContainerRef}
                       messagesEndRef={messagesEndRef}
+                      hasMore={hasMore}
+                      onLoadMore={
+                        selectedChatRoom && hasMore && !loadingMessages
+                          ? () => loadMessages(selectedChatRoom._id, page + 1, true)
+                          : undefined
+                      }
                     />
 
                     {/* Message Input */}

@@ -65,7 +65,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegis
       const userRole = response.user?.role?.toLowerCase();
       let normalizedRole: 'client' | 'engineer' | 'company' | 'admin' | null = null;
       
-      if (userRole === 'client' || userRole === 'customer') normalizedRole = 'client';
+      if (userRole === 'client') normalizedRole = 'client';
       else if (userRole === 'engineer' || userRole === 'partner') normalizedRole = 'engineer';
       else if (userRole === 'company') normalizedRole = 'company';
       else if (userRole === 'admin') normalizedRole = 'admin';

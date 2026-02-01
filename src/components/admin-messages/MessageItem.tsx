@@ -10,6 +10,7 @@ interface MessageItemProps {
   isSameSender: boolean;
   showAvatar: boolean;
   senderAvatar: string;
+  senderDisplayName?: string;
   language: string;
 }
 
@@ -20,8 +21,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   isSameSender,
   showAvatar,
   senderAvatar,
+  senderDisplayName,
   language,
 }) => {
+  const displayName = senderDisplayName || (typeof msg.sender === 'object' ? (msg.sender as any)?.name : null) || msg.senderName || (language === 'en' ? 'Unknown' : 'غير معروف');
+  const avatarLetter = displayName && displayName !== 'اسم المستخدم' ? displayName.charAt(0) : senderAvatar;
   return (
     <div className={`${isSameSender ? 'mt-1' : 'mt-4'}`}>
       <div className={`flex items-end gap-2.5 ${isAdmin
@@ -41,7 +45,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         {isAdmin && !isSystem && (
           <Avatar className={`w-8 h-8 flex-shrink-0 ${!isSameSender ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
             <AvatarFallback className="bg-amber-700 text-white text-xs font-semibold">
-              {typeof msg.senderName === 'string' ? msg.senderName.charAt(0).toUpperCase() : 'A'}
+              {avatarLetter ? String(avatarLetter).toUpperCase() : 'A'}
             </AvatarFallback>
           </Avatar>
         )}

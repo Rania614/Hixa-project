@@ -164,7 +164,7 @@ const AdminDashboard = () => {
               if (status === 'active' && isVerified) activeEngineers++;
               else if (!isVerified) pendingVerification++;
               else if (status === 'suspended' || status === 'inactive') suspended++;
-            } else if (role === 'client' || role === 'customer') {
+            } else if (role === 'client') {
               if (status === 'active' && isVerified) activeClients++;
               else if (!isVerified) pendingVerification++;
               else if (status === 'suspended' || status === 'inactive') suspended++;

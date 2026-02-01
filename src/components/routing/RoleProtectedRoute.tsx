@@ -97,7 +97,7 @@ export const RoleProtectedRoute = ({
           const role = userData.role.toLowerCase();
           let normalizedRole: UserRole = null;
           
-          if (role === 'client' || role === 'customer') normalizedRole = 'client';
+          if (role === 'client') normalizedRole = 'client';
           else if (role === 'engineer' || role === 'partner') normalizedRole = 'engineer';
           else if (role === 'company') normalizedRole = 'company';
           else if (role === 'admin') normalizedRole = 'admin';
@@ -113,7 +113,7 @@ export const RoleProtectedRoute = ({
               const role = fetchedUserData.role.toLowerCase();
               let normalizedRole: UserRole = null;
               
-              if (role === 'client' || role === 'customer') normalizedRole = 'client';
+              if (role === 'client') normalizedRole = 'client';
               else if (role === 'engineer' || role === 'partner') normalizedRole = 'engineer';
               else if (role === 'company') normalizedRole = 'company';
               else if (role === 'admin') normalizedRole = 'admin';

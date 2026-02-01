@@ -79,7 +79,7 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
     if (!userData || !userData.role) return null;
     
     const roleStr = userData.role.toLowerCase();
-    if (roleStr === 'client' || roleStr === 'customer') return 'client';
+    if (roleStr === 'client') return 'client';
     if (roleStr === 'engineer' || roleStr === 'partner') return 'engineer';
     if (roleStr === 'company') return 'company';
     if (roleStr === 'admin') return 'admin';
