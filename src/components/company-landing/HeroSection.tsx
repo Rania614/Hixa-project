@@ -8,6 +8,8 @@ interface HeroSectionProps {
   heroSubtitle: string;
   language: "en" | "ar";
   onGetStarted: () => void;
+  /** خلفية الهيرو من الداشبورد (تحكم المحتوى) */
+  heroBackgroundImage?: string;
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({
@@ -15,13 +17,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   heroSubtitle,
   language,
   onGetStarted,
+  heroBackgroundImage,
 }) => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const bgUrl = heroBackgroundImage?.trim() || "/images/W.jpeg";
 
   return (
     <section id="hero" className="relative h-screen w-full overflow-hidden">
-      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/images/W.jpeg')" }}>
+      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url(${bgUrl})` }}>
         <div className="absolute inset-0 bg-black bg-opacity-50"></div>
       </div>
 

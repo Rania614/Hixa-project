@@ -36,41 +36,57 @@ interface CountryPhoneInputProps {
   disabled?: boolean;
 }
 
-// Generate country options with flags
-const getCountryOptions = (language: "ar" | "en" = "en"): CountryOption[] => {
-  const countries: { [key: string]: { name: { en: string; ar: string }; dialCode: string } } = {
-    EG: { name: { en: "Egypt", ar: "مصر" }, dialCode: "+20" },
-    SA: { name: { en: "Saudi Arabia", ar: "السعودية" }, dialCode: "+966" },
-    AE: { name: { en: "United Arab Emirates", ar: "الإمارات العربية المتحدة" }, dialCode: "+971" },
-    KW: { name: { en: "Kuwait", ar: "الكويت" }, dialCode: "+965" },
-    QA: { name: { en: "Qatar", ar: "قطر" }, dialCode: "+974" },
-    BH: { name: { en: "Bahrain", ar: "البحرين" }, dialCode: "+973" },
-    OM: { name: { en: "Oman", ar: "عمان" }, dialCode: "+968" },
-    JO: { name: { en: "Jordan", ar: "الأردن" }, dialCode: "+962" },
-    LB: { name: { en: "Lebanon", ar: "لبنان" }, dialCode: "+961" },
-    IQ: { name: { en: "Iraq", ar: "العراق" }, dialCode: "+964" },
-    US: { name: { en: "United States", ar: "الولايات المتحدة" }, dialCode: "+1" },
-    GB: { name: { en: "United Kingdom", ar: "المملكة المتحدة" }, dialCode: "+44" },
-    FR: { name: { en: "France", ar: "فرنسا" }, dialCode: "+33" },
-    DE: { name: { en: "Germany", ar: "ألمانيا" }, dialCode: "+49" },
-    IT: { name: { en: "Italy", ar: "إيطاليا" }, dialCode: "+39" },
-    ES: { name: { en: "Spain", ar: "إسبانيا" }, dialCode: "+34" },
-    CA: { name: { en: "Canada", ar: "كندا" }, dialCode: "+1" },
-    AU: { name: { en: "Australia", ar: "أستراليا" }, dialCode: "+61" },
-    IN: { name: { en: "India", ar: "الهند" }, dialCode: "+91" },
-    CN: { name: { en: "China", ar: "الصين" }, dialCode: "+86" },
-    JP: { name: { en: "Japan", ar: "اليابان" }, dialCode: "+81" },
-    KR: { name: { en: "South Korea", ar: "كوريا الجنوبية" }, dialCode: "+82" },
-    BR: { name: { en: "Brazil", ar: "البرازيل" }, dialCode: "+55" },
-    MX: { name: { en: "Mexico", ar: "المكسيك" }, dialCode: "+52" },
-    ZA: { name: { en: "South Africa", ar: "جنوب أفريقيا" }, dialCode: "+27" },
-    NG: { name: { en: "Nigeria", ar: "نيجيريا" }, dialCode: "+234" },
-    KE: { name: { en: "Kenya", ar: "كينيا" }, dialCode: "+254" },
-    TR: { name: { en: "Turkey", ar: "تركيا" }, dialCode: "+90" },
-    RU: { name: { en: "Russia", ar: "روسيا" }, dialCode: "+7" },
-  };
+// مصدر واحد للدول في كل المشروع (اليوزر، المشاريع، طلب الخدمة، إلخ)
+export const COUNTRY_DATA: { [key: string]: { name: { en: string; ar: string }; dialCode: string } } = {
+  EG: { name: { en: "Egypt", ar: "مصر" }, dialCode: "+20" },
+  SA: { name: { en: "Saudi Arabia", ar: "السعودية" }, dialCode: "+966" },
+  AE: { name: { en: "United Arab Emirates", ar: "الإمارات العربية المتحدة" }, dialCode: "+971" },
+  KW: { name: { en: "Kuwait", ar: "الكويت" }, dialCode: "+965" },
+  QA: { name: { en: "Qatar", ar: "قطر" }, dialCode: "+974" },
+  BH: { name: { en: "Bahrain", ar: "البحرين" }, dialCode: "+973" },
+  OM: { name: { en: "Oman", ar: "عمان" }, dialCode: "+968" },
+  JO: { name: { en: "Jordan", ar: "الأردن" }, dialCode: "+962" },
+  LB: { name: { en: "Lebanon", ar: "لبنان" }, dialCode: "+961" },
+  IQ: { name: { en: "Iraq", ar: "العراق" }, dialCode: "+964" },
+  US: { name: { en: "United States", ar: "الولايات المتحدة" }, dialCode: "+1" },
+  GB: { name: { en: "United Kingdom", ar: "المملكة المتحدة" }, dialCode: "+44" },
+  FR: { name: { en: "France", ar: "فرنسا" }, dialCode: "+33" },
+  DE: { name: { en: "Germany", ar: "ألمانيا" }, dialCode: "+49" },
+  IT: { name: { en: "Italy", ar: "إيطاليا" }, dialCode: "+39" },
+  ES: { name: { en: "Spain", ar: "إسبانيا" }, dialCode: "+34" },
+  CA: { name: { en: "Canada", ar: "كندا" }, dialCode: "+1" },
+  AU: { name: { en: "Australia", ar: "أستراليا" }, dialCode: "+61" },
+  IN: { name: { en: "India", ar: "الهند" }, dialCode: "+91" },
+  CN: { name: { en: "China", ar: "الصين" }, dialCode: "+86" },
+  JP: { name: { en: "Japan", ar: "اليابان" }, dialCode: "+81" },
+  KR: { name: { en: "South Korea", ar: "كوريا الجنوبية" }, dialCode: "+82" },
+  BR: { name: { en: "Brazil", ar: "البرازيل" }, dialCode: "+55" },
+  MX: { name: { en: "Mexico", ar: "المكسيك" }, dialCode: "+52" },
+  ZA: { name: { en: "South Africa", ar: "جنوب أفريقيا" }, dialCode: "+27" },
+  NG: { name: { en: "Nigeria", ar: "نيجيريا" }, dialCode: "+234" },
+  KE: { name: { en: "Kenya", ar: "كينيا" }, dialCode: "+254" },
+  TR: { name: { en: "Turkey", ar: "تركيا" }, dialCode: "+90" },
+  RU: { name: { en: "Russia", ar: "روسيا" }, dialCode: "+7" },
+};
 
-  return Object.entries(countries).map(([code, data]) => ({
+/** رمز الاتصال حسب كود الدولة — للاستخدام في طلب الخدمة وغيره */
+export function getDialCodeForCountry(countryCode: string): string {
+  return COUNTRY_DATA[countryCode]?.dialCode ?? "+966";
+}
+
+/** قائمة الدول مع الرموز — نفس القائمة في اليوزر والمشاريع وطلب الخدمة */
+export function getCountryOptionsForSelect(language: "ar" | "en"): { value: string; dialCode: string; labelEn: string; labelAr: string }[] {
+  return Object.entries(COUNTRY_DATA).map(([code, data]) => ({
+    value: code,
+    dialCode: data.dialCode,
+    labelEn: data.name.en,
+    labelAr: data.name.ar,
+  }));
+}
+
+// Generate country options with flags (internal use)
+const getCountryOptions = (language: "ar" | "en" = "en"): CountryOption[] => {
+  return Object.entries(COUNTRY_DATA).map(([code, data]) => ({
     value: code,
     label: `${data.name[language]} (${code})`,
     dialCode: data.dialCode,
@@ -82,10 +98,9 @@ const getCountryOptions = (language: "ar" | "en" = "en"): CountryOption[] => {
 // Will be initialized with language
 let countryOptions: CountryOption[] = [];
 
-// Get dial code for a country code
+// Get dial code for a country code (internal)
 const getDialCode = (countryCode: string): string => {
-  const country = countryOptions.find((opt) => opt.value === countryCode);
-  return country?.dialCode || "+966";
+  return getDialCodeForCountry(countryCode);
 };
 
 // Get country code from phone number (if it starts with a dial code)

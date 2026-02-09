@@ -86,7 +86,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
   cta: null,
   loading: false,
   
-  setContent: (data) => set(data),
+  setContent: (data) => set((state) => ({ ...state, ...data })),
   
   fetchContent: async () => {
     set({ loading: true });

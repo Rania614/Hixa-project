@@ -1,6 +1,7 @@
 import React from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getCountryOptionsForSelect, getDialCodeForCountry } from "@/components/shared/CountryPhoneInput";
 
 interface OrderModalProps {
   open: boolean;
@@ -11,6 +12,8 @@ interface OrderModalProps {
   servicesDetailsMap: { [serviceId: string]: any[] };
   email: string;
   setEmail: (email: string) => void;
+  countryCode: string;
+  setCountryCode: (code: string) => void;
   phone: string;
   setPhone: (phone: string) => void;
   orderDetails: string;
@@ -28,6 +31,8 @@ export const OrderModal: React.FC<OrderModalProps> = ({
   servicesDetailsMap,
   email,
   setEmail,
+  countryCode,
+  setCountryCode,
   phone,
   setPhone,
   orderDetails,
@@ -35,6 +40,10 @@ export const OrderModal: React.FC<OrderModalProps> = ({
   submitting,
   onSubmit,
 }) => {
+  const isAr = language === "ar";
+  const countryOptionsList = getCountryOptionsForSelect(language);
+  const selectedCountry = countryOptionsList.find((c) => c.value === countryCode) ?? countryOptionsList[0];
+  const dialCode = getDialCodeForCountry(countryCode);
   if (!open) return null;
 
   return (
@@ -161,19 +170,37 @@ export const OrderModal: React.FC<OrderModalProps> = ({
               />
             </div>
 
-            {/* Phone Field */}
+            {/* Country Code + Phone */}
             <div>
               <label className="block text-sm font-medium text-card-foreground mb-2">
                 {language === 'en' ? 'Phone Number' : 'رقم التليفون'} <span className="text-red-500">*</span>
               </label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                required
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-card-foreground focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
-                placeholder={language === 'en' ? '+1234567890' : '+201234567890'}
-              />
+              <div className="flex gap-2">
+                <select
+                  value={countryCode}
+                  onChange={(e) => setCountryCode(e.target.value)}
+                  className="w-[140px] shrink-0 px-3 py-2 bg-background border border-border rounded-lg text-card-foreground focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
+                  dir={isAr ? "rtl" : "ltr"}
+                >
+                  {countryOptionsList.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {isAr ? c.labelAr : c.labelEn} ({c.dialCode})
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  required
+                  className="flex-1 min-w-0 px-3 py-2 bg-background border border-border rounded-lg text-card-foreground focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
+                  placeholder={language === 'en' ? '5 012 345 6789' : '5 012 345 6789'}
+                  dir="ltr"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {dialCode} {phone ? phone.replace(/\s/g, "") : "…"}
+              </p>
             </div>
 
             {/* Order Details Textarea */}

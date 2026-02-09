@@ -2,7 +2,7 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Chatbot } from '@/components/Chatbot';
 import { FeaturedProjects } from '@/components/FeaturedProjects';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { 
   ChevronDown, ArrowRight, X, 
@@ -29,6 +29,21 @@ const Landing = () => {
   const [subscribeName, setSubscribeName] = useState('');
   const [subscribeEmail, setSubscribeEmail] = useState('');
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const [heroImage, setHeroImage] = useState<string>('');
+
+  // تحميل صورة الهيرو من المحتوى (الداشبورد) — خلفية الهيرو تتغير في الصفحة الرئيسية فقط
+  useEffect(() => {
+    let cancelled = false;
+    http.get('/content')
+      .then((res) => {
+        if (cancelled) return;
+        const hero = res.data?.hero ?? res.data?.data?.hero ?? res.data;
+        const img = hero?.image;
+        if (img && typeof img === 'string' && img.trim()) setHeroImage(img.trim());
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   const handleSubscribeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,7 +151,7 @@ const Landing = () => {
       <Header />
 
       {/* --- Section 1: Hero --- */}
-      {/* تم إضافة id="hero" للربط مع الهيدر */}
+      {/* تم إضافة id="hero" للربط مع الهيدر — خلفية هذه الصفحة ثابتة (لا تتغير من الداشبورد) */}
       <section id="hero" className="relative min-h-screen flex items-center pt-20 overflow-visible">
         <div className="container mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center relative z-10">
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-10 duration-1000">
@@ -229,7 +244,11 @@ const Landing = () => {
           <div className="relative flex justify-center items-center">
             <div className="absolute inset-0 bg-yellow-500/5 blur-[150px] rounded-full" />
             <div className="relative z-10 border border-white/10 p-4 bg-black/50 backdrop-blur-sm rotate-3 group hover:rotate-0 transition-all duration-700 shadow-2xl rounded-sm">
-                <img src="./images/herohixa.png" className="w-[400px] h-[550px] object-cover grayscale group-hover:grayscale-0 transition-all duration-1000 shadow-2xl" />
+                <img
+                  src={heroImage || './images/herohixa.png'}
+                  alt="HIXA"
+                  className="w-[400px] h-[550px] object-cover grayscale group-hover:grayscale-0 transition-all duration-1000 shadow-2xl"
+                />
                 <div className="absolute -bottom-6 -left-6 bg-yellow-500 text-black p-6 font-black text-2xl shadow-2xl italic">HIXA</div>
             </div>
           </div>

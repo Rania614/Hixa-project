@@ -20,6 +20,7 @@ import { ServiceDetailsModal } from "@/components/company-landing/modals/Service
 import { ProjectDetailsModal } from "@/components/company-landing/modals/ProjectDetailsModal";
 import { ImageModal } from "@/components/company-landing/modals/ImageModal";
 import { OrderModal } from "@/components/company-landing/modals/OrderModal";
+import { getDialCodeForCountry } from "@/components/shared/CountryPhoneInput";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 
@@ -36,6 +37,7 @@ const CompanyLanding = () => {
   const [selectedServiceDetails, setSelectedServiceDetails] = useState<any[]>([]);
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [email, setEmail] = useState("");
+  const [orderCountryCode, setOrderCountryCode] = useState("SA");
   const [phone, setPhone] = useState("");
   const [orderDetails, setOrderDetails] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -647,6 +649,7 @@ const CompanyLanding = () => {
     setOrderModalOpen(false);
     setSelectedService(null);
     setEmail("");
+    setOrderCountryCode("SA");
     setPhone("");
     setOrderDetails("");
   };
@@ -655,6 +658,7 @@ const CompanyLanding = () => {
     setSelectedService(null); // No specific service
     setOrderModalOpen(true);
     setEmail("");
+    setOrderCountryCode("SA");
     setPhone("");
     setOrderDetails("");
   };
@@ -685,10 +689,13 @@ const CompanyLanding = () => {
       // Get serviceId from multiple possible fields
       const serviceId = selectedService?.serviceId || selectedService?.itemId || selectedService?._id || selectedService?.id;
       
+      // رقم كامل مع رمز الدولة
+      const fullPhone = getDialCodeForCountry(orderCountryCode) + phone.trim().replace(/^0+/, "").replace(/\s/g, "");
+
       // Use JSON instead of FormData since we're only sending text
       const payload: any = {
         email: email.trim(),
-        phone: phone.trim(),
+        phone: fullPhone,
         orderDetails: orderDetails.trim(),
       };
       
@@ -795,6 +802,7 @@ const CompanyLanding = () => {
       <HeroSection
         heroTitle={heroTitle}
         heroSubtitle={heroSubtitle}
+        heroBackgroundImage={(hero as any)?.backgroundImage ?? ""}
         language={language}
         onGetStarted={handleGetStarted}
       />
@@ -891,6 +899,8 @@ const CompanyLanding = () => {
         servicesDetailsMap={servicesDetailsMap}
         email={email}
         setEmail={setEmail}
+        countryCode={orderCountryCode}
+        setCountryCode={setOrderCountryCode}
         phone={phone}
         setPhone={setPhone}
         orderDetails={orderDetails}

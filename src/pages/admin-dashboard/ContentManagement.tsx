@@ -664,6 +664,90 @@ const ContentManagement = () => {
       onChange={(e) => setContent({ hero: { ...hero, subtitle_ar: e.target.value } })}
       className="mb-2"
     />
+    <div className="mb-4">
+      <label className="text-sm font-medium mb-1 block">
+        {language === 'en' ? 'Hero Image' : 'صورة الهيرو'}
+      </label>
+      {hero?.image && (
+        <div className="mb-2">
+          <img src={hero.image} alt="Hero" className="max-h-40 rounded border object-cover" />
+        </div>
+      )}
+      <input
+        type="file"
+        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+        className="hidden"
+        id="hero-image-upload"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          const formData = new FormData();
+          formData.append('image', file);
+          try {
+            const res = await http.post('/content/hero/image', formData);
+            const url = res.data?.url || res.data?.data?.image;
+            if (url) {
+              setContent({ hero: { ...hero, image: url } });
+              toast.success(language === 'en' ? 'Hero image uploaded' : 'تم رفع صورة الهيرو');
+            }
+          } catch (err: any) {
+            toast.error(err.response?.data?.message || (language === 'en' ? 'Upload failed' : 'فشل الرفع'));
+          }
+          e.target.value = '';
+        }}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => document.getElementById('hero-image-upload')?.click()}
+        className="gap-2"
+      >
+        <Upload className="h-4 w-4" />
+        {language === 'en' ? 'Upload image' : 'رفع صورة'}
+      </Button>
+    </div>
+    <div className="mb-4">
+      <label className="text-sm font-medium mb-1 block">
+        {language === 'en' ? 'Hero Background' : 'خلفية الهيرو'}
+      </label>
+      {hero?.backgroundImage && (
+        <div className="mb-2">
+          <img src={hero.backgroundImage} alt="Hero background" className="max-h-32 rounded border object-cover w-full max-w-md" />
+        </div>
+      )}
+      <input
+        type="file"
+        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+        className="hidden"
+        id="hero-background-upload"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          const formData = new FormData();
+          formData.append('image', file);
+          try {
+            const res = await http.post('/content/hero/background', formData);
+            const url = res.data?.url || res.data?.data?.backgroundImage;
+            if (url) {
+              setContent({ hero: { ...hero, backgroundImage: url } });
+              toast.success(language === 'en' ? 'Hero background uploaded' : 'تم رفع خلفية الهيرو');
+            }
+          } catch (err: any) {
+            toast.error(err.response?.data?.message || (language === 'en' ? 'Upload failed' : 'فشل الرفع'));
+          }
+          e.target.value = '';
+        }}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => document.getElementById('hero-background-upload')?.click()}
+        className="gap-2"
+      >
+        <Upload className="h-4 w-4" />
+        {language === 'en' ? 'Upload background' : 'رفع خلفية'}
+      </Button>
+    </div>
     <Button onClick={() => updateHero(hero)} disabled={loading}>
       {loading ? (language === 'en' ? 'Saving...' : 'جاري الحفظ...') : (language === 'en' ? 'Save Hero' : 'حفظ البطل')}
     </Button>
