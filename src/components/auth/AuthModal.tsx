@@ -15,7 +15,9 @@ import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { User, Handshake, X, Wrench, Building, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { businessCategories } from '@/constants/filters';
 import { http } from '@/services/http';
 import { toast } from '@/components/ui/sonner';
 import { CountryPhoneInput } from '@/components/shared/CountryPhoneInput';
@@ -225,7 +227,7 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
             // Check if specialization is required
             const trimmedSpecialization = specialization?.trim() || '';
             if (!trimmedSpecialization) {
-              setError('Specialization is required');
+              setError(language === 'ar' ? 'التخصص مطلوب' : 'Specialization is required');
               setLoading(false);
               return;
             }
@@ -559,18 +561,27 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
                 </div>
               )}
 
-              {/* Specialization (for engineer registration only) */}
+              {/* Specialization (for engineer registration only) - required, select from list for filter */}
               {role === 'partner' && partnerType === 'engineer' && (
                 <div>
-                  <label className="text-sm font-medium mb-2 block">{language === 'ar' ? 'التخصص' : 'Specialization'}</label>
-                  <Input
-                    type="text"
-                    value={specialization}
-                    onChange={(e) => setSpecialization(e.target.value)}
-                    placeholder={language === 'ar' ? 'أدخل التخصص' : 'Enter specialization'}
-                    required
+                  <label className="text-sm font-medium mb-2 block">{language === 'ar' ? 'التخصص' : 'Specialization'} *</label>
+                  <Select
+                    value={specialization || undefined}
+                    onValueChange={setSpecialization}
                     disabled={loading}
-                  />
+                    required
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={language === 'ar' ? 'اختر التخصص' : 'Select specialization'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {businessCategories.map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
 

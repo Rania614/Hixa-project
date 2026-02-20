@@ -134,7 +134,7 @@ export const UserFilters = ({
             {/* Category Filter */}
             <div className="w-full md:w-64">
                 <Popover>
-                    {/* <PopoverTrigger asChild>
+                    <PopoverTrigger asChild>
                         <Button
                             variant="outline"
                             role="combobox"
@@ -149,13 +149,13 @@ export const UserFilters = ({
                                     ))
                                 ) : (
                                     <span className="text-muted-foreground">
-                                        {language === 'en' ? 'Select Categories' : 'اختر التخصصات'}
+                                        {language === 'en' ? 'Select Specializations' : 'اختر التخصصات'}
                                     </span>
                                 )}
                             </div>
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
-                    </PopoverTrigger> */}
+                    </PopoverTrigger>
                     <PopoverContent className="w-64 p-0">
                         <Command>
                             <CommandInput placeholder={language === 'en' ? "Search category..." : "البحث عن تخصص..."} />

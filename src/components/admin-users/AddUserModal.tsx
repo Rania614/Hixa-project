@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { businessCategories } from '@/constants/filters';
 
 interface AddUserModalProps {
     open: boolean;
@@ -162,13 +163,19 @@ export const AddUserModal = ({
                                 <Label htmlFor="specialization">
                                     {language === 'en' ? 'Specialization' : 'التخصص'} *
                                 </Label>
-                                <Input
-                                    id="specialization"
-                                    value={userForm.specialization}
-                                    onChange={(e) => setUserForm({ ...userForm, specialization: e.target.value })}
-                                    required
-                                    placeholder={language === 'en' ? 'e.g. Civil Engineer' : 'مثال: مهندس مدني'}
-                                />
+                                <Select
+                                    value={userForm.specialization || undefined}
+                                    onValueChange={(value) => setUserForm({ ...userForm, specialization: value })}
+                                >
+                                    <SelectTrigger id="specialization">
+                                        <SelectValue placeholder={language === 'en' ? 'Select specialization' : 'اختر التخصص'} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {businessCategories.map((cat) => (
+                                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="nationalId">

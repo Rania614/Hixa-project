@@ -64,6 +64,8 @@ import {
 import { useApp } from '@/context/AppContext';
 import { toast } from '@/components/ui/sonner';
 import { CountryPhoneInput } from '@/components/shared/CountryPhoneInput';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { businessCategories } from '@/constants/filters';
 
 interface RegistrationFormProps {
   onSuccess?: () => void;
@@ -448,7 +450,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                 )}
               />
 
-              {/* Specialization */}
+              {/* Specialization - required, select from list for filter */}
               <FormField
                 control={engineerForm.control}
                 name="specialization"
@@ -456,17 +458,28 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
                       <Briefcase className="h-4 w-4" />
-                      {language === 'ar' ? 'التخصص' : 'Specialization'}
+                      {language === 'ar' ? 'التخصص' : 'Specialization'} *
                     </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={language === 'ar' ? 'أدخل التخصص' : 'Enter your specialization'}
-                        {...field}
-                        disabled={isLoading}
-                      />
-                    </FormControl>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || undefined}
+                      disabled={isLoading}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={language === 'ar' ? 'اختر التخصص' : 'Select specialization'} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {businessCategories.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormDescription>
-                      {language === 'ar' ? '2-100 حرف' : '2-100 characters'}
+                      {language === 'ar' ? 'اختر التخصص للظهور في الفلتر' : 'Select specialization for filtering'}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
