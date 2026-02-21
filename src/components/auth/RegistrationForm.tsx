@@ -470,7 +470,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                           <SelectValue placeholder={language === 'ar' ? 'اختر التخصص' : 'Select specialization'} />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent className="bg-hexa-card border-hexa-border">
                         {businessCategories.map((cat) => (
                           <SelectItem key={cat} value={cat}>
                             {cat}

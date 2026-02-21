@@ -574,7 +574,7 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder={language === 'ar' ? 'اختر التخصص' : 'Select specialization'} />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-hexa-card border-hexa-border">
                       {businessCategories.map((cat) => (
                         <SelectItem key={cat} value={cat}>
                           {cat}
