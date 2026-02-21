@@ -94,7 +94,7 @@ export const UserFilters = ({
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-64 p-0">
+                    <PopoverContent className="w-64 p-0 bg-hexa-card border-hexa-border">
                         <Command>
                             <CommandInput placeholder={language === 'en' ? "Search country..." : "البحث عن دولة..."} />
                             <CommandList>
@@ -156,7 +156,7 @@ export const UserFilters = ({
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-64 p-0">
+                    <PopoverContent className="w-64 p-0 bg-hexa-card border-hexa-border">
                         <Command>
                             <CommandInput placeholder={language === 'en' ? "Search category..." : "البحث عن تخصص..."} />
                             <CommandList>
