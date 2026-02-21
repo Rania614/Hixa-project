@@ -583,31 +583,44 @@ const AdminProjects = () => {
     }
   }, [projects]);
 
+  // Normalize project status to filter canonical values: pending | approved | assigned | in_progress | completed | rejected
+  const normalizeStatusForFilter = (p: Project): string => {
+    const s = (p.status ?? '').toString().toLowerCase().replace(/\s+/g, '_');
+    if (['draft', 'pending_review', 'pending'].includes(s) || p.adminApproval?.status === 'pending') return 'pending';
+    if (['approved', 'published', 'waiting_for_engineers', 'waitingforengineers'].includes(s)) return 'approved';
+    if (['assigned'].includes(s)) return 'assigned';
+    if (['in_progress', 'inprogress'].includes(s)) return 'in_progress';
+    if (['completed'].includes(s)) return 'completed';
+    if (['rejected', 'archived', 'cancelled', 'canceled'].includes(s)) return 'rejected';
+    // Fallback by string match
+    if (s.includes('pending') || s.includes('draft')) return 'pending';
+    if (s.includes('approv') || s.includes('publish') || s.includes('waiting')) return 'approved';
+    if (s.includes('assign')) return 'assigned';
+    if (s.includes('progress')) return 'in_progress';
+    if (s.includes('complet')) return 'completed';
+    if (s.includes('reject') || s.includes('archiv') || s.includes('cancel')) return 'rejected';
+    return s || 'pending';
+  };
+
   // Filter projects
   const filteredProjects = projects.filter(project => {
-    // Status filter
+    // Status filter (dropdown: all | pending | approved | assigned | in_progress | completed | rejected; cards also use active | assigned_in_progress | rejected_archived)
     if (statusFilter !== 'all') {
-      if (statusFilter === 'pending') {
-        // Check for pending review status (both old and new formats)
-        const isPending = project.status === 'Pending Review' ||
-                         project.status === 'pending_review' ||
-                         project.status === 'draft' ||
-                         project.adminApproval?.status === 'pending';
-        if (!isPending) return false;
-      } else if (statusFilter === 'active') {
-        const isActive = project.status === 'approved' || project.status === 'published';
-        if (!isActive) return false;
-      } else if (statusFilter === 'assigned_in_progress') {
-        const isAssignedOrInProgress = project.status === 'assigned' || project.status === 'in_progress';
-        if (!isAssignedOrInProgress) return false;
-      } else if (statusFilter === 'rejected_archived') {
-        const isRejectedOrArchived = project.status === 'rejected' || project.status === 'archived';
-        if (!isRejectedOrArchived) return false;
-      } else if (project.status !== statusFilter) return false;
+      const projectStatusNorm = normalizeStatusForFilter(project);
+      const matches =
+        projectStatusNorm === statusFilter ||
+        (statusFilter === 'active' && projectStatusNorm === 'approved') ||
+        (statusFilter === 'assigned_in_progress' && (projectStatusNorm === 'assigned' || projectStatusNorm === 'in_progress')) ||
+        (statusFilter === 'rejected_archived' && (projectStatusNorm === 'rejected'));
+      if (!matches) return false;
     }
 
-    // Category filter
-    if (categoryFilter !== 'all' && project.category !== categoryFilter) return false;
+    // Category filter (case-insensitive; API may return different casing)
+    if (categoryFilter !== 'all') {
+      const projectCat = (project.category ?? '').toLowerCase().trim();
+      const filterCat = categoryFilter.toLowerCase().trim();
+      if (projectCat !== filterCat) return false;
+    }
 
     // Search filter
     if (searchTerm) {
@@ -834,7 +847,7 @@ const AdminProjects = () => {
                   {language === 'en' ? 'Status' : 'الحالة'}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent>
+              <DropdownMenuContent className="bg-hexa-card border-hexa-border">
                 <DropdownMenuItem onClick={() => setStatusFilter('all')}>
                   {language === 'en' ? 'All' : 'الكل'}
                 </DropdownMenuItem>
@@ -866,7 +879,7 @@ const AdminProjects = () => {
                     {language === 'en' ? 'Category' : 'الفئة'}
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent>
+                <DropdownMenuContent className="bg-hexa-card border-hexa-border">
                   <DropdownMenuItem onClick={() => setCategoryFilter('all')}>
                     {language === 'en' ? 'All Categories' : 'جميع الفئات'}
                   </DropdownMenuItem>
