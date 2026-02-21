@@ -212,7 +212,7 @@ export const UserTable = ({
                                                 <MoreHorizontal className="h-4 w-4" />
                                             </Button>
                                         </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
+                                        <DropdownMenuContent align="end" className="bg-hexa-card border-hexa-border">
                                             <DropdownMenuItem onClick={() => userId && handleViewUser(userId)}>
                                                 <UserCheck className="h-4 w-4 mr-2" />
                                                 {language === 'en' ? 'View Details' : 'عرض التفاصيل'}

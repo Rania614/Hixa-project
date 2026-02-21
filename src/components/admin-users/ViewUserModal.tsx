@@ -170,14 +170,20 @@ export const ViewUserModal = ({
                                 </div>
                             )}
 
-                            {viewingUser.role === 'engineer' && (viewingUser.specialization || viewingUser.licenseNumber) && (
+                            {viewingUser.role === 'engineer' && (viewingUser.specialization || (Array.isArray(viewingUser.specializations) && viewingUser.specializations.length > 0) || viewingUser.licenseNumber) && (
                                 <div className="border-t pt-4">
                                     <h4 className="font-semibold mb-3 text-sm">{language === 'en' ? 'Professional Information' : 'المعلومات المهنية'}</h4>
                                     <div className="grid grid-cols-2 gap-4">
-                                        {viewingUser.specialization && (
+                                        {(viewingUser.specialization || (Array.isArray(viewingUser.specializations) && viewingUser.specializations.length > 0)) && (
                                             <div>
                                                 <Label className="text-muted-foreground">{language === 'en' ? 'Specialization' : 'التخصص'}</Label>
-                                                <div className="mt-1 font-medium">{viewingUser.specialization}</div>
+                                                <div className="mt-1 font-medium">
+                                                    {viewingUser.specialization
+                                                        ? viewingUser.specialization
+                                                        : Array.isArray(viewingUser.specializations)
+                                                            ? viewingUser.specializations.join(', ')
+                                                            : '—'}
+                                                </div>
                                             </div>
                                         )}
                                         {viewingUser.licenseNumber && (
