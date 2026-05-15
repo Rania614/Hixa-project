@@ -91,7 +91,7 @@ export const Chatbot = () => {
     }
   };
 
-  const whatsappNumber = '00966504131885';
+  const whatsappNumber = '00966579594291';
   const whatsappUrl = `https://wa.me/${whatsappNumber.replace(/^00/, '')}`;
 
   return (

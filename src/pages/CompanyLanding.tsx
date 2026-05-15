@@ -91,10 +91,16 @@ const CompanyLanding = () => {
     ? (services as any).items
     : [];
   
-  // Extract services metadata (title, subtitle) if services is an object
-  const servicesMetadata = services && typeof services === 'object' && !Array.isArray(services)
-    ? services
-    : null;
+  // Section header fields only (not item1/item2 service cards)
+  const servicesMetadata =
+    services && typeof services === 'object' && !Array.isArray(services)
+      ? {
+          title_en: (services as { title_en?: string }).title_en,
+          title_ar: (services as { title_ar?: string }).title_ar,
+          subtitle_en: (services as { subtitle_en?: string }).subtitle_en,
+          subtitle_ar: (services as { subtitle_ar?: string }).subtitle_ar,
+        }
+      : null;
 
   // Calculate allServices using useMemo (must be before useEffect hooks)
   const allServices = useMemo(() => {

@@ -24,6 +24,22 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
 }) => {
   const isAr = language === 'ar';
 
+  const sectionTitle =
+    (language === 'en'
+      ? (servicesMetadata?.title_en || servicesMetadata?.title)
+      : (servicesMetadata?.title_ar || servicesMetadata?.title)) ||
+    getFieldValue(services, "title", language) ||
+    (language === 'en' ? 'Our Services' : 'خدماتنا');
+
+  const sectionSubtitle =
+    (language === 'en'
+      ? (servicesMetadata?.subtitle_en || servicesMetadata?.subtitle)
+      : (servicesMetadata?.subtitle_ar || servicesMetadata?.subtitle)) ||
+    getFieldValue(services, "subtitle", language) ||
+    (language === 'en'
+      ? 'We provide cutting-edge solutions tailored to your business needs'
+      : 'نوفر حلولاً متطورة مصممة خصيصاً لاحتياجات عملك');
+
   return (
     // تم تغيير الخلفية لدرجة البيج الدافئة المطفأة #F5F2ED لتطابق سكشن الشركاء
     <section id="services" className="py-20 px-4 sm:px-6 bg-[#F5F2ED]" dir={isAr ? "rtl" : "ltr"}>
@@ -31,25 +47,13 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
         <div className="text-center mb-16">
           {/* عنوان السكشن بلون أسود دافئ */}
           <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-[#1A1A1A]">
-            {servicesMetadata 
-              ? (language === 'en' 
-                  ? (servicesMetadata.title_en || servicesMetadata.title) 
-                  : (servicesMetadata.title_ar || servicesMetadata.title))
-              : getFieldValue(services, "title", language) || 
-               (language === 'en' ? 'Our Services' : 'خدماتنا')}
+            {sectionTitle}
           </h2>
           {/* خط ذهبي صغير تحت العنوان لزيادة الفخامة */}
           <div className="w-16 h-1 bg-gold mx-auto mb-6 opacity-80"></div>
           
           <p className="text-lg sm:text-xl text-[#5A5A5A] max-w-2xl sm:max-w-3xl mx-auto leading-relaxed">
-            {servicesMetadata 
-              ? (language === 'en' 
-                  ? (servicesMetadata.subtitle_en || servicesMetadata.subtitle) 
-                  : (servicesMetadata.subtitle_ar || servicesMetadata.subtitle))
-              : getFieldValue(services, "subtitle", language) || 
-               (language === 'en' 
-               ? 'We provide cutting-edge solutions tailored to your business needs'
-               : 'نوفر حلولاً متطورة مصممة خصيصاً لاحتياجات عملك')}
+            {sectionSubtitle}
           </p>
         </div>
 
