@@ -70,10 +70,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         )}
 
         <div className="flex-grow flex flex-col items-center justify-center px-4 sm:px-6 text-center">
-          <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-bold uppercase mb-6 sm:mb-8 text-gold transition-all duration-300">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold uppercase mb-4 sm:mb-6 text-gold transition-all duration-300 leading-tight">
             {heroTitle}
           </h1>
-          <p className="text-white text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl max-w-3xl sm:max-w-4xl mx-auto opacity-90 transition-all duration-300 font-medium">
+          <p className="text-white text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl max-w-2xl sm:max-w-3xl mx-auto opacity-90 transition-all duration-300 font-normal leading-relaxed">
             {heroSubtitle}
           </p>
 
