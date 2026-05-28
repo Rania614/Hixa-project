@@ -88,7 +88,7 @@ const AdminProjectProposals = () => {
   // Redirect if projectId is missing
   useEffect(() => {
     if (!projectId) {
-      console.error('ProjectId is missing from URL params');
+      
       toast.error(language === 'en' ? 'Invalid project ID' : 'معرف المشروع غير صحيح');
       navigate('/admin/projects');
       return;
@@ -110,7 +110,7 @@ const AdminProjectProposals = () => {
         const projectData = response.data?.data || response.data?.project || response.data;
         setProject(projectData);
       } catch (error: any) {
-        console.error('Error fetching project:', error);
+        
         const errorMessage = error.response?.data?.message || 
           (language === 'en' ? 'Failed to load project' : 'فشل تحميل المشروع');
         setError(errorMessage);
@@ -138,7 +138,7 @@ const AdminProjectProposals = () => {
       const proposalsList = Array.isArray(proposalsData) ? proposalsData : [];
       setProposals(proposalsList);
     } catch (error: any) {
-      console.error('Error fetching proposals:', error);
+      
       const errorMessage = error.response?.data?.message || 
         (language === 'en' ? 'Failed to load proposals' : 'فشل تحميل العروض');
       setError(errorMessage);
@@ -193,7 +193,7 @@ const AdminProjectProposals = () => {
       toast.success(language === 'en' ? 'Proposal accepted successfully' : 'تم قبول العرض بنجاح');
       await fetchProposals();
     } catch (error: any) {
-      console.error('Error accepting proposal:', error);
+      
       const errorMessage = error.response?.data?.message || error.message || 
         (language === 'en' ? 'Failed to accept proposal' : 'فشل قبول العرض');
       toast.error(errorMessage);
@@ -210,7 +210,7 @@ const AdminProjectProposals = () => {
       toast.success(language === 'en' ? 'Proposal rejected' : 'تم رفض العرض');
       await fetchProposals();
     } catch (error: any) {
-      console.error('Error rejecting proposal:', error);
+      
       const errorMessage = error.response?.data?.message || error.message || 
         (language === 'en' ? 'Failed to reject proposal' : 'فشل رفض العرض');
       toast.error(errorMessage);
@@ -227,7 +227,7 @@ const AdminProjectProposals = () => {
       toast.success(language === 'en' ? 'Proposal marked as reviewed' : 'تم وضع علامة مراجعة على العرض');
       await fetchProposals();
     } catch (error: any) {
-      console.error('Error marking proposal as reviewed:', error);
+      
       const errorMessage = error.response?.data?.message || error.message || 
         (language === 'en' ? 'Failed to update proposal' : 'فشل تحديث العرض');
       toast.error(errorMessage);
@@ -247,7 +247,7 @@ const AdminProjectProposals = () => {
       setSelectedProposal(null);
       await fetchProposals();
     } catch (error: any) {
-      console.error('Error deleting proposal:', error);
+      
       const errorMessage = error.response?.data?.message || error.message || 
         (language === 'en' ? 'Failed to delete proposal' : 'فشل حذف العرض');
       toast.error(errorMessage);
@@ -288,7 +288,7 @@ const AdminProjectProposals = () => {
       setSelectedProposal(null);
       await fetchProposals();
     } catch (error: any) {
-      console.error('Error updating proposal:', error);
+      
       const errorMessage = error.response?.data?.message || error.message || 
         (language === 'en' ? 'Failed to update proposal' : 'فشل تحديث العرض');
       toast.error(errorMessage);

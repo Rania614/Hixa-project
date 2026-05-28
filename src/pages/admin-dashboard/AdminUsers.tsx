@@ -196,7 +196,7 @@ const AdminUsers = () => {
         : [];
       setUsers(normalizedUsers);
     } catch (error: any) {
-      console.error('Error fetching users:', error);
+      
       if (error.response?.status !== 404) {
         toast.error(language === 'en' ? 'Failed to load users' : 'فشل تحميل المستخدمين');
       }
@@ -215,7 +215,7 @@ const AdminUsers = () => {
         setBusinessScopesMeta(response.data.data.businessScopes || []);
       }
     } catch (error) {
-      console.error('Error fetching filter metadata:', error);
+      
     }
   };
 
@@ -252,7 +252,7 @@ const AdminUsers = () => {
           },
         });
       } else {
-        console.error('Error fetching statistics:', error);
+        
       }
     }
   };
@@ -264,7 +264,7 @@ const AdminUsers = () => {
       const response = await http.get(`/users/${userId}`);
       return response.data?.data || response.data?.user || response.data;
     } catch (error: any) {
-      console.error('Error fetching user details:', error);
+      
       toast.error(language === 'en' ? 'Failed to load user details' : 'فشل تحميل تفاصيل المستخدم');
       throw error;
     } finally {
@@ -349,7 +349,7 @@ const AdminUsers = () => {
       fetchUsers();
       fetchStatistics();
     } catch (error: any) {
-      console.error('Error updating user:', error);
+      
       toast.error(language === 'en' ? error.response?.data?.message || 'Failed to update user' : error.response?.data?.message || 'فشل تحديث المستخدم');
     } finally {
       setUpdating(false);
@@ -364,7 +364,7 @@ const AdminUsers = () => {
       fetchUsers();
       fetchStatistics();
     } catch (error: any) {
-      console.error('Error updating user status:', error);
+      
       toast.error(language === 'en' ? 'Failed to update user status' : 'فشل تحديث حالة المستخدم');
     }
   };
@@ -382,7 +382,7 @@ const AdminUsers = () => {
       fetchStatistics();
       setSelectedUsers(prev => prev.filter(id => id !== userId));
     } catch (error: any) {
-      console.error('Error deleting user:', error);
+      
       toast.error(language === 'en' ? 'Failed to delete user' : 'فشل حذف المستخدم');
     }
   };
@@ -405,7 +405,7 @@ const AdminUsers = () => {
       fetchUsers();
       fetchStatistics();
     } catch (error: any) {
-      console.error('Error deleting users:', error);
+      
       toast.error(language === 'en' ? 'Failed to delete users' : 'فشل حذف المستخدمين');
     }
   };
@@ -496,7 +496,7 @@ const AdminUsers = () => {
       fetchUsers();
       fetchStatistics();
     } catch (error: any) {
-      console.error('Error adding user:', error);
+      
       toast.error(language === 'en' ? error.response?.data?.message || 'Failed to add user' : error.response?.data?.message || 'فشل إضافة المستخدم');
     } finally {
       setAdding(false);

@@ -79,7 +79,7 @@ const CompanyProjectDetails = () => {
           adminApproval: projectData.adminApproval || projectData.admin_approval,
         });
       } catch (error: any) {
-        console.error("Error fetching project:", error);
+        
         toast.error(
           language === "en" ? "Failed to load project details" : "فشل تحميل تفاصيل المشروع"
         );
@@ -137,7 +137,7 @@ const CompanyProjectDetails = () => {
           try {
             userData = JSON.parse(userDataStr);
           } catch (e) {
-            console.error("Error parsing user data:", e);
+            
           }
         }
         
@@ -149,7 +149,7 @@ const CompanyProjectDetails = () => {
         
         setCanSubmitProposal(!hasCompanyProposal);
       } catch (error: any) {
-        console.error("Error fetching proposals:", error);
+        
         if (error.response?.status !== 404) {
           toast.error(
             language === "en" ? "Failed to load proposals" : "فشل تحميل العروض"

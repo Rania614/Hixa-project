@@ -9,7 +9,7 @@ baseURL = baseURL.trim();
 
 // Fix: localhost doesn't support HTTPS - convert https://localhost to http://localhost
 if (baseURL.startsWith('https://localhost') || baseURL.startsWith('https://127.0.0.1')) {
-  console.warn("⚠️ Detected HTTPS on localhost - converting to HTTP");
+  
   baseURL = baseURL.replace(/^https:\/\//, 'http://');
 }
 
@@ -17,7 +17,7 @@ if (baseURL.startsWith('https://localhost') || baseURL.startsWith('https://127.0
 // Only remove trailing slashes
 baseURL = baseURL.replace(/\/+$/, ''); // remove trailing slashes
 
-console.log("🌐 HTTP Service initialized with baseURL:", baseURL);
+
 
 // -------------------------------
 // Access Token Storage (in-memory + localStorage for backward compatibility)
@@ -80,15 +80,7 @@ http.interceptors.request.use((config) => {
     fullURL = config.url;
   }
 
-  console.log(`📤 HTTP Request: ${config.method?.toUpperCase()} ${fullURL}`, {
-    baseURL: config.baseURL,
-    url: config.url,
-    fullURL: fullURL,
-    hasToken: !!token,
-    tokenLength: token?.length,
-    origin: window.location.origin,
-    data: config.data instanceof FormData ? '[FormData]' : config.data,
-  });
+  
 
   return config;
 }, (error) => Promise.reject(error));
@@ -98,10 +90,7 @@ http.interceptors.request.use((config) => {
 // -------------------------------
 http.interceptors.response.use(
   (response) => {
-    console.log(`✅ HTTP Response: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
-      status: response.status,
-      data: response.data,
-    });
+    
     
     // Update access token if response contains a new one (from login/register/refresh)
     if (response.data?.accessToken || response.data?.token) {
@@ -120,7 +109,7 @@ http.interceptors.response.use(
 
       // Don't retry refresh token endpoint to avoid infinite loop
       if (originalRequest.url?.includes('/auth/refresh')) {
-        console.warn("🔒 401 on refresh endpoint - Clearing tokens and redirecting");
+        
         setAccessToken(null);
         localStorage.removeItem("user");
 
@@ -132,7 +121,7 @@ http.interceptors.response.use(
       }
 
       try {
-        console.log("🔄 Attempting to refresh access token...");
+        
         // Try to get new access token using refresh token from cookie
         const refreshResponse = await http.post('/auth/refresh');
         
@@ -147,11 +136,11 @@ http.interceptors.response.use(
           
           // Retry original request with new token
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          console.log("✅ Token refreshed, retrying original request");
+          
           return http(originalRequest);
         }
       } catch (refreshError) {
-        console.warn("❌ Failed to refresh token:", refreshError);
+        
         // Refresh failed - clear tokens and redirect to login
         setAccessToken(null);
         localStorage.removeItem("user");
@@ -167,7 +156,7 @@ http.interceptors.response.use(
     if (error.response?.status === 403) {
       const backendMessage = error.response?.data?.message || "";
       const pathname = window.location.pathname;
-      console.warn("🚫 403 Forbidden:", { url: error.config?.url, message: backendMessage, pathname });
+      
 
       const requiresReauth = ['/proposals/my','/users/me','/projects/my'];
       const needsReauth = requiresReauth.some(endpoint => error.config?.url?.includes(endpoint));
@@ -175,14 +164,14 @@ http.interceptors.response.use(
       if (needsReauth) {
         if (backendMessage.toLowerCase().includes('engineer') || backendMessage.toLowerCase().includes('مهندسين') || backendMessage.toLowerCase().includes('role')) {
           if (pathname.startsWith('/engineer')) {
-            console.warn("User may not have engineer role, redirecting to login");
+            
             setTimeout(() => {
               localStorage.removeItem("token");
               window.location.href = '/engineer/login';
             }, 2000);
           }
         } else if (backendMessage.toLowerCase().includes('active') || backendMessage.toLowerCase().includes('مفعّل')) {
-          console.warn("Account not activated");
+          
         }
       }
     }
@@ -190,7 +179,7 @@ http.interceptors.response.use(
     if (error.response?.status === 404) {
       const optionalEndpoints = ['/project-rooms/','/chat-rooms/','/messages/unread/count'];
       const isOptionalEndpoint = optionalEndpoints.some(endpoint => error.config?.url?.includes(endpoint));
-      if (!isOptionalEndpoint) console.warn("⚠️ 404 Not Found:", error.config?.url);
+      if (!isOptionalEndpoint) 
       return Promise.resolve({ data: null });
     }
 
@@ -204,7 +193,7 @@ http.interceptors.response.use(
       const maxRetries = 2; // Maximum 2 retries
       
       if (retryCount < maxRetries) {
-        console.warn(`⏳ 429 Too Many Requests - Retrying (${retryCount + 1}/${maxRetries}) after ${retryDelay}ms:`, error.config?.url);
+        
         
         // Mark this request as retried
         error.config.__retryCount = retryCount + 1;
@@ -216,7 +205,7 @@ http.interceptors.response.use(
           }, retryDelay * (retryCount + 1)); // Exponential backoff: 5s, 10s, 15s
         });
       } else {
-        console.error("❌ 429 Too Many Requests - Max retries reached:", error.config?.url);
+        
         // Return a graceful error response instead of rejecting
         return Promise.reject({
           ...error,
@@ -243,43 +232,35 @@ http.interceptors.response.use(
       
       if (isOptionalEndpoint) {
         // For optional endpoints, just log a warning (less verbose)
-        console.warn("⚠️ Network error for optional endpoint:", error.config?.url);
+        
       } else {
         // For required endpoints, log full error details
-        console.error("🌐 Network Error:", {
-          message: errorMessage,
-          code: errorCode,
-          url: error.config?.url,
-          baseURL: error.config?.baseURL,
-          attemptedURL: attemptedURL,
-          currentOrigin: window.location.origin,
-          envBaseURL: import.meta.env.VITE_API_BASE_URL,
-        });
+        
 
         // Check if it's a CORS error
         if (errorMessage.includes('CORS') || errorMessage.includes('cors') || errorCode === 'ERR_NETWORK') {
-          console.error("🚫 CORS or Network Error - Possible causes:");
-          console.error("  1. Server is not running");
-          console.error("  2. CORS not configured correctly");
-          console.error("  3. Wrong baseURL:", baseURL);
-          console.error("  4. Network connectivity issue");
-          console.error("  5. Firewall blocking the request");
-          console.error("🚫 Current baseURL:", baseURL);
-          console.error("🚫 Attempted URL:", attemptedURL);
-          console.error("🚫 Current origin:", window.location.origin);
+          
+          
+          
+          
+          
+          
+          
+          
+          
         }
       }
 
       // Check if it's a timeout
       if (errorCode === 'ECONNABORTED' || errorMessage.includes('timeout')) {
-        console.error("⏱️ Request timeout - Server took too long to respond");
-        console.error("⏱️ Try increasing timeout or check server performance");
+        
+        
       }
 
       // Check if it's connection refused
       if (errorCode === 'ECONNREFUSED' || errorMessage.includes('refused')) {
-        console.error("🔌 Connection Refused - Server might not be running");
-        console.error("🔌 Check if the server is running on:", baseURL);
+        
+        
       }
 
       // Don't reject for network errors in some cases - let the component handle it

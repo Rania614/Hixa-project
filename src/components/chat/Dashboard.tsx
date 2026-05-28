@@ -33,7 +33,7 @@ export const Dashboard = ({ onSelectProjectRoom }: DashboardProps) => {
         setProjectRooms(rooms);
       } catch (err: any) {
         setError(err.response?.data?.message || err.message || 'Failed to fetch project rooms');
-        console.error('Error fetching project rooms:', err);
+        
       } finally {
         setLoading(false);
       }

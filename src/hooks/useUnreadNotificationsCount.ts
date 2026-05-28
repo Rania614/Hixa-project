@@ -36,7 +36,7 @@ export const useUnreadNotificationsCount = (
     } catch (err: any) {
       // Don't show error for 429 (Too Many Requests) - just log it silently
       if (err.response?.status === 429) {
-        console.warn('Rate limit exceeded for unread notifications count. Will retry later.');
+        
         // Don't set error state for rate limiting - it will retry automatically
         setLoading(false);
         return;
@@ -51,7 +51,7 @@ export const useUnreadNotificationsCount = (
       
       const errorMessage = err.response?.data?.message || err.message || 'فشل في جلب عدد الإشعارات';
       setError(errorMessage);
-      console.error('Error fetching unread count:', err);
+      
     } finally {
       setLoading(false);
     }

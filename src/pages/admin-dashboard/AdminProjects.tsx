@@ -319,7 +319,7 @@ const AdminProjects = () => {
           return;
         } catch (err: any) {
           // If pending endpoint doesn't exist, fall back to regular endpoint
-          console.warn('Pending endpoint not available, using regular endpoint');
+          
         }
       }
       
@@ -328,10 +328,10 @@ const AdminProjects = () => {
       if (!Array.isArray(projectsData)) projectsData = [];
       setProjects(projectsData);
     } catch (error: any) {
-      console.error('Error fetching projects:', error);
+      
       // Use mock data if API fails
       if (error.response?.status === 404 || error.code === 'ERR_NETWORK') {
-        console.log('Using mock data for projects');
+        
         setProjects(getMockProjects());
       } else {
         if (error.response?.status !== 404) {
@@ -387,7 +387,7 @@ const AdminProjects = () => {
       fetchProjects();
       fetchStatistics();
     } catch (error: any) {
-      console.error('Error updating project status:', error);
+      
       toast.error(language === 'en' ? 'Failed to update status' : 'فشل تحديث الحالة');
     }
   };
@@ -404,7 +404,7 @@ const AdminProjects = () => {
       fetchProjects();
       fetchStatistics();
     } catch (error: any) {
-      console.error('Error approving project:', error);
+      
       const errorMessage = error.response?.data?.message || (language === 'en' ? 'Failed to approve project' : 'فشل الموافقة على المشروع');
       toast.error(errorMessage);
     }
@@ -441,7 +441,7 @@ const AdminProjects = () => {
       fetchProjects();
       fetchStatistics();
     } catch (error: any) {
-      console.error('Error rejecting project:', error);
+      
       const errorMessage = error.response?.data?.message || (language === 'en' ? 'Failed to reject project' : 'فشل رفض المشروع');
       toast.error(errorMessage);
     }
@@ -460,7 +460,7 @@ const AdminProjects = () => {
       fetchProjects();
       fetchStatistics();
     } catch (error: any) {
-      console.error('Error hard deleting project:', error);
+      
       const errorMessage = error.response?.data?.message || (language === 'en' ? 'Failed to delete project' : 'فشل حذف المشروع');
       toast.error(errorMessage);
     } finally {
@@ -493,7 +493,7 @@ const AdminProjects = () => {
       fetchProjects();
       fetchStatistics();
     } catch (error: any) {
-      console.error('Error cancelling project:', error);
+      
       const errorMessage = error.response?.data?.message || (language === 'en' ? 'Failed to cancel project' : 'فشل إلغاء المشروع');
       toast.error(errorMessage);
     } finally {
@@ -532,7 +532,7 @@ const AdminProjects = () => {
         navigate(`/admin/projects/${duplicatedId}`);
       }
     } catch (error: any) {
-      console.error('Error duplicating project:', error);
+      
       const errorMessage = error.response?.data?.message || (language === 'en' ? 'Failed to duplicate project' : 'فشل نسخ المشروع');
       toast.error(errorMessage);
     } finally {
@@ -565,7 +565,6 @@ const AdminProjects = () => {
   //     fetchProjects();
   //     fetchStatistics();
   //   } catch (error: any) {
-  //     console.error('Error cancelling project:', error);
   //     const errorMessage = error.response?.data?.message || (language === 'en' ? 'Failed to cancel project' : 'فشل إلغاء المشروع');
   //     toast.error(errorMessage);
   //   } finally {

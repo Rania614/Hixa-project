@@ -79,15 +79,15 @@ const WorkDetails = () => {
     if (!id) return;
     try {
       setLoading(true);
-      console.log("Fetching work with ID:", id);
-      const workData = await getPortfolioWorkById(id);
-      console.log("Fetched work data:", workData);
       
-      console.log("Raw workData keys:", Object.keys(workData || {}));
-      console.log("workData.mainImage:", workData.mainImage);
-      console.log("workData.mainImage type:", typeof workData.mainImage);
-      console.log("workData.mainImage?.url:", workData.mainImage?.url);
-      console.log("workData.gallery:", workData.gallery);
+      const workData = await getPortfolioWorkById(id);
+      
+      
+      
+      
+      
+      
+      
       
       // Extract image URL from mainImage object or use string directly
       let mainImageUrl = null;
@@ -127,11 +127,11 @@ const WorkDetails = () => {
         features: workData.keyFeatures || workData.features || undefined,
       };
       
-      console.log("Processed work for display:", processedWork);
-      console.log("Processed work image (mainImage.url):", processedWork.image);
+      
+      
       setWork(processedWork);
     } catch (error) {
-      console.error("Failed to fetch work:", error);
+      
       // Navigate back if work not found
       navigate(`${basePath}/portfolio`);
     } finally {
@@ -146,7 +146,7 @@ const WorkDetails = () => {
       await deletePortfolioWork(id);
       navigate("/engineer/portfolio");
     } catch (error) {
-      console.error("Failed to delete work:", error);
+      
     } finally {
       setDeleting(false);
       setDeleteDialogOpen(false);
@@ -293,14 +293,14 @@ const WorkDetails = () => {
           <div className="h-96 bg-hexa-bg flex items-center justify-center overflow-hidden relative">
             {work.image && typeof work.image === 'string' ? (() => {
               const imageUrl = getImageUrl(work.image);
-              console.log("Displaying work image, URL:", imageUrl, "Original:", work.image);
+              
               return imageUrl ? (
                 <img 
                   src={imageUrl} 
                   alt={work.title || 'Work image'}
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    console.error("Image load error:", "URL:", imageUrl, "Original:", work.image);
+                    
                     e.currentTarget.style.display = 'none';
                     const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
                     if (placeholder) placeholder.style.display = 'flex';
@@ -380,7 +380,7 @@ const WorkDetails = () => {
                               alt={`${work.title || 'Work'} - Image ${idx + 2}`}
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                console.error("Additional image load error:", imageUrl);
+                                
                                 e.currentTarget.style.display = 'none';
                                 const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
                                 if (placeholder) placeholder.style.display = 'flex';

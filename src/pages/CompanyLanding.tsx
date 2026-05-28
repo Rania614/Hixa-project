@@ -59,9 +59,9 @@ const CompanyLanding = () => {
   
   // Debug: Log CTA data changes
   useEffect(() => {
-    console.log('🏠 CompanyLanding - CTA from store:', cta);
-    console.log('🏠 CompanyLanding - CTA social:', cta?.social);
-    console.log('🏠 CompanyLanding - Is CTA social array?', Array.isArray(cta?.social));
+    
+    
+    
   }, [cta]);
   
   // Fetch services details from API (4 services, each with 4 sections)
@@ -231,7 +231,7 @@ const CompanyLanding = () => {
     
     // Listen for CTA update events
     const handleCTAUpdated = () => {
-      console.log('🔄 CTA updated event received, refreshing landing data...');
+      
       fetchLandingData();
     };
     
@@ -726,21 +726,21 @@ const CompanyLanding = () => {
       }
 
       // Send to API
-      console.log('📤 Sending service order request:', payload);
+      
       const response = await http.post('/service-orders', payload);
 
       // Log response (for debugging)
-      console.log('✅ Service Order Response:', response.data);
+      
 
       toast.success(language === 'en' ? 'Order submitted successfully!' : 'تم إرسال الطلب بنجاح!');
 
       // Close modal and reset form
       handleCloseModal();
     } catch (error: any) {
-      console.error('❌ Service Order Error:', error);
-      console.error('❌ Error Response:', error.response?.data);
-      console.error('❌ Error Status:', error.response?.status);
-      console.error('❌ Error Message:', error.message);
+      
+      
+      
+      
       
       // Show detailed error message
       let errorMessage = '';

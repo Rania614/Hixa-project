@@ -63,7 +63,7 @@ const ClientBrowseProjects = () => {
         let projectsData: any[] = [];
         
         try {
-          console.log(`🔄 Fetching /projects with params:`, queryParams);
+          
           response = await http.get("/projects", { params: queryParams });
             
           // Handle different response structures
@@ -78,9 +78,9 @@ const ClientBrowseProjects = () => {
             projectsData = tempData.data;
           }
           
-          console.log(`✅ Found ${projectsData.length} projects`);
+          
         } catch (err: any) {
-          console.error("❌ Error fetching projects:", err);
+          
           throw err;
         }
         
@@ -92,7 +92,7 @@ const ClientBrowseProjects = () => {
           try {
             userData = JSON.parse(userDataStr);
           } catch (e) {
-            console.error("Error parsing user data:", e);
+            
           }
         }
         
@@ -102,15 +102,7 @@ const ClientBrowseProjects = () => {
         // No need for additional filtering on frontend
         const filteredProjects = projectsData;
         
-        console.log("✅ Projects received from backend (already filtered):", {
-          total: projectsData.length,
-          projects: projectsData.map((p: any) => ({ 
-            title: p.title, 
-            status: p.status, 
-            approved: p.adminApproval?.status || p.adminApproval,
-            client: p.client?._id || p.client
-          }))
-        });
+        
         
         // Transform projects to match the expected format
         const transformedProjects = filteredProjects.map((project: any) => ({
@@ -130,8 +122,8 @@ const ClientBrowseProjects = () => {
         
         setAvailableProjects(transformedProjects);
       } catch (error: any) {
-        console.error("Error fetching projects:", error);
-        console.error("Error response:", error.response);
+        
+        
         if (error.response?.status !== 404) {
           toast.error(
             language === "en" 

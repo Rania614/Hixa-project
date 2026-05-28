@@ -44,7 +44,7 @@ const ProjectDetails = () => {
         
         // Format attachments from API response
         const attachments = projectData.attachments || [];
-        console.log("📎 Raw attachments from API:", attachments);
+        
         const formattedFiles = attachments.map((att: any) => {
           // Try multiple possible field names for URL
           const fileUrl = att.url || att.path || att.fileUrl || att.link || "";
@@ -56,13 +56,7 @@ const ProjectDetails = () => {
             : "";
           const fileDate = att.uploadedAt || att.createdAt || "";
           
-          console.log("📄 Formatted file:", {
-            _id: att._id,
-            name: fileName,
-            url: fileUrl,
-            hasUrl: !!fileUrl,
-            originalAtt: att
-          });
+          
           
           return {
             _id: att._id || att.id,
@@ -74,8 +68,8 @@ const ProjectDetails = () => {
           };
         });
         
-        console.log("📁 Formatted files array:", formattedFiles);
-        console.log("📁 Files count:", formattedFiles.length);
+        
+        
 
         setProject({
           id: projectData._id || projectData.id || id,
@@ -94,7 +88,7 @@ const ProjectDetails = () => {
           } : null,
         });
       } catch (error: any) {
-        console.error("Error fetching project:", error);
+        
         toast.error(
           language === "en" ? "Failed to load project details" : "فشل تحميل تفاصيل المشروع"
         );
@@ -114,7 +108,7 @@ const ProjectDetails = () => {
         const proposalsData = await getProjectProposals(id);
         setProposals(proposalsData);
       } catch (error: any) {
-        console.error("Error fetching proposals:", error);
+        
         if (error.response?.status !== 404) {
           toast.error(
             language === "en" ? "Failed to load proposals" : "فشل تحميل العروض"
@@ -193,7 +187,7 @@ const ProjectDetails = () => {
       // Navigate back to projects list
       navigate("/client/projects");
     } catch (error: any) {
-      console.error("Error cancelling project:", error);
+      
       const errorMessage = error.response?.data?.message || 
         (language === "en" ? "Failed to cancel project" : "فشل إلغاء المشروع");
       toast.error(errorMessage);
@@ -552,7 +546,7 @@ const ProjectDetails = () => {
                 {displayProject.files && displayProject.files.length > 0 ? (
                   <div className="space-y-3">
                     {displayProject.files.map((file: any, idx: number) => {
-                      console.log("🔍 Rendering file:", file);
+                      
                       return (
                         <div key={file._id || idx} className="flex items-center justify-between p-3 border-hexa-border rounded-lg hover:bg-hexa-bg transition-colors bg-hexa-card border">
                           <div className="flex items-center gap-3">
@@ -573,7 +567,7 @@ const ProjectDetails = () => {
                               if (file.url) {
                                 window.open(file.url, '_blank');
                               } else {
-                                console.error("❌ File URL is missing:", file);
+                                
                                 toast.error(
                                   language === "en" 
                                     ? "File URL is not available" 

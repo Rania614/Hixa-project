@@ -54,7 +54,7 @@ const CompanyPortfolio = () => {
   const fetchPortfolioWorks = async () => {
     try {
       setLoading(true);
-      console.log("Fetching portfolio works...");
+      
       
       // Get user ID from localStorage
       const userStr = localStorage.getItem("user");
@@ -64,9 +64,9 @@ const CompanyPortfolio = () => {
         try {
           const user = JSON.parse(userStr);
           userId = user._id || user.id;
-          console.log("Found user ID:", userId);
+          
         } catch (e) {
-          console.error("Error parsing user from localStorage:", e);
+          
         }
       }
       
@@ -74,44 +74,44 @@ const CompanyPortfolio = () => {
       const works = userId 
         ? await getAllPortfolioWorks(userId)
         : await getAllPortfolioWorks();
-      console.log("Raw fetched portfolio works:", works);
-      console.log("Type of works:", typeof works);
-      console.log("Is array?", Array.isArray(works));
+      
+      
+      
       
       // Handle different response formats
       // API might return array directly or wrapped in an object
       let worksArray: PortfolioWork[] = [];
       if (Array.isArray(works)) {
         worksArray = works;
-        console.log("Works is array, using directly");
+        
       } else if (works && typeof works === 'object' && 'data' in works && Array.isArray(works.data)) {
         worksArray = works.data;
-        console.log("Works has data array, using works.data");
+        
       } else if (works && typeof works === 'object' && 'items' in works && Array.isArray(works.items)) {
         worksArray = works.items;
-        console.log("Works has items array, using works.items");
+        
       } else if (works && typeof works === 'object' && 'works' in works && Array.isArray(works.works)) {
         worksArray = works.works;
-        console.log("Works has works array, using works.works");
+        
       } else if (works && typeof works === 'object') {
         // If it's a single object, wrap it in an array
         worksArray = [works as PortfolioWork];
-        console.log("Works is single object, wrapping in array");
+        
       } else {
-        console.warn("Unknown works format:", works);
+        
         worksArray = [];
       }
       
-      console.log("Final processed portfolio works array:", worksArray);
-      console.log("Number of works:", worksArray.length);
+      
+      
       worksArray.forEach((work, index) => {
-        console.log(`Work ${index}:`, work);
+        
       });
       
       setPortfolioWorks(worksArray);
     } catch (error) {
-      console.error("Failed to fetch portfolio works:", error);
-      console.error("Error details:", error);
+      
+      
       // Keep empty array on error
       setPortfolioWorks([]);
     } finally {
@@ -214,14 +214,14 @@ const CompanyPortfolio = () => {
                       <div className="h-48 bg-hexa-card flex items-center justify-center border-b border-hexa-border overflow-hidden relative">
                         {workImage && typeof workImage === 'string' ? (() => {
                           const imageUrl = getImageUrl(workImage);
-                          console.log("Displaying image for work:", workId, "URL:", imageUrl, "Original:", workImage);
+                          
                           return imageUrl ? (
                             <img 
                               src={imageUrl} 
                               alt={workTitle}
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                console.error("Image load error for work:", workId, "URL:", imageUrl, "Original:", workImage);
+                                
                                 e.currentTarget.style.display = 'none';
                                 const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
                                 if (placeholder) placeholder.style.display = 'flex';

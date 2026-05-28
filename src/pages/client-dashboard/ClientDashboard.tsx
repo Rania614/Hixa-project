@@ -41,7 +41,7 @@ const ClientDashboard = () => {
         const stats = await projectsApi.getStatistics();
         setStatistics(stats);
       } catch (error: any) {
-        console.error('Error fetching statistics:', error);
+        
         if (error.response?.status !== 404) {
           toast.error(language === 'en' ? 'Failed to load statistics' : 'فشل تحميل الإحصائيات');
         }
@@ -86,7 +86,7 @@ const ClientDashboard = () => {
         
         setProjects(projectsData);
       } catch (error: any) {
-        console.error('Error fetching projects:', error);
+        
         if (error.response?.status !== 404) {
           toast.error(language === 'en' ? 'Failed to load projects' : 'فشل تحميل المشاريع');
         }

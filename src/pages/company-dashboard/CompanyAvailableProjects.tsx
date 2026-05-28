@@ -58,7 +58,7 @@ const CompanyAvailableProjects = () => {
         let projectsData: any[] = [];
         
         try {
-          console.log(`🔄 Fetching /projects with params:`, queryParams);
+          
           response = await http.get("/projects", { params: queryParams });
           
           // Handle different response structures
@@ -73,22 +73,18 @@ const CompanyAvailableProjects = () => {
             projectsData = tempData.data;
           }
           
-          console.log(`✅ Found ${projectsData.length} projects`);
+          
         } catch (err: any) {
-          console.error("❌ Error fetching projects:", err);
+          
           throw err;
         }
         
         // Debug: Log the final result
-        console.log("🔍 Final projects data:", {
-          count: projectsData.length,
-          sample: projectsData.length > 0 ? projectsData[0] : null,
-          fullResponse: response?.data
-        });
+        
         
         if (projectsData.length === 0) {
-          console.warn("⚠️ No projects found! Full response:", response?.data);
-          console.warn("⚠️ This might be a backend issue - check if projects exist in database");
+          
+          
         }
         
         // Filter projects on the frontend to show only available projects for engineers
@@ -96,12 +92,7 @@ const CompanyAvailableProjects = () => {
         const excludedStatuses = ['Completed', 'completed', 'Cancelled', 'cancelled', 'Rejected', 'rejected', 'closed', 'Closed'];
         const filteredProjects = projectsData.filter((project: any) => {
           // Log each project for debugging
-          console.log("🔍 Checking project:", {
-            id: project._id || project.id,
-            title: project.title || project.name,
-            isActive: project.isActive,
-            status: project.status,
-          });
+          
           
           // Check if project is explicitly inactive (only exclude if isActive === false)
           const isExplicitlyInactive = project.isActive === false;
@@ -118,16 +109,13 @@ const CompanyAvailableProjects = () => {
           const shouldInclude = !isExplicitlyInactive && !isExcludedStatus;
           
           if (!shouldInclude) {
-            console.log(`❌ Project excluded:`, {
-              title: project.title || project.name,
-              reason: isExplicitlyInactive ? 'isActive === false' : isExcludedStatus ? `status: ${status}` : 'unknown'
-            });
+            
           }
           
           return shouldInclude;
         });
         
-        console.log(`📊 Projects after filtering: ${filteredProjects.length} out of ${projectsData.length}`);
+        
         
         // If no projects after filtering but we have projects in data, show all for debugging
         // TODO: Remove this after fixing the backend/API issue
@@ -136,7 +124,7 @@ const CompanyAvailableProjects = () => {
           : filteredProjects;
         
         if (projectsToUse.length !== filteredProjects.length) {
-          console.warn("⚠️ Showing all projects (filtering disabled) for debugging. Projects were filtered out.");
+          
         }
         
         // Transform projects to match the expected format
@@ -157,8 +145,8 @@ const CompanyAvailableProjects = () => {
         
         setAvailableProjects(transformedProjects);
       } catch (error: any) {
-        console.error("Error fetching projects:", error);
-        console.error("Error response:", error.response);
+        
+        
         // Show error message
         if (error.response?.status !== 404) {
           toast.error(
@@ -238,15 +226,7 @@ const CompanyAvailableProjects = () => {
         
         // Debug logging (can be removed later)
         if (!shouldInclude && availableProjects.length > 0) {
-          console.log(`🔍 Filtering project "${p.title}":`, {
-            activeTab: tabLower,
-            category,
-            projectType,
-            possibleMatches,
-            matchesCategory,
-            matchesProjectType,
-            shouldInclude
-          });
+          
         }
         
         return shouldInclude;

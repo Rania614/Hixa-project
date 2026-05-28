@@ -115,7 +115,7 @@ const AdminMessages = () => {
         return prev;
       });
     } catch (error: any) {
-      console.error('Error loading all chat rooms:', error);
+      
       if (error.response?.status !== 404) {
         toast.error(language === 'en' ? 'Failed to load chat rooms' : 'فشل تحميل غرف الدردشة');
       }
@@ -148,20 +148,20 @@ const AdminMessages = () => {
 
   const loadMessages = React.useCallback(async (chatRoomId: string, pageNum: number = 1, append: boolean = false) => {
     try {
-      console.log('📥 [Admin] Loading messages for chatRoom:', chatRoomId, 'page:', pageNum);
+      
       setLoadingMessages(true);
 
       // Add timeout to prevent hanging (10 seconds for admin)
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
-          console.error('⏱️ [Admin] Request timeout after 10 seconds');
+          
           reject(new Error('Request timeout'));
         }, 10000);
       });
 
-      console.log('📥 [Admin] Calling messagesApi.getMessages...');
+      
       const apiCall = messagesApi.getMessages(chatRoomId, pageNum, 50);
-      console.log('📥 [Admin] API call started, waiting for response...');
+      
 
       const result = await Promise.race([
         apiCall,
@@ -170,7 +170,7 @@ const AdminMessages = () => {
 
 
       if (!result) {
-        console.error('❌ [Admin] No result returned from API');
+        
         setMessages([]);
         setHasMore(false);
         setPage(pageNum);
@@ -178,19 +178,14 @@ const AdminMessages = () => {
       }
 
       if (!result.messages || !Array.isArray(result.messages)) {
-        console.error('❌ [Admin] Invalid response structure:', {
-          result,
-          hasMessages: !!result.messages,
-          isArray: Array.isArray(result.messages),
-          type: typeof result.messages
-        });
+        
         setMessages([]);
         setHasMore(false);
         setPage(pageNum);
         return;
       }
 
-      console.log('✅ [Admin] Valid response, processing', result.messages.length, 'messages');
+      
 
       // Only apply result if still viewing this chat room (avoid showing wrong room messages)
       const currentRoomId = selectedChatRoomRef.current?._id;
@@ -202,7 +197,7 @@ const AdminMessages = () => {
         // When appending (loading older messages), add them to the beginning
         setMessages((prev) => {
           const updated = [...result.messages, ...prev];
-          console.log('📥 [Admin] Messages after append:', updated.length);
+          
           return updated;
         });
       } else {
@@ -219,11 +214,11 @@ const AdminMessages = () => {
 
       // If timeout or network error, keep existing messages (from Socket.io)
       if (error.message === 'Request timeout' || error.code === 'ERR_NETWORK') {
-        console.warn('⚠️ [Admin] Request timeout or network error, keeping existing messages');
+        
         // Don't clear messages, just stop loading
         setHasMore(false);
       } else if (error.response?.status === 404) {
-        console.log('⚠️ [Admin] No messages found (404), setting empty array');
+        
         setMessages([]);
         setHasMore(false);
         setPage(1);
@@ -237,7 +232,7 @@ const AdminMessages = () => {
         setHasMore(false);
       }
     } finally {
-      console.log('✅ [Admin] Finished loading messages, setting loadingMessages to false');
+      
       setLoadingMessages(false);
     }
   }, [scrollToBottom, language]); // Remove messages.length to prevent infinite loops
@@ -275,13 +270,7 @@ const AdminMessages = () => {
         ? (language === 'en' ? `Sent ${attachments.length} file(s)` : `تم إرسال ${attachments.length} ملف(ات)`)
         : '');
 
-      console.log('📤 Sending message:', {
-        chatRoomId: selectedChatRoom._id,
-        content: messageContent,
-        type: messageType,
-        attachmentsCount: attachments.length,
-        fileNames: attachments.map(f => f.name)
-      });
+      
 
       const sentMessage = await messagesApi.sendMessage(
         selectedChatRoom._id,
@@ -290,7 +279,7 @@ const AdminMessages = () => {
         attachments.length > 0 ? attachments : undefined
       );
 
-      console.log('✅ Message sent successfully:', sentMessage);
+      
 
       // Clear input immediately for better UX
       setMessage("");
@@ -306,7 +295,7 @@ const AdminMessages = () => {
         setMessages((prev) => {
           const exists = prev.some(m => m._id === sentMessage._id);
           if (!exists) {
-            console.log('⚠️ Socket.io event not received, adding message optimistically');
+            
             return [...prev, sentMessage].sort(
               (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
             );
@@ -325,7 +314,7 @@ const AdminMessages = () => {
             : 'تم إرسال الرسالة بنجاح'
       );
     } catch (error: any) {
-      console.error('❌ Error sending message:', error);
+      
       const errorMessage = error.response?.data?.message || error.message ||
         (language === 'en' ? 'Failed to send message' : 'فشل إرسال الرسالة');
       toast.error(errorMessage);
@@ -393,7 +382,7 @@ const AdminMessages = () => {
           : 'تم بدء الدردشة بنجاح'
       );
     } catch (error: any) {
-      console.error('Error starting chat:', error);
+      
       toast.error(
         language === 'en'
           ? 'Failed to start chat'
@@ -442,13 +431,7 @@ const AdminMessages = () => {
       }
 
       // Log for debugging
-      console.log('🔍 Assign Engineer Debug:', {
-        chatRoomId: selectedChatRoom._id,
-        chatRoomType: selectedChatRoom.type,
-        engineerField: selectedChatRoom.engineer,
-        participants: selectedChatRoom.participants,
-        foundEngineerId: engineerId
-      });
+      
 
       if (!engineerId) {
         toast.error(language === 'en' ? 'Engineer ID not found in chat room' : 'لم يتم العثور على معرف المهندس في غرفة المحادثة');
@@ -461,15 +444,12 @@ const AdminMessages = () => {
         ? engineerId
         : String(engineerId);
 
-      console.log('📤 Calling assignEngineerFromChat:', {
-        chatRoomId: selectedChatRoom._id,
-        engineerId: engineerIdStr
-      });
+      
 
       // Call API directly
       const result = await messagesApi.assignEngineerFromChat(selectedChatRoom._id, engineerIdStr);
 
-      console.log('✅ Assign engineer result:', result);
+      
 
       toast.success(language === 'en' ? 'Engineer assigned successfully' : 'تم تعيين المهندس بنجاح');
 
@@ -485,12 +465,8 @@ const AdminMessages = () => {
 
       setShowAssignModal(false);
     } catch (error: any) {
-      console.error('❌ Error assigning engineer:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
+      
+      
 
       const errorMessage = error.response?.data?.message ||
         error.message ||
@@ -547,7 +523,7 @@ const AdminMessages = () => {
         setMessages([]);
       }
     } catch (error: any) {
-      console.error('Error rejecting engineer:', error);
+      
       const msg = error.response?.data?.message || error.message;
       toast.error(msg || (language === 'en' ? 'Failed to reject engineer' : 'فشل رفض المهندس'));
     } finally {
@@ -712,7 +688,7 @@ const AdminMessages = () => {
         const projectData = await projectsApi.getProjectById(projectId);
         setProject(projectData);
       } catch (error: any) {
-        console.error('Error loading project:', error);
+        
         setProject(null);
       } finally {
         setLoadingProject(false);
@@ -762,31 +738,31 @@ const AdminMessages = () => {
     }
     socketService.connect();
     const handleNewMessage = (data: SocketMessageEvent) => {
-      console.log('📨 New message received:', data);
+      
       const currentChatRoomId = selectedChatRoomRef.current?._id;
-      console.log('📨 Current selectedChatRoom?._id:', currentChatRoomId);
-      console.log('📨 Message chatRoomId:', data.chatRoomId);
+      
+      
       setMessages((prev) => {
-        console.log('📨 Current messages count:', prev.length);
+        
         // Check if message already exists (avoid duplicates)
         const exists = prev.some(m => m._id === data.message._id);
         if (exists) {
-          console.log('⚠️ Message already exists, skipping');
+          
           return prev;
         }
 
         if (data.chatRoomId === currentChatRoomId) {
-          console.log('✅ Adding message to current chat room');
+          
           // Add new message and sort by createdAt (oldest first)
           const updated = [...prev, data.message];
           const sorted = updated.sort(
             (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
           );
-          console.log('✅ Messages after adding:', sorted.length);
-          console.log('✅ New message in array:', sorted.find(m => m._id === data.message._id));
+          
+          
           return sorted;
         }
-        console.log('ℹ️ Message for different chat room, not adding');
+        
         return prev;
       });
       if (data.chatRoomId === currentChatRoomId) {
@@ -836,16 +812,16 @@ const AdminMessages = () => {
 
       // Only load if we haven't loaded for this chat room yet
       if (loadAttemptedRef.current !== chatRoomId) {
-        console.log('🔄 ChatRoom selected, loading messages:', chatRoomId);
+        
         loadAttemptedRef.current = chatRoomId;
         setPage(1);
         setHasMore(true);
         setMessages([]); // Clear previous messages
         loadMessages(chatRoomId, 1);
         socketService.joinChatRoom(chatRoomId);
-        messagesApi.markChatRoomAsRead(chatRoomId).catch(console.error);
+        messagesApi.markChatRoomAsRead(chatRoomId).catch(() => {});
       } else {
-        console.log('⏭️ [Admin] Skipping load - already loaded for chat room:', chatRoomId);
+        
       }
 
       return () => {

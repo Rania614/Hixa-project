@@ -217,7 +217,7 @@ const AdminDashboard = () => {
         setProjectsList(allProjectsList);
 
       } catch (error: any) {
-        console.error('Error fetching dashboard data:', error);
+        
         toast.error(isAr ? 'حدث خطأ أثناء جلب البيانات' : 'Error fetching dashboard data');
       } finally {
         setLoading(false);

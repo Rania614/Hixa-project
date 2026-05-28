@@ -65,7 +65,7 @@ const AddWork = () => {
         existingImage: typeof work.image === 'string' ? work.image : "",
       });
     } catch (error) {
-      console.error("Failed to fetch work:", error);
+      
       navigate(`${basePath}/portfolio`);
     } finally {
       setFetching(false);
@@ -110,8 +110,8 @@ const AddWork = () => {
     // Validate category is from allowed list
     const isValidCategory = businessCategories.includes(formData.category.trim());
     if (!isValidCategory) {
-      console.error("Invalid category:", formData.category);
-      console.error("Allowed categories:", businessCategories);
+      
+      
       toast.error(language === "en" ? "Invalid category selected" : "نطاق الأعمال غير صحيح");
       return;
     }
@@ -128,31 +128,24 @@ const AddWork = () => {
         formDataToSend.append("date", formData.date);
         formDataToSend.append("image", formData.image);
         
-        console.log("📤 Sending FormData with image:", {
-          title: formData.title.trim(),
-          description: formData.description.trim(),
-          category: formData.category.trim(),
-          categoryLength: formData.category.trim().length,
-          date: formData.date,
-          hasImage: !!formData.image
-        });
+        
         
         // Log FormData entries
-        console.log("📤 FormData entries:");
+        
         for (const [key, value] of formDataToSend.entries()) {
           if (value instanceof File) {
-            console.log(`  ${key}: [File] ${value.name} (${value.size} bytes)`);
+            
           } else {
-            console.log(`  ${key}: "${value}" (length: ${value.length})`);
+            
           }
         }
         
         if (isEditMode && id) {
           const result = await updatePortfolioWork(id, formDataToSend);
-          console.log("Update result:", result);
+          
         } else {
           const result = await addPortfolioWork(formDataToSend);
-          console.log("Add result:", result);
+          
         }
       } else {
         const workData = {
@@ -162,17 +155,17 @@ const AddWork = () => {
           date: formData.date,
         };
         
-        console.log("📤 Sending JSON data:", workData);
-        console.log("📤 Category value:", workData.category);
-        console.log("📤 Category length:", workData.category.length);
-        console.log("📤 Is valid category?", businessCategories.includes(workData.category));
+        
+        
+        
+        
         
         if (isEditMode && id) {
           const result = await updatePortfolioWork(id, workData);
-          console.log("Update result:", result);
+          
         } else {
           const result = await addPortfolioWork(workData);
-          console.log("Add result:", result);
+          
         }
       }
       
@@ -180,7 +173,7 @@ const AddWork = () => {
       await new Promise(resolve => setTimeout(resolve, 500));
       navigate(`${basePath}/portfolio`);
     } catch (error) {
-      console.error(`Failed to ${isEditMode ? 'update' : 'add'} work:`, error);
+      
       // Error toast is handled in the API function
     } finally {
       setLoading(false);

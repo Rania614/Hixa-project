@@ -52,11 +52,7 @@ const EngineerProjectDetails = () => {
           }
         }
         
-        console.log("🔍 Project data structure:", {
-          type: typeof projectData,
-          keys: projectData ? Object.keys(projectData) : null,
-          projectData: projectData
-        });
+        
         
         // Format deadline if it's a date
         let formattedDeadline = "";
@@ -110,8 +106,8 @@ const EngineerProjectDetails = () => {
           adminApproval: projectData.adminApproval || projectData.admin_approval,
         });
       } catch (error: any) {
-        console.error("Error fetching project:", error);
-        console.error("Error response:", error.response);
+        
+        
         toast.error(
           language === "en" ? "Failed to load project details" : "فشل تحميل تفاصيل المشروع"
         );
@@ -170,7 +166,7 @@ const EngineerProjectDetails = () => {
         // Check if engineer can submit proposal (no existing proposal)
         setCanSubmitProposal(proposalsData.length === 0);
       } catch (error: any) {
-        console.error("Error fetching proposals:", error);
+        
         // Don't show error toast for 404, as project might not have proposals yet
         if (error.response?.status !== 404) {
           toast.error(

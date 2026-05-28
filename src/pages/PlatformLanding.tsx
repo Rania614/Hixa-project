@@ -67,7 +67,7 @@ const Landing = () => {
         email: subscribeEmail.trim().toLowerCase()
       });
       
-      console.log('✅ Subscription successful:', response.data);
+      
       
       toast.success(isAr ? 'تم الاشتراك بنجاح!' : 'Subscribed successfully!');
       
@@ -81,7 +81,7 @@ const Landing = () => {
         setSubscribeModalOpen(false);
       }, 1500);
     } catch (error: any) { 
-      console.error('❌ Subscription error:', error);
+      
       
       // Handle different error cases
       let errorMessage = isAr ? 'حدث خطأ ما. يرجى المحاولة مرة أخرى' : 'Error occurred. Please try again';

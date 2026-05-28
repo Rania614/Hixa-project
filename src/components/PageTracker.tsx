@@ -38,7 +38,7 @@ const PageTracker = () => {
                 data
             }).catch(err => {
                 // Silently fail in production, but log in dev if needed
-                if (import.meta.env.DEV) console.error(`Failed to send ${event} tracking data:`, err);
+                void err;
             });
         };
 

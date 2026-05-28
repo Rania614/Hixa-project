@@ -28,7 +28,7 @@ export const useNotificationWebSocket = (
 
   // Handle new notification event
   const handleNewNotification = useCallback((data: SocketNotificationEvent) => {
-    console.log('New notification received via WebSocket:', data);
+    
     
     // Call the callback if provided
     if (callbackRef.current) {
@@ -44,7 +44,7 @@ export const useNotificationWebSocket = (
           tag: data.notification._id, // Prevent duplicate notifications
         });
       } catch (error) {
-        console.error('Error showing browser notification:', error);
+        
       }
     }
   }, []);
@@ -76,7 +76,7 @@ export const useNotificationWebSocket = (
  */
 export const requestNotificationPermission = async (): Promise<boolean> => {
   if (!('Notification' in window)) {
-    console.log('This browser does not support notifications');
+    
     return false;
   }
 
@@ -89,7 +89,7 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
       const permission = await Notification.requestPermission();
       return permission === 'granted';
     } catch (error) {
-      console.error('Error requesting notification permission:', error);
+      
       return false;
     }
   }

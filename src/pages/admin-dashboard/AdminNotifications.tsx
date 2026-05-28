@@ -113,7 +113,7 @@ const AdminNotifications = () => {
         await markAsRead(notification._id);
         refetchCount();
       } catch (error) {
-        console.error("Error marking notification as read:", error);
+        
       } finally {
         setProcessingIds((prev) => {
           const newSet = new Set(prev);

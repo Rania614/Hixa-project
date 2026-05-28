@@ -103,7 +103,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegis
           : 'An error occurred during login');
       
       toast.error(errorMessage);
-      console.error('Login error:', error);
+      
     } finally {
       setIsLoading(false);
     }

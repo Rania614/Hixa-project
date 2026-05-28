@@ -103,7 +103,7 @@ const EngineerProfileView = () => {
 
         setEngineer(normalizedEngineer);
       } catch (error: any) {
-        console.error("Error fetching engineer:", error);
+        
         const errorMessage = error.response?.data?.message || 
           (language === "en" ? "Failed to load engineer profile" : "فشل تحميل ملف المهندس");
         setError(errorMessage);

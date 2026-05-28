@@ -53,7 +53,7 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'فشل في جلب الإشعارات';
       setError(errorMessage);
-      console.error('Error fetching notifications:', err);
+      
     } finally {
       setLoading(false);
     }
@@ -83,7 +83,7 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
       return updated;
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'فشل في تحديد الإشعار كمقروء';
-      console.error('Error marking notification as read:', err);
+      
       throw new Error(errorMessage);
     }
   }, []);
@@ -102,7 +102,7 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
       }
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'فشل في حذف الإشعار';
-      console.error('Error deleting notification:', err);
+      
       throw new Error(errorMessage);
     }
   }, [meta]);

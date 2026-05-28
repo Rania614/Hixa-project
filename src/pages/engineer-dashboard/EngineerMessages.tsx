@@ -63,9 +63,9 @@ const EngineerMessages = () => {
           try {
             const userData = JSON.parse(userStr);
             setUser(userData);
-            console.log('✅ User loaded from localStorage:', userData._id || userData.id);
+            
           } catch (e) {
-            console.error("Error parsing user from localStorage:", e);
+            
           }
         }
         
@@ -77,14 +77,14 @@ const EngineerMessages = () => {
             if (userData) {
               setUser(userData);
               localStorage.setItem("user", JSON.stringify(userData));
-              console.log('✅ User loaded from API:', userData._id || userData.id);
+              
             }
           } catch (error: any) {
-            console.warn("Could not fetch user data:", error);
+            
           }
         }
       } catch (error) {
-        console.error("Error loading user:", error);
+        
       }
     };
     
@@ -108,7 +108,7 @@ const EngineerMessages = () => {
         setSelectedProjectRoom(rooms[0]);
       }
     } catch (error: any) {
-      console.error('Error loading project rooms:', error);
+      
       if (error.response?.status !== 404) {
         toast.error(language === 'en' ? 'Failed to load projects' : 'فشل تحميل المشاريع');
       }
@@ -121,16 +121,16 @@ const EngineerMessages = () => {
   // Load Chat Rooms (filter: admin-engineer and group only)
   const loadChatRooms = useCallback(async (projectRoomId: string) => {
     try {
-      console.log('📥 Loading chat rooms for projectRoom:', projectRoomId);
+      
       const rooms = await messagesApi.getChatRooms(projectRoomId);
-      console.log('📥 Raw chat rooms from API:', rooms);
-      console.log('📥 Current user:', user?._id || user?.id);
+      
+      
       
       // Filter: Engineer sees only admin-engineer (their own) and group chat rooms
       const filteredRooms = rooms.filter(room => {
-        console.log('🔍 Checking room:', room._id, 'type:', room.type);
+        
         if (room.type === 'group') {
-          console.log('✅ Group room, including');
+          
           return true;
         }
         if (room.type === 'admin-engineer') {
@@ -139,7 +139,7 @@ const EngineerMessages = () => {
             const participantId = typeof p.user === 'string' ? p.user : (typeof p.user === 'object' ? p.user._id || p.user.id : p.user);
             const userId = user?._id || user?.id;
             const matches = participantId?.toString() === userId?.toString();
-            console.log('🔍 Participant check:', { participantId, userId, matches });
+            
             return matches;
           });
           
@@ -149,23 +149,23 @@ const EngineerMessages = () => {
           );
           
           const shouldInclude = isParticipant || engineerMatches;
-          console.log('🔍 Engineer check:', { isParticipant, engineerMatches, shouldInclude });
+          
           return shouldInclude;
         }
-        console.log('❌ Room type not allowed, excluding');
+        
         return false;
       });
       
-      console.log('📥 Filtered chat rooms:', filteredRooms);
+      
       setChatRooms(filteredRooms);
       if (filteredRooms.length > 0 && !selectedChatRoom) {
-        console.log('✅ Setting selected chat room:', filteredRooms[0]._id);
+        
         setSelectedChatRoom(filteredRooms[0]);
       } else if (filteredRooms.length === 0) {
-        console.log('⚠️ No chat rooms found after filtering');
+        
       }
     } catch (error: any) {
-      console.error('❌ Error loading chat rooms:', error);
+      
       if (error.response?.status !== 404) {
         toast.error(language === 'en' ? 'Failed to load chats' : 'فشل تحميل المحادثات');
       }
@@ -176,7 +176,7 @@ const EngineerMessages = () => {
   // Load Messages
   const loadMessages = useCallback(async (chatRoomId: string, pageNum: number = 1, append: boolean = false) => {
     try {
-      console.log('📥 Loading messages for chatRoom:', chatRoomId, 'page:', pageNum);
+      
       setLoadingMessages(true);
       
       // Add timeout to prevent hanging (reduced to 5 seconds)
@@ -189,11 +189,11 @@ const EngineerMessages = () => {
         timeoutPromise
       ]) as any;
       
-      console.log('📥 Raw response from getMessages:', response);
-      console.log('📥 Messages loaded:', response.messages?.length || 0, 'messages');
+      
+      
       
       if (!response || !response.messages) {
-        console.warn('⚠️ Invalid response structure:', response);
+        
         setMessages([]);
         setHasMore(false);
         setPage(pageNum);
@@ -202,18 +202,18 @@ const EngineerMessages = () => {
       }
       
       if (append) {
-        console.log('📥 Appending messages to existing list');
+        
         setMessages((prev) => {
           const updated = [...prev, ...response.messages];
-          console.log('📥 Messages after append:', updated.length);
+          
           return updated;
         });
       } else {
         // Messages come from backend oldest first, we want newest at bottom
         // So we keep them as is (oldest first = top to bottom)
-        console.log('📥 Setting messages:', response.messages.length);
-        console.log('📥 First message (oldest):', response.messages[0]);
-        console.log('📥 Last message (newest):', response.messages[response.messages.length - 1]);
+        
+        
+        
         setMessages(response.messages);
       }
       setHasMore(response.page < response.totalPages);
@@ -225,16 +225,12 @@ const EngineerMessages = () => {
         }, 200);
       }
     } catch (error: any) {
-      console.error('❌ Error loading messages:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
+      
+      
       
       // If timeout or network error, don't clear messages - keep existing ones
       if (error.message === 'Request timeout' || error.code === 'ERR_NETWORK') {
-        console.warn('⚠️ Request timeout or network error, keeping existing messages');
+        
         // Don't clear messages, just stop loading
       } else if (error.response?.status !== 404) {
         toast.error(language === 'en' ? 'Failed to load messages' : 'فشل تحميل الرسائل');
@@ -248,7 +244,7 @@ const EngineerMessages = () => {
       }
       setHasMore(false);
     } finally {
-      console.log('✅ Finished loading messages, setting loadingMessages to false');
+      
       setLoadingMessages(false);
     }
   }, [scrollToBottom, language, messages.length]);
@@ -320,7 +316,7 @@ const EngineerMessages = () => {
             : 'تم إرسال الرسالة بنجاح'
       );
     } catch (error: any) {
-      console.error('Error sending message:', error);
+      
       const errorMessage = error.response?.data?.message || error.message || 
         (language === 'en' ? 'Failed to send message' : 'فشل إرسال الرسالة');
       toast.error(errorMessage);
@@ -332,9 +328,9 @@ const EngineerMessages = () => {
 
   // Handle new message from Socket.io
   const handleNewMessage = useCallback((data: SocketMessageEvent) => {
-    console.log('📨 New message received:', data);
+    
     if (!selectedChatRoomRef.current || data.chatRoomId !== selectedChatRoomRef.current._id) {
-      console.log('📨 Message for different chat room, ignoring');
+      
       return;
     }
     
@@ -343,14 +339,14 @@ const EngineerMessages = () => {
       // Check if message already exists
       const exists = prev.some(m => m._id === newMessage._id);
       if (exists) {
-        console.log('📨 Message already exists, skipping');
+        
         return prev;
       }
       // Add new message and sort by date
       const updated = [...prev, newMessage].sort(
         (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       );
-      console.log('📨 Messages updated:', updated.length);
+      
       return updated;
     });
     // Scroll to bottom when new message arrives
@@ -433,7 +429,7 @@ const EngineerMessages = () => {
       
       // Only load messages if we haven't tried for this chat room yet
       if (loadAttemptedRef.current !== chatRoomId) {
-        console.log('🔄 ChatRoom selected, loading messages:', chatRoomId);
+        
         selectedChatRoomRef.current = selectedChatRoom;
         loadAttemptedRef.current = chatRoomId;
         setMessages([]);
@@ -441,12 +437,12 @@ const EngineerMessages = () => {
         
         // Try to load messages, but don't block if it fails
         loadMessages(chatRoomId, 1, false).catch(() => {
-          console.warn('⚠️ Failed to load messages, will rely on Socket.io');
+          
         });
       }
       
       // Mark chat room as read
-      messagesApi.markChatRoomAsRead(chatRoomId).catch(console.error);
+      messagesApi.markChatRoomAsRead(chatRoomId).catch(() => {});
       // Join Socket.io room
       socketService.joinRoom(chatRoomId);
     }

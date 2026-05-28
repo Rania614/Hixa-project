@@ -54,7 +54,7 @@ export const DeleteMessageButton: React.FC<DeleteMessageButtonProps> = ({
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'فشل في حذف الرسالة';
       setError(errorMessage);
-      console.error('Error deleting message:', err);
+      
       setLoading(false);
     }
   };

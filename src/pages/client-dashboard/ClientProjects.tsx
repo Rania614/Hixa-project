@@ -44,12 +44,12 @@ const ClientProjects = () => {
         try {
           response = await http.get(endpoint);
           if (response && response.data) {
-            console.log(`✅ Successfully fetched from ${endpoint}`);
+            
             break; // Success, exit loop
           }
         } catch (err: any) {
           lastError = err;
-          console.warn(`⚠️ Failed to fetch from ${endpoint}:`, err.response?.status || err.message);
+          
           // Continue to next endpoint
           continue;
         }
@@ -66,11 +66,7 @@ const ClientProjects = () => {
       
       const transformedProjects = projectsData.map((project: any) => {
         const mappedStatus = mapStatusToComponent(project.status);
-        console.log('🔍 Project status mapping:', {
-          original: project.status,
-          mapped: mappedStatus,
-          projectTitle: project.title || project.name
-        });
+        
         
         return {
           id: project._id || project.id,
@@ -96,7 +92,7 @@ const ClientProjects = () => {
       
       setProjects(transformedProjects);
     } catch (error: any) {
-      console.error('Error fetching projects:', error);
+      
       const errorMessage = error.response?.data?.message || error.message || '';
       
       // Don't show error toast if it's just a 404 - endpoint might not be implemented yet
@@ -107,7 +103,7 @@ const ClientProjects = () => {
             : `فشل تحميل المشاريع${errorMessage ? ': ' + errorMessage : ''}`
         );
       } else {
-        console.warn('Projects endpoint not found - this is expected if backend endpoint is not implemented yet');
+        
       }
       
       // Keep empty array on error
@@ -140,7 +136,7 @@ const ClientProjects = () => {
       // Refresh projects list
       fetchProjects();
     } catch (error: any) {
-      console.error("Error cancelling project:", error);
+      
       const errorMessage = error.response?.data?.message || 
         (language === "en" ? "Failed to cancel project" : "فشل إلغاء المشروع");
       toast.error(errorMessage);
@@ -154,7 +150,7 @@ const ClientProjects = () => {
     if (!status) return 'pendingReview';
     
     const statusLower = status.toLowerCase().trim();
-    console.log('🔍 Mapping status:', { original: status, lower: statusLower });
+    
     
     const statusMap: Record<string, string> = {
       'draft': 'pendingReview',
@@ -176,7 +172,7 @@ const ClientProjects = () => {
     };
     
     const mapped = statusMap[statusLower] || 'pendingReview';
-    console.log('🔍 Mapped result:', mapped);
+    
     return mapped;
   };
 

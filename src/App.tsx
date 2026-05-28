@@ -226,7 +226,7 @@ const AdminProtectedRoute = ({ children }: { children: React.ReactNode }) => {
           try {
             userData = JSON.parse(userDataStr);
           } catch (e) {
-            console.error("Error parsing user data:", e);
+            
           }
         }
 
@@ -239,7 +239,7 @@ const AdminProtectedRoute = ({ children }: { children: React.ReactNode }) => {
               localStorage.setItem("user", JSON.stringify(userData));
             }
           } catch (error: any) {
-            console.warn("Could not fetch user data:", error);
+            
             setIsChecking(false);
             setIsAdmin(true);
             return;
@@ -257,7 +257,7 @@ const AdminProtectedRoute = ({ children }: { children: React.ReactNode }) => {
           setIsAdmin(true);
         }
       } catch (error) {
-        console.error("Error verifying admin role:", error);
+        
         setIsAdmin(true);
       } finally {
         setIsChecking(false);
@@ -354,7 +354,7 @@ const CompanyProtectedRoute = ({ children }: { children: React.ReactNode }) => {
           try {
             userData = JSON.parse(userDataStr);
           } catch (e) {
-            console.error("Error parsing user data:", e);
+            
           }
         }
 
@@ -392,7 +392,7 @@ const CompanyProtectedRoute = ({ children }: { children: React.ReactNode }) => {
           setIsCompany(true);
         }
       } catch (error) {
-        console.error("Error verifying company role:", error);
+        
         setIsCompany(true);
       } finally {
         setIsChecking(false);
@@ -489,7 +489,7 @@ const EngineerProtectedRoute = ({ children }: { children: React.ReactNode }) => 
           try {
             userData = JSON.parse(userDataStr);
           } catch (e) {
-            console.error("Error parsing user data:", e);
+            
           }
         }
 
@@ -502,7 +502,7 @@ const EngineerProtectedRoute = ({ children }: { children: React.ReactNode }) => 
               localStorage.setItem("user", JSON.stringify(userData));
             }
           } catch (error: any) {
-            console.warn("Could not fetch user data:", error);
+            
             // If API call fails but token exists, allow access (backend will verify)
             setIsChecking(false);
             setIsEngineer(true);
@@ -522,7 +522,7 @@ const EngineerProtectedRoute = ({ children }: { children: React.ReactNode }) => 
           setIsEngineer(true);
         }
       } catch (error) {
-        console.error("Error verifying engineer role:", error);
+        
         // On error, allow access (backend will verify)
         setIsEngineer(true);
       } finally {
@@ -638,13 +638,7 @@ const PublicRoute = ({ children, allowWhenAuthenticated = false }: { children: R
   const currentToken = localStorage.getItem("token");
   const isAuthorized = isAuthenticated && !!currentToken;
 
-  console.log("🔍 PublicRoute check:", {
-    pathname: location.pathname,
-    isAuthenticated,
-    hasToken: !!currentToken,
-    isAuthorized,
-    allowWhenAuthenticated
-  });
+  
 
   // For login/auth pages, redirect to dashboard if already authenticated
   if (isAuthorized) {

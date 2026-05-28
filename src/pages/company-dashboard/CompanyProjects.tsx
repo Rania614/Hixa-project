@@ -54,13 +54,13 @@ const CompanyProjects = () => {
         
         // Ensure it's always an array
         if (!Array.isArray(proposalsData)) {
-          console.warn("Proposals data is not an array:", proposalsData);
+          
           proposalsData = [];
         }
         
         setProposals(proposalsData);
       } catch (error: any) {
-        console.error("Error fetching proposals:", error);
+        
         
         // Handle 403 Forbidden
         if (error.response?.status === 403) {
@@ -146,7 +146,7 @@ const CompanyProjects = () => {
       setDeleteDialogOpen(false);
       setProposalToDelete(null);
     } catch (error: any) {
-      console.error("Error deleting proposal:", error);
+      
       const errorMessage = error.response?.data?.message || 
         (language === "en" ? "Failed to delete proposal" : "فشل حذف العرض");
       toast.error(errorMessage);

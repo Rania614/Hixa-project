@@ -41,7 +41,7 @@ export const FeaturedProjects = () => {
         
         setProjects(sortedProjects);
       } catch (error: any) {
-        console.error('Error fetching featured projects:', error);
+        
         // Don't show error toast for public page - just set empty array
         setProjects([]);
       } finally {

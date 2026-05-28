@@ -14,7 +14,7 @@ baseURL = baseURL.trim();
 
 // Fix: localhost doesn't support HTTPS - convert https://localhost to http://localhost
 if (baseURL.startsWith('https://localhost') || baseURL.startsWith('https://127.0.0.1')) {
-  console.warn("⚠️ Detected HTTPS on localhost - converting to HTTP");
+  
   baseURL = baseURL.replace(/^https:\/\//, 'http://');
 }
 
@@ -22,7 +22,7 @@ if (baseURL.startsWith('https://localhost') || baseURL.startsWith('https://127.0
 // Keep /api/api if it exists (don't remove double /api/api)
 baseURL = baseURL.replace(/\/+$/, ''); // remove trailing slashes only
 
-console.log("🔐 AdminLogin API baseURL:", baseURL);
+
 
 const api = axios.create({
   baseURL: baseURL + '/',
@@ -71,22 +71,16 @@ const AdminLogin = () => {
       for (const endpoint of loginEndpoints) {
         try {
           const fullUrl = `${baseURL}${endpoint.path}`;
-          console.log(`🔄 Trying login endpoint: ${endpoint.name} (Full URL: ${fullUrl})`);
+          
           res = await api.post(endpoint.path, { email, password });
-          console.log(`✅ Login successful via ${endpoint.name}`, res.data);
+          
           break; // Success, exit loop
         } catch (err: any) {
           lastError = err;
           const status = err.response?.status;
           const statusText = err.response?.statusText;
           const errorData = err.response?.data;
-          console.log(`❌ ${endpoint.name} failed:`, {
-            status,
-            statusText,
-            message: err.message,
-            data: errorData,
-            url: err.config?.url
-          });
+          
           // If it's not a 404, don't try other endpoints (it's a real error like 401)
           if (status !== 404 && status !== undefined) {
             throw err;
@@ -112,7 +106,7 @@ const AdminLogin = () => {
           return;
         }
 
-        console.log('Admin login success:', res.data);
+        
 
         // Save token
         localStorage.setItem("token", res.data.token);
@@ -134,7 +128,7 @@ const AdminLogin = () => {
         setError('Invalid response from server.');
       }
     } catch (err: any) {
-      console.error('Login failed:', err.response || err.message);
+      
       
       // Extract error message - server may return it as string or in object
       const getErrorMessage = (defaultMsg: string) => {

@@ -45,7 +45,7 @@ const CompanyDashboard = () => {
         const stats = await projectsApi.getStatistics();
         setStatistics(stats);
       } catch (error: any) {
-        console.error('Error fetching statistics:', error);
+        
         if (error.response?.status !== 404) {
           toast.error(language === 'en' ? 'Failed to load statistics' : 'فشل تحميل الإحصائيات');
         }
@@ -69,7 +69,7 @@ const CompanyDashboard = () => {
         });
         setActiveProjects(response.data || []);
       } catch (error: any) {
-        console.error('Error fetching active projects:', error);
+        
         if (error.response?.status !== 404) {
           toast.error(language === 'en' ? 'Failed to load projects' : 'فشل تحميل المشاريع');
         }
@@ -93,7 +93,7 @@ const CompanyDashboard = () => {
         });
         setCompletedProjects(response.data || []);
       } catch (error: any) {
-        console.error('Error fetching completed projects:', error);
+        
         setCompletedProjects([]);
       }
     };
@@ -119,7 +119,7 @@ const CompanyDashboard = () => {
         
         setProposals(proposalsData);
       } catch (error: any) {
-        console.error('Error fetching proposals:', error);
+        
         if (error.response?.status !== 404 && error.response?.status !== 403) {
           toast.error(language === 'en' ? 'Failed to load proposals' : 'فشل تحميل العروض');
         }
@@ -148,7 +148,7 @@ const CompanyDashboard = () => {
           .slice(0, 5);
         setChatRooms(activeRooms);
       } catch (error: any) {
-        console.error('Error fetching chat rooms:', error);
+        
         setChatRooms([]);
       } finally {
         setChatRoomsLoading(false);

@@ -103,7 +103,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const data = getInitialContentSnapshot();
       setContent(data);
     } catch (error) {
-      console.error("Error fetching landing content:", error);
+      
     } finally {
       setLoading(false);
     }

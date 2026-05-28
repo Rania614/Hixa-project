@@ -127,7 +127,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
         cta: data.cta || null,
       });
     } catch (err) {
-      console.error("Fetch failed:", err);
+      
       toast({
         title: "Error",
         description: "Failed to fetch content",
@@ -145,7 +145,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
       set({ hero });
       toast({ title: "Hero Updated Successfully" });
     } catch (err) {
-      console.error(err);
+      
       toast({ 
         title: "Error updating hero", 
         description: err.response?.data?.message || "Failed to update hero",
@@ -193,7 +193,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
       set({ about: { ...(about || {}), ...payload, subtitle_en: descriptionEn, subtitle_ar: descriptionAr } });
       toast({ title: "About Updated Successfully" });
     } catch (err) {
-      console.error("Error updating about:", err.response?.data || err);
+      
       toast({
         title: "Error updating about",
         description: err.response?.data?.message || "Failed to update about",
@@ -243,7 +243,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
       });
       toast({ title: "Service Added Successfully" });
     } catch (err: any) {
-      console.error("Error adding service:", err);
+      
       // Rollback - remove the temp service
       set({ 
         services: { 
@@ -280,7 +280,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
       });
       toast({ title: "Service Deleted Successfully" });
     } catch (err) {
-      console.error(err);
+      
       toast({ 
         title: "Error deleting service", 
         description: err.response?.data?.message || "Failed to delete service",
@@ -333,7 +333,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
       await http.put("/content/services", payload);
       toast({ title: "Service Reordered Successfully" });
     } catch (err) {
-      console.error(err);
+      
       toast({ 
         title: "Error reordering service", 
         description: err.response?.data?.message || "Failed to reorder service",
@@ -392,7 +392,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
       set({ projects: updatedProjects });
       toast({ title: "Projects Updated Successfully" });
     } catch (err: any) {
-      console.error("Error updating projects:", err.response?.data || err);
+      
       const errorMessage = err.response?.data?.message || err.message || "Failed to update projects";
       toast({ 
         title: "Error updating projects", 
@@ -421,7 +421,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
       });
       toast({ title: "Project Added Successfully" });
     } catch (err) {
-      console.error(err);
+      
       toast({ 
         title: "Error adding project", 
         description: err.response?.data?.message || "Failed to add project",
@@ -449,7 +449,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
       });
       toast({ title: "Project Deleted Successfully" });
     } catch (err) {
-      console.error(err);
+      
       toast({ 
         title: "Error deleting project", 
         description: err.response?.data?.message || "Failed to delete project",
@@ -502,7 +502,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
       await http.put("/content/projects", payload);
       toast({ title: "Project Reordered Successfully" });
     } catch (err) {
-      console.error(err);
+      
       toast({ 
         title: "Error reordering project", 
         description: err.response?.data?.message || "Failed to reorder project",
@@ -560,7 +560,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
             try {
               await http.post("/content/partners/items", itemPayload);
             } catch (itemErr: any) {
-              console.error(`Error adding partner item:`, itemErr);
+              
               const errorMsg = itemErr.response?.data?.message || itemErr.message || 'Failed to add partner';
               throw new Error(errorMsg);
             }
@@ -583,7 +583,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
           try {
             await http.put(`/content/partners/items/${itemId}`, itemPayload);
           } catch (itemErr: any) {
-            console.error(`Error updating partner item ${itemId}:`, itemErr);
+            
             // If it's a 413 error, show helpful message
             if (itemErr.response?.status === 413) {
               throw new Error('Image is too large. Please use Logo URL instead of uploading a file.');
@@ -600,7 +600,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
       set({ partners });
       toast({ title: "Partners Updated Successfully" });
     } catch (err: any) {
-      console.error("Error updating partners:", err.response?.data || err);
+      
       const errorMessage = err.response?.data?.message || err.message || "Failed to update partners";
       toast({ 
         title: "Error updating partners", 
@@ -643,7 +643,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
       });
       toast({ title: "Partner Added Successfully" });
     } catch (err: any) {
-      console.error(err);
+      
       const errorMsg = err.response?.data?.message || err.message || "Failed to add partner";
       toast({ 
         title: "Error adding partner", 
@@ -673,7 +673,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
       });
       toast({ title: "Partner Deleted Successfully" });
     } catch (err) {
-      console.error(err);
+      
       toast({ 
         title: "Error deleting partner", 
         description: err.response?.data?.message || "Failed to delete partner",
@@ -713,7 +713,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
       await get().fetchContent();
       toast({ title: "Partner Reordered Successfully" });
     } catch (err) {
-      console.error(err);
+      
       toast({ 
         title: "Error reordering partner", 
         description: err.response?.data?.message || "Failed to reorder partner",
@@ -787,7 +787,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
       set({ jobs: updatedJobs });
       toast({ title: "Jobs Updated Successfully" });
     } catch (err: any) {
-      console.error("Error updating jobs:", err.response?.data || err);
+      
       const errorMessage = err.response?.data?.message || err.message || "Failed to update jobs";
       toast({ 
         title: "Error updating jobs", 
@@ -842,7 +842,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
       });
       toast({ title: "Job Added Successfully" });
     } catch (err: any) {
-      console.error(err);
+      
       const errorMsg = err.response?.data?.message || err.message || "Failed to add job";
       toast({ 
         title: "Error adding job", 
@@ -911,7 +911,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
       });
       toast({ title: "Job Deleted Successfully" });
     } catch (err: any) {
-      console.error(err);
+      
       const errorMsg = err.response?.data?.message || err.message || "Failed to delete job";
       toast({ 
         title: "Error deleting job", 
@@ -962,22 +962,22 @@ export const useContentStore = create<ContentState>((set, get) => ({
       };
       
       const response = await http.put("/content/cta", payload);
-      console.log('✅ CTA Update Response:', response.data);
-      console.log('✅ CTA Update Response data:', response.data?.data);
-      console.log('✅ CTA Update Response social:', response.data?.data?.social);
+      
+      
+      
       
       // Update store with response data (server returns updated cta object)
       if (response.data?.data) {
-        console.log('✅ Setting CTA in store:', response.data.data);
+        
         set({ cta: response.data.data });
       } else {
-        console.log('⚠️ No data in response, using payload');
+        
         // Fallback: use the merged payload
         set({ cta: payload });
       }
       toast({ title: "CTA Updated Successfully" });
     } catch (err: any) {
-      console.error(err);
+      
       const errorMsg = err.response?.data?.message || err.message || "Failed to update CTA";
       toast({ 
         title: "Error updating CTA", 

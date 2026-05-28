@@ -304,7 +304,7 @@ const apiRequest = async (endpoint, options = {}) => {
     }
     return await response.json();
   } catch (error) {
-    console.error(`API request failed for ${url}:`, error);
+    
     throw error;
   }
 };
@@ -326,7 +326,7 @@ export const getHeroContent = async () => {
     return await apiRequest('/content/hero');
   } catch (error) {
     // Fallback to mock data if API fails
-    console.warn('Failed to fetch hero content from API, using mock data');
+    
     return simulateRequest(() => mockData.hero);
   }
 };
@@ -337,7 +337,7 @@ export const getAboutContent = async () => {
     return await apiRequest('/content/about');
   } catch (error) {
     // Fallback to mock data if API fails
-    console.warn('Failed to fetch about content from API, using mock data');
+    
     return simulateRequest(() => mockData.about);
   }
 };
@@ -375,7 +375,7 @@ export const updateHeroContent = async (payload) => {
     return response;
   } catch (error) {
     // Fallback to mock data update if API fails
-    console.warn('Failed to update hero content via API, updating mock data only');
+    
     mockData.hero = { ...mockData.hero, ...payload };
     return simulateRequest(() => mockData.hero);
   }
@@ -393,7 +393,7 @@ export const updateAboutContent = async (payload) => {
     return response;
   } catch (error) {
     // Fallback to mock data update if API fails
-    console.warn('Failed to update about content via API, updating mock data only');
+    
     mockData.about = { ...mockData.about, ...payload };
     return simulateRequest(() => mockData.about);
   }

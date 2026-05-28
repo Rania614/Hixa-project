@@ -121,30 +121,30 @@ const CompanyProfile = () => {
 
   // Fetch profile data from API
   useEffect(() => {
-    console.log("🔄 useEffect triggered - fetching profile data...");
+    
     fetchProfile();
   }, []);
   
   // Debug: Log formData changes
   useEffect(() => {
-    console.log("📝 formData state changed:", formData);
+    
   }, [formData]);
 
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      console.log("📤 Fetching profile from GET /users/me");
+      
       const data = await profileApi.getProfile();
       
-      console.log("📥 Profile data received:", data);
-      console.log("📥 Final data keys:", data ? Object.keys(data) : "no data");
-      console.log("📥 Full data JSON:", JSON.stringify(data, null, 2));
-      console.log("📥 Avatar structure:", data?.avatar);
-      console.log("📥 Name:", data?.name);
-      console.log("📥 Email:", data?.email);
-      console.log("📥 Phone:", data?.phone);
-      console.log("📥 Location:", data?.location);
-      console.log("📥 Bio:", data?.bio);
+      
+      
+      
+      
+      
+      
+      
+      
+      
       
       // Handle avatar - it's an object that might have different properties
       // Check all possible avatar URL properties
@@ -163,9 +163,9 @@ const CompanyProfile = () => {
         avatarUrl = getImageUrl(avatarUrl);
       }
       
-      console.log("📥 Final avatar URL:", avatarUrl);
-      console.log("📥 Avatar URL type:", typeof avatarUrl);
-      console.log("📥 Avatar URL length:", avatarUrl?.length || 0);
+      
+      
+      
       
       // Map API data to our form structure
       const mappedProfileData = {
@@ -181,8 +181,8 @@ const CompanyProfile = () => {
         reviewsCount: data.reviewsCount || 0,
       };
       
-      console.log("📥 Mapped profile data:", mappedProfileData);
-      console.log("📥 Setting profileImage to:", mappedProfileData.profileImage);
+      
+      
       setProfileData(mappedProfileData);
       
       // Extract country code from phone if available
@@ -206,7 +206,7 @@ const CompanyProfile = () => {
         bio: data.bio || "",
       };
       
-      console.log("📥 Mapped form data:", mappedFormData);
+      
       
       // Update form values
       setValue("name", mappedFormData.name);
@@ -220,15 +220,15 @@ const CompanyProfile = () => {
       setCertifications(Array.isArray(data.certifications) ? data.certifications : []);
       
       if (avatarUrl) {
-        console.log("📥 Setting imagePreview to:", avatarUrl);
+        
         setImagePreview(avatarUrl);
       } else {
-        console.log("⚠️ No avatar URL to set as preview");
+        
       }
       
-      console.log("✅ Profile data loaded and state updated successfully");
+      
     } catch (error: any) {
-      console.error("Error fetching profile:", error);
+      
       
       // Don't show error toast for 401 - the interceptor will handle redirect
       // Don't show error toast for 404 - endpoint might not exist yet
@@ -248,7 +248,7 @@ const CompanyProfile = () => {
       }
     } finally {
       setLoading(false);
-      console.log("🔄 Loading state set to false");
+      
     }
   };
 
@@ -371,8 +371,8 @@ const CompanyProfile = () => {
         updateData.certifications = certifications;
       }
       
-      console.log("📤 Updating profile:", updateData);
-      console.log("📤 Selected image:", selectedImage);
+      
+      
       
       // Update profile with or without avatar using profileApi
       const updatedProfile = await profileApi.updateProfile(
@@ -380,7 +380,7 @@ const CompanyProfile = () => {
         selectedImage || undefined
       );
       
-      console.log("✅ Profile updated successfully:", updatedProfile);
+      
       
       // Handle avatar from response - it's an object with url property
       let avatarUrl = "";
@@ -441,8 +441,8 @@ const CompanyProfile = () => {
       await fetchProfile();
       
     } catch (error: any) {
-      console.error("Error updating profile:", error);
-      console.error("Error response data:", error.response?.data);
+      
+      
       
       // Don't show error toast for 401 - the interceptor will handle redirect
       if (error.response?.status === 401) {
@@ -537,7 +537,7 @@ const CompanyProfile = () => {
         confirmPassword: '',
       });
     } catch (error: any) {
-      console.error("Error changing password:", error);
+      
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.error || 
                           error.message || 
@@ -619,7 +619,7 @@ const CompanyProfile = () => {
                     src={imagePreview || profileData.profileImage} 
                     alt="Profile"
                     onError={(e) => {
-                      console.error("❌ Failed to load avatar image:", imagePreview || profileData.profileImage);
+                      
                       // Hide the image on error, fallback will show
                       e.currentTarget.style.display = 'none';
                     }}

@@ -61,7 +61,7 @@ export const SearchMessages: React.FC<SearchMessagesProps> = ({
       setError(errorMessage);
       setResults([]);
       setMeta(null);
-      console.error('Error searching messages:', err);
+      
     } finally {
       setLoading(false);
     }

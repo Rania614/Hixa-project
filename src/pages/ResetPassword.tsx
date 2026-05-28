@@ -104,7 +104,7 @@ const ResetPassword = () => {
         }
       }, 2000);
     } catch (err: any) {
-      console.error('Reset password error:', err);
+      
       
       let errorMessage = isAr 
         ? 'حدث خطأ أثناء إعادة تعيين كلمة المرور' 

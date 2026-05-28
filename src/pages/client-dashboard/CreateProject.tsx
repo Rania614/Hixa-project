@@ -130,7 +130,7 @@ const CreateProject = () => {
           return;
         }
         payload.category = formData.businessScope.trim();
-        console.log("✅ Valid business scope selected:", formData.businessScope.trim());
+        
       }
       
       // Note: The separate 'category' input field is not used - businessScope replaces it
@@ -163,16 +163,16 @@ const CreateProject = () => {
         payload.tags = formData.tags;
       }
 
-      console.log("📤 Sending project data:", JSON.stringify(payload, null, 2));
-      console.log("📤 Payload keys:", Object.keys(payload));
-      console.log("📤 businessScope value:", formData.businessScope);
-      console.log("📤 category in payload:", payload.category);
+      
+      
+      
+      
 
       // Send POST request to /projects endpoint
       const response = await http.post('/projects', payload);
 
-      console.log("✅ Project created successfully:", response.data);
-      console.log("📦 Full response:", JSON.stringify(response.data, null, 2));
+      
+      
 
       // Get project ID from response - backend returns { message, data: { id, ... } }
       // sanitizeProject returns 'id' field, not '_id'
@@ -183,13 +183,13 @@ const CreateProject = () => {
                        response.data?.project?.id ||
                        response.data?.project?._id;
       
-      console.log("🆔 Extracted project ID:", projectId);
-      console.log("📎 Attachments to upload:", attachments.length);
+      
+      
       
       // Upload attachments if any
       if (attachments.length > 0) {
         if (!projectId) {
-          console.error("❌ No project ID found in response!");
+          
           toast.error(
             language === "en" 
               ? "Project created but could not get project ID. Please add files manually." 
@@ -203,7 +203,7 @@ const CreateProject = () => {
             // Upload files one by one
             for (let i = 0; i < attachments.length; i++) {
               const file = attachments[i];
-              console.log(`📤 Uploading file ${i + 1}/${attachments.length}:`, file.name);
+              
               
               const formData = new FormData();
               formData.append('file', file);
@@ -216,20 +216,20 @@ const CreateProject = () => {
               // Upload file - http.js automatically handles FormData and removes Content-Type header
               const uploadResponse = await http.post(`/projects/${projectId}/attachments`, formData);
               
-              console.log(`✅ File ${i + 1} uploaded successfully:`, uploadResponse.data);
+              
             }
             
             setUploadProgress(100);
-            console.log("✅ All attachments uploaded successfully");
+            
             toast.success(
               language === "en" 
                 ? `Project created and ${attachments.length} file(s) uploaded successfully!` 
                 : `تم إنشاء المشروع ورفع ${attachments.length} ملف(ات) بنجاح!`
             );
           } catch (uploadError: any) {
-            console.error("❌ Error uploading attachments:", uploadError);
-            console.error("❌ Upload error response:", uploadError.response?.data);
-            console.error("❌ Upload error status:", uploadError.response?.status);
+            
+            
+            
             
             // Show detailed error message
             const errorMessage = uploadError.response?.data?.message || 
@@ -267,9 +267,9 @@ const CreateProject = () => {
         navigate("/client/projects");
       }, attachments.length > 0 ? 1500 : 500);
     } catch (error: any) {
-      console.error("❌ Error creating project:", error);
-      console.error("❌ Error response data:", error.response?.data);
-      console.error("❌ Error response status:", error.response?.status);
+      
+      
+      
       
       // Extract error message from response
       const getErrorMessage = () => {
@@ -281,7 +281,7 @@ const CreateProject = () => {
 
         // Log full error data for debugging
         const errorData = error.response.data;
-        console.log("🔍 Full error data:", JSON.stringify(errorData, null, 2));
+        
 
         // Handle validation errors that might be in errors array or fields object
         if (errorData.errors) {

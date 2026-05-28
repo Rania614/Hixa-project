@@ -48,7 +48,7 @@ const ContentManagement = () => {
   // Returns data as-is from state, no padding
   const getServiceDetails = (serviceId: string): any[] => {
     if (!serviceId) {
-      console.warn('⚠️ getServiceDetails called with empty serviceId');
+      
       return [];
     }
     
@@ -71,30 +71,30 @@ const ContentManagement = () => {
     
     if (foundDetails && servicesDetails[foundDetails]) {
       const foundDetailsArray = servicesDetails[foundDetails];
-      console.log(`✅ Found details for serviceId ${normalizedServiceId}:`, foundDetailsArray);
-      console.log(`📊 Details count: ${foundDetailsArray.length}`);
+      
+      
       if (foundDetailsArray.length > 0) {
-        console.log(`📋 First section:`, foundDetailsArray[0]);
+        
       }
       return foundDetailsArray;
     }
     
-    console.warn(`⚠️ No details found for serviceId ${normalizedServiceId}, returning empty array`);
-    console.warn(`🔍 Available keys in servicesDetails:`, Object.keys(servicesDetails));
-    console.warn(`🔍 servicesDetails content:`, servicesDetails);
+    
+    
+    
     return [];
   };
   
   // Helper function to set service details by serviceId
   const setServiceDetails = (serviceId: string, details: any[]) => {
     if (!serviceId) return;
-    console.log(`💾 Setting details for service ${serviceId}:`, details);
+    
     setServicesDetails(prev => {
       const updated = {
         ...prev,
         [serviceId]: details,
       };
-      console.log(`✅ State updated. Total services in state: ${Object.keys(updated).length}`);
+      
       return updated;
     });
   };
@@ -148,13 +148,7 @@ const ContentManagement = () => {
   
   // Debug: Log services data
   useEffect(() => {
-    console.log('🔍 Services Debug:', {
-      services,
-      servicesData,
-      safeServices,
-      safeServicesLength: safeServices.length,
-      firstService: safeServices[0],
-    });
+    
   }, [services, safeServices.length]);
   const projectsData = Array.isArray(projects) ? { items: projects } : (projects || { items: [] });
   const safeProjects = Array.isArray(projectsData.items) ? projectsData.items : [];
@@ -178,7 +172,7 @@ const ContentManagement = () => {
   // Fetch services details after services are loaded
   useEffect(() => {
     if (safeServices.length > 0) {
-      console.log('🔄 Services loaded, fetching details...');
+      
       fetchOrderSections();
     }
   }, [safeServices.length]);
@@ -203,11 +197,11 @@ const ContentManagement = () => {
 
   const fetchOrderSections = async () => {
     try {
-      console.log('🔄 Services details are now part of services object, no need to fetch separately');
+      
       // Details are now part of the services object structure
       // No need to fetch separately - they come with the service
     } catch (error: any) {
-      console.error('❌ Error:', error);
+      
     }
   };
 
@@ -237,9 +231,9 @@ const ContentManagement = () => {
       updatePayload[field] = value;
       
       await http.put(`/content/services/${itemId}/details/${detailId}`, updatePayload);
-      console.log(`✅ Updated ${field} for ${itemId}/${detailId}`);
+      
     } catch (error: any) {
-      console.error(`❌ Error updating ${field}:`, error);
+      
       // Don't show error toast for every keystroke - only log it
     }
   };
@@ -252,7 +246,7 @@ const ContentManagement = () => {
     formData.append('image', file);
 
     try {
-      console.log(`🔄 Uploading image for ${itemId}/${detailId}...`);
+      
       const response = await http.post(`/content/services/${itemId}/details/${detailId}/image`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
@@ -280,7 +274,7 @@ const ContentManagement = () => {
         throw new Error('No image URL returned from server');
       }
     } catch (error: any) {
-      console.error('Error uploading image:', error);
+      
       const errorMessage = error.response?.data?.message || error.message || 
         (language === 'en' ? 'Failed to upload image. Please use image URL instead.' : 'فشل رفع الصورة. يرجى استخدام رابط الصورة بدلاً من ذلك.');
       toast.error(errorMessage);
@@ -324,10 +318,10 @@ const ContentManagement = () => {
           };
           
           await http.put(`/content/services/${itemId}/details/${detailId}`, updatePayload);
-          console.log(`✅ Updated ${itemId}/${detailId}`);
+          
           return { success: true, detailId };
         } catch (error: any) {
-          console.error(`❌ Error updating ${itemId}/${detailId}:`, error);
+          
           return { success: false, detailId, error };
         }
       });
@@ -351,7 +345,7 @@ const ContentManagement = () => {
         );
       }
     } catch (error: any) {
-      console.error(`❌ Error saving service ${itemId} details:`, error);
+      
       toast.error(
         language === 'en' 
           ? 'Failed to save service details' 
@@ -365,16 +359,16 @@ const ContentManagement = () => {
       // Save to localStorage first (as backup)
       localStorage.setItem('servicesDetails', JSON.stringify(servicesDetails));
       
-      console.log('💾 Saving services details to API...');
+      
       
       // Get services from store to get their IDs
       const currentServices = Array.isArray(services) ? services : (services?.items || []);
       
       // Try to save to /content/services-details first
       try {
-        console.log('🔄 Trying to save to /content/services-details');
+        
           await http.put('/content/services-details', { servicesDetails });
-        console.log('✅ Services details saved to /content/services-details');
+        
         toast.success(
           language === 'en' 
             ? 'Services details saved successfully' 
@@ -384,14 +378,14 @@ const ContentManagement = () => {
       } catch (servicesDetailsErr: any) {
         // If that fails, try to save individual service details
         if (servicesDetailsErr.response?.status === 404) {
-          console.log('⚠️ /content/services-details not found, trying to save individual service details');
+          
           
           if (currentServices.length > 0) {
             // Try to save details for each service using /content/services/details/{serviceId}
             const savePromises = currentServices.slice(0, 4).map(async (service: any, index: number) => {
               const serviceId = service._id || service.id;
               if (!serviceId) {
-                console.warn(`Service ${index + 1} has no ID, skipping...`);
+                
                 return { success: false, serviceIndex: index };
               }
               
@@ -400,7 +394,7 @@ const ContentManagement = () => {
               try {
                 // Always use serviceId as categoryKey to ensure proper linking
                 const categoryKey = serviceId;
-                console.log(`🔑 Using serviceId ${serviceId} as categoryKey for service ${index + 1}`);
+                
                 
                 // Prepare all sections for this service
                 const sections = serviceDetails
@@ -424,12 +418,12 @@ const ContentManagement = () => {
                   .filter((s: any) => s !== null); // Remove empty sections
                 
                 if (sections.length === 0) {
-                  console.log(`⏭️ Service ${index + 1} has no valid sections to save`);
+                  
                   return { success: true, serviceIndex: index, skipped: true };
                 }
                 
-                console.log(`💾 Saving service ${index + 1} (ID: ${serviceId}) with ${sections.length} section(s)`);
-                console.log(`🔑 Using categoryKey: ${categoryKey}`);
+                
+                
                 
                 // Save each section individually using the correct endpoint structure
                 // PUT /content/services/items/{serviceId}/details/{detailId} for updates
@@ -453,14 +447,14 @@ const ContentManagement = () => {
                     let response;
                       if (section._id) {
                         // UPDATE existing section
-                      console.log(`🔄 Updating section ${sectionIndex + 1} via PUT ${endpoint}`);
+                      
                       response = await http.put(endpoint, sectionPayload);
-                      console.log(`✅ Section ${sectionIndex + 1} updated successfully`);
+                      
                       } else {
                         // CREATE new section
-                      console.log(`🆕 Creating section ${sectionIndex + 1} via POST ${endpoint}`);
+                      
                       response = await http.post(endpoint, sectionPayload);
-                      console.log(`✅ Section ${sectionIndex + 1} created successfully`);
+                      
                     }
                     
                     return { success: true, sectionIndex, data: response.data };
@@ -471,25 +465,21 @@ const ContentManagement = () => {
                     
                     if (err.response?.status === 400 && isBelongingError && section._id) {
                       // Detail doesn't belong to this service - create a new one instead
-                      console.warn(`⚠️ Section ${sectionIndex + 1} detail (${section._id}) doesn't belong to service ${serviceId}. Creating new detail instead.`);
+                      
                       
                       try {
                         const createEndpoint = `/content/services/items/${serviceId}/details`;
-                        console.log(`🆕 Creating new section ${sectionIndex + 1} via POST ${createEndpoint}`);
+                        
                         const response = await http.post(createEndpoint, sectionPayload);
-                        console.log(`✅ Section ${sectionIndex + 1} created successfully (replaced old detail)`);
+                        
                         return { success: true, sectionIndex, data: response.data, replaced: true };
                       } catch (createErr: any) {
-                        console.error(`❌ Error creating new section ${sectionIndex + 1}:`, createErr);
+                        
                         return { success: false, sectionIndex, error: createErr };
                       }
                     }
                     
-                    console.error(`❌ Error saving section ${sectionIndex + 1}:`, {
-                      status: err.response?.status,
-                      message: errorMessage,
-                      endpoint: endpoint,
-                    });
+                    
                     return { success: false, sectionIndex, error: err };
                   }
                 });
@@ -499,9 +489,9 @@ const ContentManagement = () => {
                 const failCount = sectionResults.filter(r => !r.success).length;
                 
                 if (successCount > 0) {
-                  console.log(`✅ Service ${index + 1}: ${successCount} section(s) saved successfully`);
+                  
                 if (failCount > 0) {
-                    console.warn(`⚠️ Service ${index + 1}: ${failCount} section(s) failed`);
+                    
                 }
                 return { 
                     success: true, 
@@ -509,7 +499,7 @@ const ContentManagement = () => {
                   sectionResults 
                 };
                 } else {
-                  console.error(`❌ Service ${index + 1}: All sections failed to save`);
+                  
                   return { 
                     success: false, 
                     serviceIndex: index,
@@ -519,20 +509,13 @@ const ContentManagement = () => {
                 }
               } catch (err: any) {
                 if (err.response?.status === 404) {
-                  console.log(`⚠️ Service ${index + 1} details endpoint not found (404)`);
+                  
                   return { success: false, serviceIndex: index, error: err, skipped: true };
                 } else if (err.response?.status === 400) {
-                  console.error(`❌ Bad Request (400) for service ${index + 1}:`, {
-                    status: err.response?.status,
-                    statusText: err.response?.statusText,
-                    data: err.response?.data,
-                    message: err.response?.data?.message,
-                    errors: err.response?.data?.errors,
-                    fullResponse: err.response,
-                  });
-                  console.error(`❌ Full error for service ${index + 1}:`, err);
+                  
+                  
                 } else {
-                  console.error(`❌ Error saving service ${index + 1} details:`, err);
+                  
                 }
                 return { success: false, serviceIndex: index, error: err };
               }
@@ -550,7 +533,7 @@ const ContentManagement = () => {
             });
             
             if (successCount > 0) {
-              console.log(`✅ Saved ${successCount} service(s) details successfully`);
+              
           toast.success(
             language === 'en' 
                   ? `Services details saved successfully (${successCount} service${successCount > 1 ? 's' : ''})` 
@@ -560,7 +543,7 @@ const ContentManagement = () => {
               // If some failed or skipped, show warning
               if (failCount > 0 || skippedCount > 0) {
                 const totalFailed = failCount + skippedCount;
-                console.warn(`⚠️ ${totalFailed} service(s) failed to save. Data saved locally in localStorage.`);
+                
                 toast.warning(
                   language === 'en' 
                     ? `${totalFailed} service(s) could not be saved. Data saved locally.` 
@@ -570,7 +553,7 @@ const ContentManagement = () => {
               return;
             } else if (all404) {
               // All requests failed with 404 - endpoint not implemented
-              console.warn('⚠️ Services details endpoint not implemented on backend. Data saved locally only.');
+              
               toast.warning(
                 language === 'en' 
                   ? 'Services details endpoint not available. Data saved locally only.' 
@@ -580,7 +563,7 @@ const ContentManagement = () => {
             }
           } else {
             // No services to save
-            console.warn('⚠️ No services found to save details for');
+            
             toast.warning(
               language === 'en' 
                 ? 'No services found to save details for' 
@@ -590,14 +573,14 @@ const ContentManagement = () => {
           }
           
           // If we reach here, individual save failed
-          console.error('❌ Individual service details save failed');
+          
           throw new Error('Failed to save services details. Please try again.');
         } else {
           throw servicesDetailsErr;
         }
       }
     } catch (error: any) {
-      console.error('❌ Error saving services details:', error);
+      
       
       // Check if it's a 404 error (endpoint not implemented)
       if (error.response?.status === 404) {
@@ -1108,7 +1091,6 @@ const ContentManagement = () => {
                               : 'تم إضافة الخدمة بنجاح. تم إنشاء 4 أقسام تفاصيل فارغة.'
                           );
                         } catch (error) {
-                          console.error('Error adding service:', error);
                         }
                       }}
                       disabled={loading}
@@ -1389,13 +1371,7 @@ const ContentManagement = () => {
                                           throw new Error('No URL returned from upload');
                                         }
                                       } catch (err: any) {
-                                        console.error('Upload error details:', {
-                                          message: err.message,
-                                          status: err.response?.status,
-                                          statusText: err.response?.statusText,
-                                          data: err.response?.data,
-                                          url: err.config?.url,
-                                        });
+                                        
                                         
                                         // Check if it's a 500 error (server error)
                                         if (err.response?.status === 500) {
@@ -1576,7 +1552,7 @@ const ContentManagement = () => {
                         isActive: true,
                       }).catch((err) => {
                         // Error is already handled in the store
-                        console.error('Failed to add partner:', err);
+                        
                       })
                     }
                     disabled={loading}
@@ -1714,13 +1690,7 @@ const ContentManagement = () => {
                                           throw new Error('No URL returned from upload');
                                         }
                                       } catch (err: any) {
-                                        console.error('Upload error details:', {
-                                          message: err.message,
-                                          status: err.response?.status,
-                                          statusText: err.response?.statusText,
-                                          data: err.response?.data,
-                                          url: err.config?.url,
-                                        });
+                                        
                                         
                                         // Check if it's a 500 error (server error)
                                         if (err.response?.status === 500) {
@@ -2329,7 +2299,7 @@ const ContentManagement = () => {
                                   <SelectItem
                                     key={platform.id}
                                     value={platform.id}
-                                    className="focus:bg-muted data-[highlighted]:bg-muted data-[state=checked]:bg-gold/20"
+                                    className="text-foreground focus:bg-gold/30 focus:text-white data-[highlighted]:bg-gold/30 data-[highlighted]:text-white data-[state=checked]:bg-gold/20 data-[state=checked]:text-white"
                                   >
                                     <Icon className="h-4 w-4 shrink-0" />
                                     <span className="whitespace-nowrap">
@@ -2374,10 +2344,10 @@ const ContentManagement = () => {
                       onClick={async () => {
                         // Use current cta from store, merging with any local changes
                         const currentCta = cta || {};
-                        console.log('💾 Saving CTA:', currentCta);
-                        console.log('💾 CTA social:', currentCta.social);
-                        console.log('💾 CTA social is array?', Array.isArray(currentCta.social));
-                        console.log('💾 CTA social length:', Array.isArray(currentCta.social) ? currentCta.social.length : 0);
+                        
+                        
+                        
+                        
                         await updateCTA(currentCta);
                         // Wait a bit before triggering refresh to ensure data is saved
                         setTimeout(() => {
@@ -2629,9 +2599,9 @@ const ContentManagement = () => {
                     
                     try {
                       // Update service by itemId using the new endpoint
-                      console.log(`🔄 Updating service ${itemId} via PUT /content/services/${itemId}`);
+                      
                       const response = await http.put(`/content/services/${itemId}`, updatePayload);
-                      console.log(`✅ Service updated successfully:`, response.data);
+                      
                       
                       // Update local state
                       setContent({
@@ -2651,7 +2621,7 @@ const ContentManagement = () => {
                       // Refresh content to get latest data
                       await fetchContent();
                     } catch (error: any) {
-                      console.error('❌ Error updating service:', error);
+                      
                       const errorMessage = error.response?.data?.message || 
                         (language === 'en' 
                           ? 'Failed to update service' 
@@ -2786,7 +2756,7 @@ const ContentManagement = () => {
                                   const percentCompleted = Math.round(
                                     (progressEvent.loaded * 100) / progressEvent.total
                                   );
-                                  console.log(`Upload progress: ${percentCompleted}%`);
+                                  
                                 }
                               }
                             }
@@ -2821,7 +2791,7 @@ const ContentManagement = () => {
                             throw new Error('No image URL returned from server');
                           }
                         } catch (error: any) {
-                          console.error('Error uploading image:', error);
+                          
                           const errorMessage = error.response?.data?.message || error.message || 
                             (language === 'en' ? 'Failed to upload image' : 'فشل رفع الصورة');
                           toast.error(errorMessage);
@@ -2875,7 +2845,7 @@ const ContentManagement = () => {
                                 );
                                 toast.success(language === 'en' ? 'Image removed' : 'تم حذف الصورة');
                               } catch (error) {
-                                console.error('Error removing image:', error);
+                                
                                 toast.error(language === 'en' ? 'Failed to remove image' : 'فشل حذف الصورة');
                               }
                             }}
@@ -2964,7 +2934,7 @@ const ContentManagement = () => {
                                     const percentCompleted = Math.round(
                                       (progressEvent.loaded * 100) / progressEvent.total
                                     );
-                                    console.log(`Upload progress: ${percentCompleted}%`);
+                                    
                                   }
                                 }
                               }
@@ -2999,7 +2969,7 @@ const ContentManagement = () => {
                               throw new Error('No QR Code URL returned from server');
                             }
                           } catch (error: any) {
-                            console.error('Error uploading QR Code:', error);
+                            
                             const errorMessage = error.response?.data?.message || error.message || 
                               (language === 'en' ? 'Failed to upload QR Code' : 'فشل رفع QR Code');
                             toast.error(errorMessage);
@@ -3053,7 +3023,7 @@ const ContentManagement = () => {
                                   );
                                   toast.success(language === 'en' ? 'QR Code removed' : 'تم حذف QR Code');
                                 } catch (error) {
-                                  console.error('Error removing QR Code:', error);
+                                  
                                   toast.error(language === 'en' ? 'Failed to remove QR Code' : 'فشل حذف QR Code');
                                 }
                               }}
@@ -3165,12 +3135,12 @@ const ContentManagement = () => {
                     };
                     
                     try {
-                      console.log(`🔄 Updating detail ${itemId}/${detailId}...`);
+                      
                       const response = await http.put(
                         `/content/services/${itemId}/details/${detailId}`, 
                         updatePayload
                       );
-                      console.log(`✅ Detail updated successfully:`, response.data);
+                      
                       
                       // Update local state
                       setContent({
@@ -3199,7 +3169,7 @@ const ContentManagement = () => {
                       setSelectedDetail(null);
                       setIsDetailEditMode(false);
                     } catch (error: any) {
-                      console.error('❌ Error updating detail:', error);
+                      
                       const errorMessage = error.response?.data?.message || 
                         (language === 'en' ? 'Failed to update detail' : 'فشل تحديث التفصيل');
                       toast.error(errorMessage);

@@ -63,9 +63,9 @@ const ClientMessages = () => {
           try {
             const userData = JSON.parse(userStr);
             setUser(userData);
-            console.log('✅ User loaded from localStorage:', userData._id || userData.id);
+            
           } catch (e) {
-            console.error("Error parsing user from localStorage:", e);
+            
           }
         }
         
@@ -77,14 +77,14 @@ const ClientMessages = () => {
             if (userData) {
               setUser(userData);
               localStorage.setItem("user", JSON.stringify(userData));
-              console.log('✅ User loaded from API:', userData._id || userData.id);
+              
             }
           } catch (error: any) {
-            console.warn("Could not fetch user data:", error);
+            
           }
         }
       } catch (error) {
-        console.error("Error loading user:", error);
+        
       }
     };
     
@@ -108,7 +108,7 @@ const ClientMessages = () => {
         setSelectedProjectRoom(rooms[0]);
       }
     } catch (error: any) {
-      console.error('Error loading project rooms:', error);
+      
       if (error.response?.status !== 404) {
         toast.error(language === 'en' ? 'Failed to load projects' : 'فشل تحميل المشاريع');
       }
@@ -131,7 +131,7 @@ const ClientMessages = () => {
         setSelectedChatRoom(filteredRooms[0]);
       }
     } catch (error: any) {
-      console.error('Error loading chat rooms:', error);
+      
       if (error.response?.status !== 404) {
         toast.error(language === 'en' ? 'Failed to load chats' : 'فشل تحميل المحادثات');
       }
@@ -165,7 +165,7 @@ const ClientMessages = () => {
         setTimeout(() => scrollToBottom(), 100);
       }
     } catch (error: any) {
-      console.error('Error loading messages:', error);
+      
       if (error.response?.status !== 404) {
         toast.error(language === 'en' ? 'Failed to load messages' : 'فشل تحميل الرسائل');
       }
@@ -243,7 +243,7 @@ const ClientMessages = () => {
             : 'تم إرسال الرسالة بنجاح'
       );
     } catch (error: any) {
-      console.error('Error sending message:', error);
+      
       const errorMessage = error.response?.data?.message || error.message || 
         (language === 'en' ? 'Failed to send message' : 'فشل إرسال الرسالة');
       toast.error(errorMessage);
@@ -255,9 +255,9 @@ const ClientMessages = () => {
 
   // Handle new message from Socket.io
   const handleNewMessage = useCallback((data: SocketMessageEvent) => {
-    console.log('📨 New message received:', data);
+    
     if (!selectedChatRoomRef.current || data.chatRoomId !== selectedChatRoomRef.current._id) {
-      console.log('📨 Message for different chat room, ignoring');
+      
       return;
     }
     
@@ -266,14 +266,14 @@ const ClientMessages = () => {
       // Check if message already exists
       const exists = prev.some(m => m._id === newMessage._id);
       if (exists) {
-        console.log('📨 Message already exists, skipping');
+        
         return prev;
       }
       // Add new message and sort by date
       const updated = [...prev, newMessage].sort(
         (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       );
-      console.log('📨 Messages updated:', updated.length);
+      
       return updated;
     });
     setTimeout(() => scrollToBottom(), 100);
@@ -351,7 +351,7 @@ const ClientMessages = () => {
       setPage(1);
       loadMessages(selectedChatRoom._id, 1, false);
       // Mark chat room as read
-      messagesApi.markChatRoomAsRead(selectedChatRoom._id).catch(console.error);
+      messagesApi.markChatRoomAsRead(selectedChatRoom._id).catch(() => {});
       // Join Socket.io room
       socketService.joinRoom(selectedChatRoom._id);
     }

@@ -108,7 +108,7 @@ export const trackEvent = async (params: TrackEventParams): Promise<void> => {
     // Silently ignore all errors
     // Tracking should never break the application
     if (process.env.NODE_ENV === 'development') {
-      console.debug('Event tracking failed (silently ignored):', error);
+      
     }
   }
 };

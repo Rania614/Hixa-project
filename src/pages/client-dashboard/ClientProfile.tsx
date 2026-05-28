@@ -94,10 +94,10 @@ const ClientProfile = () => {
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      console.log("📤 Fetching profile from GET /users/me");
+      
       const profile = await profileApi.getProfile();
       
-      console.log("📥 Profile data:", profile);
+      
       
       // Handle avatar
       let avatarUrl = "";
@@ -134,9 +134,9 @@ const ClientProfile = () => {
       setValue("location", profile.location || "");
       setValue("bio", profile.bio || "");
       
-      console.log("✅ Profile data loaded successfully");
+      
     } catch (error: any) {
-      console.error("Error fetching profile:", error);
+      
       
       // Don't show error toast for 401 - the interceptor will handle redirect
       if (error.response?.status === 401) {
@@ -212,8 +212,8 @@ const ClientProfile = () => {
         updateData.bio = data.bio;
       }
       
-      console.log("📤 Updating profile:", updateData);
-      console.log("📤 Selected image:", selectedImage);
+      
+      
       
       // Update profile with or without avatar
       const updatedProfile = await profileApi.updateProfile(
@@ -221,7 +221,7 @@ const ClientProfile = () => {
         selectedImage || undefined
       );
       
-      console.log("✅ Profile updated successfully:", updatedProfile);
+      
       
       toast.success(
         language === "en"
@@ -241,7 +241,7 @@ const ClientProfile = () => {
       // Refresh profile data
       await fetchProfile();
     } catch (error: any) {
-      console.error("Error updating profile:", error);
+      
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.error || 
                           error.message || 
@@ -308,7 +308,7 @@ const ClientProfile = () => {
         confirmPassword: '',
       });
     } catch (error: any) {
-      console.error("Error changing password:", error);
+      
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.error || 
                           error.message || 

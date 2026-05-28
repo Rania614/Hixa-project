@@ -79,7 +79,7 @@ const PartnerRequests = () => {
       
       setRequests(sortedRequests);
     } catch (error: any) {
-      console.error('Error fetching partner requests:', error);
+      
       toast.error(language === 'en' ? 'Failed to fetch partner requests' : 'فشل في جلب طلبات الشراكة');
       setRequests([]);
     } finally {
@@ -94,7 +94,7 @@ const PartnerRequests = () => {
       toast.success(language === 'en' ? 'Status updated successfully' : 'تم تحديث الحالة بنجاح');
       await fetchRequests();
     } catch (error: any) {
-      console.error('Error updating status:', error);
+      
       toast.error(
         error.response?.data?.message || 
         (language === 'en' ? 'Failed to update status' : 'فشل في تحديث الحالة')
@@ -114,7 +114,7 @@ const PartnerRequests = () => {
       toast.success(language === 'en' ? 'Request deleted successfully' : 'تم حذف الطلب بنجاح');
       await fetchRequests();
     } catch (error: any) {
-      console.error('Error deleting request:', error);
+      
       toast.error(
         error.response?.data?.message || 
         (language === 'en' ? 'Failed to delete request' : 'فشل في حذف الطلب')

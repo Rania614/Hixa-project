@@ -30,7 +30,7 @@ export function isValidObjectId(id: string | null | undefined): boolean {
 export function validateObjectId(id: string | null | undefined, fieldName: string = 'ID'): void {
   if (!isValidObjectId(id)) {
     const errorMessage = `Invalid MongoDB ObjectId for ${fieldName}: "${id}". Expected 24-character hexadecimal string.`;
-    console.error(errorMessage);
+    
     throw new Error(errorMessage);
   }
 }

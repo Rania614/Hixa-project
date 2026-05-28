@@ -128,7 +128,7 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
           setError('Invalid response from server');
         }
       } catch (err: any) {
-        console.error('Login failed:', err);
+        
         const errorMessage = err.response?.data?.message || 
                            err.response?.data?.error || 
                            err.message || 
@@ -295,9 +295,9 @@ export const AuthModal = ({ isOpen, onClose, onAuthSuccess, role, initialMode = 
           setError(language === 'ar' ? 'تم التسجيل بنجاح لكن لم يتم استلام رمز الوصول' : 'Registration successful but no token received');
         }
       } catch (err: any) {
-        console.error('❌ Registration failed:', err);
-        console.error('❌ Error response:', err.response?.data);
-        console.error('❌ Error status:', err.response?.status);
+        
+        
+        
         
         // Extract error message
         let errorMessage = '';

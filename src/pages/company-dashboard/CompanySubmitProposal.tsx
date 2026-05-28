@@ -68,7 +68,7 @@ const CompanySubmitProposal = () => {
         }
         setUser(userData);
       } catch (error) {
-        console.error("Auth error", error);
+        
       } finally {
         setAuthChecking(false);
       }

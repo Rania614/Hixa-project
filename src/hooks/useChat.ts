@@ -49,7 +49,7 @@ export const useChat = ({ chatRoomId, enabled = true }: UseChatOptions) => {
     // Backend uses MongoDB ObjectIds, NOT numeric IDs
     if (!isValidObjectId(chatRoomId)) {
       const errorMsg = `Invalid chatRoomId: "${chatRoomId}". Expected MongoDB ObjectId (24-character hex string).`;
-      console.error(errorMsg);
+      
       setError(errorMsg);
       setLoading(false);
       return;
@@ -88,7 +88,7 @@ export const useChat = ({ chatRoomId, enabled = true }: UseChatOptions) => {
       setHasMore(response.page < response.totalPages);
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'Failed to fetch messages');
-      console.error('Error fetching messages:', err);
+      
     } finally {
       setLoading(false);
     }
@@ -114,7 +114,7 @@ export const useChat = ({ chatRoomId, enabled = true }: UseChatOptions) => {
     // Validate chatRoomId is a valid MongoDB ObjectId
     if (!isValidObjectId(chatRoomId)) {
       const errorMsg = `Cannot send message: Invalid chatRoomId "${chatRoomId}". Expected MongoDB ObjectId.`;
-      console.error(errorMsg);
+      
       setError(errorMsg);
       throw new Error(errorMsg);
     }
@@ -130,7 +130,7 @@ export const useChat = ({ chatRoomId, enabled = true }: UseChatOptions) => {
       // No need to manually add it to state
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'Failed to send message');
-      console.error('Error sending message:', err);
+      
       throw err;
     } finally {
       setSending(false);
@@ -220,7 +220,7 @@ export const useChat = ({ chatRoomId, enabled = true }: UseChatOptions) => {
     // Validate chatRoomId is a valid MongoDB ObjectId before connecting
     // Backend uses MongoDB ObjectIds, NOT numeric IDs
     if (!isValidObjectId(chatRoomId)) {
-      console.error('Cannot connect socket: Invalid chatRoomId', chatRoomId);
+      
       setError(`Invalid chat room ID: "${chatRoomId}". Expected MongoDB ObjectId.`);
       return;
     }
@@ -235,7 +235,7 @@ export const useChat = ({ chatRoomId, enabled = true }: UseChatOptions) => {
       socketService.joinRoom(chatRoomId);
       currentRoomRef.current = chatRoomId;
     } catch (error) {
-      console.error('Failed to join socket room:', error);
+      
       setError('Failed to connect to chat room');
     }
 

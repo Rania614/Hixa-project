@@ -114,7 +114,7 @@ const AdminAnalytics = () => {
       setDailyStats(Array.isArray(dailyRes.data?.data) ? dailyRes.data.data : []);
 
     } catch (err: any) {
-      console.error('Error fetching analytics:', err);
+      
       setError(err.response?.data?.message || (isAr ? 'حدث خطأ أثناء جلب البيانات' : 'Error fetching analytics data'));
     } finally {
       setLoading(false);

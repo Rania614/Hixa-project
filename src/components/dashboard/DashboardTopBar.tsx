@@ -43,7 +43,7 @@ export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({ userType }) =>
           try {
             userData = JSON.parse(userStr);
           } catch (e) {
-            console.error("Error parsing user data:", e);
+            
           }
         }
 
@@ -71,10 +71,10 @@ export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({ userType }) =>
             }
             
             if (!userData && lastError) {
-              console.warn("Could not fetch user data from any endpoint:", lastError);
+              
             }
           } catch (error: any) {
-            console.warn("Could not fetch user data:", error);
+            
           }
         }
 
@@ -121,7 +121,7 @@ export const DashboardTopBar: React.FC<DashboardTopBarProps> = ({ userType }) =>
           setUserInitials(userType === "client" ? "C" : userType === "company" ? "Co" : "E");
         }
       } catch (error) {
-        console.error("Error loading user data:", error);
+        
         // Fallback to default values
         setUserName(userType === "client" ? "Client" : userType === "company" ? "Company" : "Engineer");
         setUserInitials(userType === "client" ? "C" : userType === "company" ? "Co" : "E");

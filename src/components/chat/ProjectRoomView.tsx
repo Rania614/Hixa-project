@@ -43,7 +43,7 @@ export const ProjectRoomView = ({ projectRoom, onBack, onSelectChatRoom }: Proje
         // Only show error for non-404 errors
         if (err.response?.status !== 404) {
           setError(err.response?.data?.message || err.message || 'Failed to fetch chat rooms');
-          console.error('Error fetching chat rooms:', err);
+          
         } else {
           // 404 is expected - set empty array
           setChatRooms([]);

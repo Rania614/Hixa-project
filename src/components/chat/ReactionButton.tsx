@@ -45,7 +45,7 @@ export const ReactionButton: React.FC<ReactionButtonProps> = ({
       const updatedMessage = await messagesApi.toggleReaction(message._id, emoji);
       onReactionToggle(updatedMessage);
     } catch (error) {
-      console.error('Error toggling reaction:', error);
+      
       // Error is handled silently - user can try again
     } finally {
       setLoading(false);

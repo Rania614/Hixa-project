@@ -63,9 +63,9 @@ const CompanyMessages = () => {
           try {
             const userData = JSON.parse(userStr);
             setUser(userData);
-            console.log('✅ User loaded from localStorage:', userData._id || userData.id);
+            
           } catch (e) {
-            console.error("Error parsing user from localStorage:", e);
+            
           }
         }
         
@@ -77,14 +77,14 @@ const CompanyMessages = () => {
             if (userData) {
               setUser(userData);
               localStorage.setItem("user", JSON.stringify(userData));
-              console.log('✅ User loaded from API:', userData._id || userData.id);
+              
             }
           } catch (error: any) {
-            console.warn("Could not fetch user data:", error);
+            
           }
         }
       } catch (error) {
-        console.error("Error loading user:", error);
+        
       }
     };
     
@@ -100,28 +100,28 @@ const CompanyMessages = () => {
   const loadProjectRooms = useCallback(async () => {
     try {
       setLoading(true);
-      console.log('📥 Loading project rooms for company...');
+      
       const rooms = await messagesApi.getProjectRooms();
-      console.log('📥 Received project rooms from API:', rooms.length, rooms);
+      
       // Filter: Company sees only project rooms for projects they submitted proposals for
       // Backend should already filter this, but we add extra safety
       setProjectRooms(rooms);
       setSelectedProjectRoom((prev) => {
         if (!prev && rooms.length > 0) {
-          console.log('✅ Selected first project room:', rooms[0]._id);
+          
           return rooms[0];
         }
         return prev;
       });
       if (rooms.length === 0) {
-        console.log('⚠️ No project rooms found - company has not submitted any proposals yet');
+        
       }
     } catch (error: any) {
-      console.error('❌ Error loading project rooms:', error);
+      
       
       // Handle rate limiting (429) gracefully
       if (error.response?.status === 429 || error.isRateLimitError) {
-        console.warn('⏳ Rate limit exceeded, will retry automatically');
+        
         // Don't show error toast for rate limiting - http.js will retry automatically
         // Just set empty array to prevent UI issues
         setProjectRooms([]);
@@ -140,14 +140,14 @@ const CompanyMessages = () => {
   // Load Chat Rooms (filter: admin-company/admin-engineer and group only)
   const loadChatRooms = useCallback(async (projectRoomId: string) => {
     try {
-      console.log('📥 Loading chat rooms for projectRoom:', projectRoomId);
+      
       const rooms = await messagesApi.getChatRooms(projectRoomId);
-      console.log('📥 Raw chat rooms from API:', rooms);
-      console.log('📥 Current user:', user?._id || user?.id);
+      
+      
       
       // Filter: Company sees admin-client (chat with admin), admin-company, admin-engineer (their own), and group chat rooms
       const filteredRooms = rooms.filter(room => {
-        console.log('🔍 Checking room:', room._id, 'type:', room.type);
+        
         
         // Group rooms: include if company is a participant
         if (room.type === 'group') {
@@ -161,7 +161,7 @@ const CompanyMessages = () => {
             const matches = participantId?.toString() === userId?.toString();
             return matches;
           });
-          console.log('🔍 Group room participant check:', isParticipant);
+          
           return isParticipant;
         }
         
@@ -175,14 +175,10 @@ const CompanyMessages = () => {
                 ? (p.user._id || p.user.id || p.user) 
                 : p.user);
             const matches = participantId?.toString() === userId?.toString();
-            console.log('🔍 Admin-client participant check:', { 
-              participantId: participantId?.toString(), 
-              userId: userId?.toString(), 
-              matches 
-            });
+            
             return matches;
           }) || false;
-          console.log('🔍 Admin-client final check:', { isParticipant, roomType: room.type });
+          
           return isParticipant;
         }
         
@@ -198,11 +194,7 @@ const CompanyMessages = () => {
                 ? (p.user._id || p.user.id || p.user) 
                 : p.user);
             const matches = participantId?.toString() === userId?.toString();
-            console.log('🔍 Participant check:', { 
-              participantId: participantId?.toString(), 
-              userId: userId?.toString(), 
-              matches 
-            });
+            
             return matches;
           }) || false;
           
@@ -215,37 +207,28 @@ const CompanyMessages = () => {
                 ? (room.engineer._id || room.engineer.id || room.engineer)
                 : room.engineer);
             engineerMatches = engineerId?.toString() === userId?.toString();
-            console.log('🔍 Engineer field check:', { 
-              engineerId: engineerId?.toString(), 
-              userId: userId?.toString(), 
-              matches: engineerMatches 
-            });
+            
           }
           
           const shouldInclude = isParticipant || engineerMatches;
-          console.log('🔍 Company/Engineer final check:', { 
-            isParticipant, 
-            engineerMatches, 
-            shouldInclude,
-            roomType: room.type 
-          });
+          
           return shouldInclude;
         }
         
-        console.log('❌ Room type not allowed, excluding:', room.type);
+        
         return false;
       });
       
-      console.log('📥 Filtered chat rooms:', filteredRooms);
+      
       setChatRooms(filteredRooms);
       if (filteredRooms.length > 0 && !selectedChatRoom) {
-        console.log('✅ Setting selected chat room:', filteredRooms[0]._id);
+        
         setSelectedChatRoom(filteredRooms[0]);
       } else if (filteredRooms.length === 0) {
-        console.log('⚠️ No chat rooms found after filtering');
+        
       }
     } catch (error: any) {
-      console.error('❌ Error loading chat rooms:', error);
+      
       if (error.response?.status !== 404) {
         toast.error(language === 'en' ? 'Failed to load chats' : 'فشل تحميل المحادثات');
       }
@@ -256,7 +239,7 @@ const CompanyMessages = () => {
   // Load Messages
   const loadMessages = useCallback(async (chatRoomId: string, pageNum: number = 1, append: boolean = false) => {
     try {
-      console.log('📥 Loading messages for chatRoom:', chatRoomId, 'page:', pageNum);
+      
       setLoadingMessages(true);
       
       // Add timeout to prevent hanging (reduced to 5 seconds)
@@ -269,11 +252,11 @@ const CompanyMessages = () => {
         timeoutPromise
       ]) as any;
       
-      console.log('📥 Raw response from getMessages:', response);
-      console.log('📥 Messages loaded:', response.messages?.length || 0, 'messages');
+      
+      
       
       if (!response || !response.messages) {
-        console.warn('⚠️ Invalid response structure:', response);
+        
         setMessages([]);
         setHasMore(false);
         setPage(pageNum);
@@ -282,18 +265,18 @@ const CompanyMessages = () => {
       }
       
       if (append) {
-        console.log('📥 Appending messages to existing list');
+        
         setMessages((prev) => {
           const updated = [...prev, ...response.messages];
-          console.log('📥 Messages after append:', updated.length);
+          
           return updated;
         });
       } else {
         // Messages come from backend oldest first, we want newest at bottom
         // So we keep them as is (oldest first = top to bottom)
-        console.log('📥 Setting messages:', response.messages.length);
-        console.log('📥 First message (oldest):', response.messages[0]);
-        console.log('📥 Last message (newest):', response.messages[response.messages.length - 1]);
+        
+        
+        
         setMessages(response.messages);
       }
       setHasMore(response.page < response.totalPages);
@@ -305,16 +288,12 @@ const CompanyMessages = () => {
         }, 200);
       }
     } catch (error: any) {
-      console.error('❌ Error loading messages:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
+      
+      
       
       // If timeout or network error, don't clear messages - keep existing ones
       if (error.message === 'Request timeout' || error.code === 'ERR_NETWORK') {
-        console.warn('⚠️ Request timeout or network error, keeping existing messages');
+        
         // Don't clear messages, just stop loading
       } else if (error.response?.status !== 404) {
         toast.error(language === 'en' ? 'Failed to load messages' : 'فشل تحميل الرسائل');
@@ -328,7 +307,7 @@ const CompanyMessages = () => {
       }
       setHasMore(false);
     } finally {
-      console.log('✅ Finished loading messages, setting loadingMessages to false');
+      
       setLoadingMessages(false);
     }
   }, [scrollToBottom, language, messages.length]);
@@ -400,7 +379,7 @@ const CompanyMessages = () => {
             : 'تم إرسال الرسالة بنجاح'
       );
     } catch (error: any) {
-      console.error('Error sending message:', error);
+      
       const errorMessage = error.response?.data?.message || error.message || 
         (language === 'en' ? 'Failed to send message' : 'فشل إرسال الرسالة');
       toast.error(errorMessage);
@@ -412,9 +391,9 @@ const CompanyMessages = () => {
 
   // Handle new message from Socket.io
   const handleNewMessage = useCallback((data: SocketMessageEvent) => {
-    console.log('📨 New message received:', data);
+    
     if (!selectedChatRoomRef.current || data.chatRoomId !== selectedChatRoomRef.current._id) {
-      console.log('📨 Message for different chat room, ignoring');
+      
       return;
     }
     
@@ -423,14 +402,14 @@ const CompanyMessages = () => {
       // Check if message already exists
       const exists = prev.some(m => m._id === newMessage._id);
       if (exists) {
-        console.log('📨 Message already exists, skipping');
+        
         return prev;
       }
       // Add new message and sort by date
       const updated = [...prev, newMessage].sort(
         (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       );
-      console.log('📨 Messages updated:', updated.length);
+      
       return updated;
     });
     // Scroll to bottom when new message arrives
@@ -516,7 +495,7 @@ const CompanyMessages = () => {
       
       // Only load messages if we haven't tried for this chat room yet
       if (loadAttemptedRef.current !== chatRoomId) {
-        console.log('🔄 ChatRoom selected, loading messages:', chatRoomId);
+        
         selectedChatRoomRef.current = selectedChatRoom;
         loadAttemptedRef.current = chatRoomId;
         setMessages([]);
@@ -524,12 +503,12 @@ const CompanyMessages = () => {
         
         // Try to load messages, but don't block if it fails
         loadMessages(chatRoomId, 1, false).catch(() => {
-          console.warn('⚠️ Failed to load messages, will rely on Socket.io');
+          
         });
       }
       
       // Mark chat room as read
-      messagesApi.markChatRoomAsRead(chatRoomId).catch(console.error);
+      messagesApi.markChatRoomAsRead(chatRoomId).catch(() => {});
       // Join Socket.io room
       socketService.joinRoom(chatRoomId);
     }

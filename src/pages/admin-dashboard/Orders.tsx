@@ -73,16 +73,12 @@ const Orders = () => {
       
       // Log first order image structure for debugging
       if (sortedOrders.length > 0 && sortedOrders[0].image) {
-        console.log('First order image structure:', {
-          image: sortedOrders[0].image,
-          imageType: typeof sortedOrders[0].image,
-          isObject: typeof sortedOrders[0].image === 'object',
-        });
+        
       }
       
       setOrders(sortedOrders);
     } catch (error: any) {
-      console.error('Error fetching orders:', error);
+      
       toast.error(language === 'en' ? 'Failed to fetch orders' : 'فشل في جلب الطلبات');
       setOrders([]); // Set empty array on error
     } finally {
@@ -96,7 +92,7 @@ const Orders = () => {
       const response = await http.get(`/service-orders/${orderId}`);
       return response.data;
     } catch (error: any) {
-      console.error('Error fetching order:', error);
+      
       toast.error(language === 'en' ? 'Failed to fetch order' : 'فشل في جلب الطلب');
       return null;
     }
@@ -121,7 +117,7 @@ const Orders = () => {
       // إعادة جلب الطلبات بعد الحذف
       await fetchOrders();
     } catch (error: any) {
-      console.error('Error deleting order:', error);
+      
       toast.error(
         error.response?.data?.message || 
         (language === 'en' ? 'Failed to delete order' : 'فشل في حذف الطلب')
@@ -140,7 +136,7 @@ const Orders = () => {
       // إعادة جلب الطلبات بعد التحديث
       await fetchOrders();
     } catch (error: any) {
-      console.error('Error updating order:', error);
+      
       toast.error(
         error.response?.data?.message || 
         (language === 'en' ? 'Failed to update order' : 'فشل في تحديث الطلب')

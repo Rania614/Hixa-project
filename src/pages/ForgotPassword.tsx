@@ -48,7 +48,7 @@ const ForgotPassword = () => {
           : 'Password reset link has been sent to your email'
       );
     } catch (err: any) {
-      console.error('Password reset error:', err);
+      
       
       let errorMessage = isAr 
         ? 'حدث خطأ أثناء إرسال البريد الإلكتروني' 

@@ -79,7 +79,7 @@ export const ChatRoomView = ({ chatRoom, onBack }: ChatRoomViewProps) => {
         const user = JSON.parse(userStr);
         setCurrentUserId(user._id || user.id || null);
       } catch (e) {
-        console.error('Error parsing user from localStorage:', e);
+        
       }
     }
   }, []);
@@ -171,7 +171,7 @@ export const ChatRoomView = ({ chatRoom, onBack }: ChatRoomViewProps) => {
       setTimeout(() => scrollToBottom(true), 200);
     } catch (err) {
       // Error is handled by useChat hook
-      console.error('Failed to send message:', err);
+      
     }
   };
 

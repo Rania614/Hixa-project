@@ -70,7 +70,7 @@ export const EditMessage: React.FC<EditMessageProps> = ({
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'فشل في تحديث الرسالة';
       setError(errorMessage);
-      console.error('Error updating message:', err);
+      
     } finally {
       setLoading(false);
     }

@@ -138,7 +138,7 @@ const AdminSettings = () => {
 
   const handleSave = () => {
     // TODO: Save to API
-    console.log('Saving admin settings:', admins);
+    
   };
 
   return (

@@ -53,7 +53,7 @@ export const Subscribers = () => {
         phone: stats.phone || stats.phoneSubscribers || 0
       });
     } catch (error: any) {
-      console.error('Error fetching statistics:', error);
+      
       // Don't show error toast for statistics, just use local count
     }
   };
@@ -65,7 +65,7 @@ export const Subscribers = () => {
       const response = await http.get('/subscribers');
       let subscribersData = response.data;
       
-      console.log('Subscribers response:', subscribersData);
+      
       
       // Handle different response structures
       // The API returns {data: Array, meta: {...}}
@@ -83,15 +83,15 @@ export const Subscribers = () => {
         return sub.isActive !== false;
       });
       
-      console.log('Processed subscribers (after filter):', subscribersArray);
+      
       
       setSubscribers(subscribersArray);
       
       // Fetch statistics after getting subscribers
       await fetchStatistics();
     } catch (error: any) {
-      console.error('Error fetching subscribers:', error);
-      console.error('Error response:', error.response?.data);
+      
+      
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.error ||
                           (language === 'en' 
@@ -124,16 +124,16 @@ export const Subscribers = () => {
       try {
         await http.delete(`/subscribers/${subscriberId}`);
         deleted = true;
-        console.log('Subscriber deleted via DELETE endpoint');
+        
       } catch (error1: any) {
         // If DELETE fails (404 or other), try unsubscribe endpoint (sets isActive: false)
         if (error1.response?.status === 404) {
           try {
             await http.post('/subscribers/unsubscribe', { id: subscriberId });
             deleted = true;
-            console.log('Subscriber unsubscribed via unsubscribe endpoint');
+            
           } catch (error2: any) {
-            console.error('Both DELETE and unsubscribe failed:', error1, error2);
+            
             // If both fail, throw the first error
             throw error1;
           }
@@ -150,7 +150,7 @@ export const Subscribers = () => {
         await fetchSubscribers();
       }
     } catch (error: any) {
-      console.error('Error unsubscribing subscriber:', error);
+      
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.error ||
                           (language === 'en' 
@@ -180,7 +180,7 @@ export const Subscribers = () => {
       
       toast.success(language === 'en' ? 'Subscribers exported successfully' : 'تم تصدير المشتركين بنجاح');
     } catch (error: any) {
-      console.error('Error exporting subscribers:', error);
+      
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.error ||
                           (language === 'en' 
@@ -205,7 +205,7 @@ export const Subscribers = () => {
           message: { en: broadcastMessageEn, ar: broadcastMessageAr }
         });
       } catch (error1: any) {
-        console.log('First endpoint failed, trying /subscribers/subscribe/broadcast...');
+        
         try {
           // Second try: /api/subscribers/subscribe/broadcast
           response = await http.post('/subscribers/subscribe/broadcast', {
@@ -213,7 +213,7 @@ export const Subscribers = () => {
             message: { en: broadcastMessageEn, ar: broadcastMessageAr }
           });
         } catch (error2: any) {
-          console.log('Second endpoint failed, trying /subscribers/send-broadcast...');
+          
           try {
             // Third try: /api/subscribers/send-broadcast
             response = await http.post('/subscribers/send-broadcast', {
@@ -221,7 +221,7 @@ export const Subscribers = () => {
               message: { en: broadcastMessageEn, ar: broadcastMessageAr }
             });
           } catch (error3: any) {
-            console.error('All broadcast endpoints failed:', error1, error2, error3);
+            
             throw error1; // Throw the first error
           }
         }
@@ -240,8 +240,8 @@ export const Subscribers = () => {
         setBroadcastMessageAr('');
       }, 2000);
     } catch (error: any) {
-      console.error('Failed to send broadcast:', error);
-      console.error('Error response:', error.response?.data);
+      
+      
       
       // Check if it's a 404 error
       if (error.response?.status === 404) {

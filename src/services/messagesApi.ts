@@ -107,7 +107,7 @@ export const messagesApi = {
     } catch (error: any) {
       // Handle rate limiting (429) - http.js will retry automatically
       if (error.response?.status === 429 || error.isRateLimitError) {
-        console.warn('⏳ Rate limit exceeded for project-rooms, will retry automatically');
+        
         // Return empty array and let http.js retry
         throw error; // Re-throw to let http.js handle retry
       }
@@ -160,14 +160,14 @@ export const messagesApi = {
       params: { page, limit }
     });
     
-    console.log('📥 Raw API response:', response.data);
+    
     
     // Backend sends: { data: [...], meta: {...} }
     if (response.data?.data && Array.isArray(response.data.data)) {
       // Response has { data: [...], meta: {...} }
       const messages = response.data.data;
       const meta = response.data.meta || {};
-      console.log('📥 Parsed messages:', messages.length, 'meta:', meta);
+      
       return {
         messages,
         total: meta.total || messages.length,
@@ -177,7 +177,7 @@ export const messagesApi = {
     } else if (response.data?.messages && Array.isArray(response.data.messages)) {
       // Response has { messages: [...], meta: {...} }
       const meta = response.data.meta || {};
-      console.log('📥 Parsed messages (alternative structure):', response.data.messages.length);
+      
       return {
         messages: response.data.messages,
         total: meta.total || response.data.messages.length,
@@ -186,7 +186,7 @@ export const messagesApi = {
       };
     } else if (Array.isArray(response.data)) {
       // Response is directly an array
-      console.log('📥 Parsed messages (direct array):', response.data.length);
+      
       return {
         messages: response.data,
         total: response.data.length,
@@ -196,7 +196,7 @@ export const messagesApi = {
     }
     
     // Default empty response
-    console.warn('⚠️ Unknown response structure, returning empty');
+    
     return { messages: [], total: 0, page: 1, totalPages: 1 };
   },
 
@@ -220,13 +220,7 @@ export const messagesApi = {
         formData.append('attachments', file, file.name);
       });
 
-      console.log('📎 Sending FormData with attachments:', {
-        chatRoomId,
-        content,
-        type,
-        attachmentsCount: attachments.length,
-        fileNames: attachments.map(f => f.name)
-      });
+      
 
       const response = await http.post(`/messages`, formData, {
         headers: {
@@ -282,7 +276,7 @@ export const messagesApi = {
         );
       } catch (err) {
         // Silently fail - this is not critical
-        console.warn('Failed to mark chat room as read:', err);
+        
       }
     }
   },

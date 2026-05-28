@@ -154,7 +154,7 @@ const AdminProjectDetails = () => {
 
   // Debug: Log the ID
   useEffect(() => {
-    console.log('AdminProjectDetails - ID from params:', id);
+    
   }, [id]);
   
   // Modal states
@@ -342,7 +342,7 @@ const AdminProjectDetails = () => {
   const fetchProject = async () => {
     if (!id || id === 'undefined') {
       // Use mock data if no valid ID
-      console.log('No valid ID, using mock data');
+      
       setLoading(true);
       const mockProject = getMockProject('1'); // Default to first mock project
       if (mockProject) {
@@ -362,24 +362,24 @@ const AdminProjectDetails = () => {
       
       // Normalize client data - handle both populated and unpopulated client
       if (projectData.client) {
-        console.log('📋 Client data from API:', projectData.client);
+        
         
         // If client is just an ID (string), we need to fetch it separately
         if (typeof projectData.client === 'string') {
           try {
-            console.log('📞 Fetching client details for ID:', projectData.client);
+            
             const clientResponse = await http.get(`/users/${projectData.client}`);
             const clientData = clientResponse.data?.data || clientResponse.data?.user || clientResponse.data;
-            console.log('📞 Client details fetched:', clientData);
+            
             projectData.client = {
               _id: projectData.client,
               name: clientData.name || '',
               email: clientData.email || '',
               phone: clientData.phone || clientData.phoneNumber || clientData.contact || '',
             };
-            console.log('✅ Normalized client data:', projectData.client);
+            
           } catch (error) {
-            console.error('❌ Error fetching client data:', error);
+            
             // Keep client as ID if fetch fails
             projectData.client = {
               _id: projectData.client,
@@ -395,13 +395,10 @@ const AdminProjectDetails = () => {
             ...originalClient,
             phone: originalClient.phone || originalClient.phoneNumber || originalClient.contact || '',
           };
-          console.log('✅ Client already populated, normalized phone:', {
-            original: originalClient,
-            normalized: projectData.client
-          });
+          
         }
       } else {
-        console.warn('⚠️ No client data in project response');
+        
       }
       
       setProject(projectData);
@@ -411,10 +408,10 @@ const AdminProjectDetails = () => {
         fetchProposals();
       }
     } catch (error: any) {
-      console.error('Error fetching project:', error);
+      
       // Use mock data if API fails (404, 400, network error, etc.)
       if (error.response?.status === 404 || error.response?.status === 400 || error.code === 'ERR_NETWORK' || error.code === 'ERR_BAD_REQUEST') {
-        console.log('Using mock data for project due to API error');
+        
         const mockProject = getMockProject(id);
         if (mockProject) {
           setProject(mockProject);
@@ -455,10 +452,10 @@ const AdminProjectDetails = () => {
       const proposalsData = response.data?.data || response.data?.proposals || response.data || [];
       setProposals(Array.isArray(proposalsData) ? proposalsData : []);
     } catch (error: any) {
-      console.error('Error fetching proposals:', error);
+      
       // Use mock data if API fails
       if (error.response?.status === 404 || error.code === 'ERR_NETWORK') {
-        console.log('Using mock data for proposals');
+        
         setProposals(getMockProposals(id));
       } else {
         if (error.response?.status !== 404) {
@@ -478,7 +475,7 @@ const AdminProjectDetails = () => {
       const notesData = response.data?.data || response.data?.notes || response.data || [];
       setNotes(Array.isArray(notesData) ? notesData : []);
     } catch (error: any) {
-      console.error('Error fetching notes:', error);
+      
       if (error.response?.status !== 404) {
         toast.error(language === 'en' ? 'Failed to load notes' : 'فشل تحميل الملاحظات');
       }
@@ -507,7 +504,7 @@ const AdminProjectDetails = () => {
       setShowAddNoteForm(false);
       fetchNotes();
     } catch (error: any) {
-      console.error('Error adding note:', error);
+      
       const errorMessage = error.response?.data?.message || (language === 'en' ? 'Failed to add note' : 'فشل إضافة الملاحظة');
       toast.error(errorMessage);
     } finally {
@@ -528,7 +525,7 @@ const AdminProjectDetails = () => {
       toast.success(language === 'en' ? 'Note deleted successfully' : 'تم حذف الملاحظة بنجاح');
       fetchNotes();
     } catch (error: any) {
-      console.error('Error deleting note:', error);
+      
       const errorMessage = error.response?.data?.message || (language === 'en' ? 'Failed to delete note' : 'فشل حذف الملاحظة');
       toast.error(errorMessage);
     }
@@ -572,7 +569,7 @@ const AdminProjectDetails = () => {
       toast.success(language === 'en' ? 'Project approved and published' : 'تم الموافقة على المشروع ونشره');
       fetchProject();
     } catch (error: any) {
-      console.error('Error approving project:', error);
+      
       // For demo, update local state
       if (error.response?.status === 404 || error.code === 'ERR_NETWORK') {
         const autoVisibility = generateAutoVisibility(project);
@@ -601,7 +598,7 @@ const AdminProjectDetails = () => {
       setRejectReason('');
       fetchProject();
     } catch (error: any) {
-      console.error('Error rejecting project:', error);
+      
       toast.error(language === 'en' ? 'Failed to reject project' : 'فشل رفض المشروع');
     }
   };
@@ -620,7 +617,7 @@ const AdminProjectDetails = () => {
       setEditRequestMessage('');
       fetchProject();
     } catch (error: any) {
-      console.error('Error requesting edit:', error);
+      
       // For demo purposes, show success even if API fails
       if (error.response?.status === 404 || error.code === 'ERR_NETWORK') {
         toast.success(language === 'en' ? 'Edit request sent to client (Demo)' : 'تم إرسال طلب التعديل للعميل (تجريبي)');
@@ -648,7 +645,7 @@ const AdminProjectDetails = () => {
       fetchProject();
       fetchProposals();
     } catch (error: any) {
-      console.error('Error accepting proposal:', error);
+      
       const errorMessage = error.response?.data?.message || 
         (language === 'en' ? 'Failed to accept proposal' : 'فشل قبول العرض');
       toast.error(errorMessage);
@@ -662,7 +659,7 @@ const AdminProjectDetails = () => {
       toast.success(language === 'en' ? 'Proposal rejected' : 'تم رفض العرض');
       fetchProposals();
     } catch (error: any) {
-      console.error('Error rejecting proposal:', error);
+      
       const errorMessage = error.response?.data?.message || 
         (language === 'en' ? 'Failed to reject proposal' : 'فشل رفض العرض');
       toast.error(errorMessage);
@@ -676,7 +673,7 @@ const AdminProjectDetails = () => {
       toast.success(language === 'en' ? 'Proposal deleted' : 'تم حذف العرض');
       fetchProposals();
     } catch (error: any) {
-      console.error('Error deleting proposal:', error);
+      
       const errorMessage = error.response?.data?.message || 
         (language === 'en' ? 'Failed to delete proposal' : 'فشل حذف العرض');
       toast.error(errorMessage);
@@ -685,13 +682,13 @@ const AdminProjectDetails = () => {
 
 
   useEffect(() => {
-    console.log('useEffect triggered, ID:', id, 'Type:', typeof id);
+    
     if (id && id !== 'undefined') {
       fetchProject();
       fetchNotes();
     } else {
       // If no valid ID, use mock data immediately
-      console.log('No valid ID, using mock data');
+      
       setLoading(true);
       const mockProject = getMockProject('1');
       if (mockProject) {
@@ -1230,7 +1227,6 @@ const AdminProjectDetails = () => {
                             toast.success(language === 'en' ? 'Target roles updated' : 'تم تحديث الأدوار المستهدفة');
                             fetchProject();
                           } catch (error: any) {
-                            console.error('Error updating target roles:', error);
                             // Handle 404 (endpoint doesn't exist) or 400 (endpoint doesn't support partial update)
                             // as demo mode since the backend may not support updating only targetRoles
                             if (error.response?.status === 404 || error.response?.status === 400 || error.code === 'ERR_NETWORK') {
@@ -1660,7 +1656,7 @@ const AdminProjectDetails = () => {
                                 });
                                 toast.success(language === 'en' ? 'Visibility updated' : 'تم تحديث الظهور');
                               } catch (error: any) {
-                                console.error('Error updating visibility:', error);
+                                
                                 if (error.response?.status === 404 || error.code === 'ERR_NETWORK') {
                                   toast.success(language === 'en' ? 'Visibility updated (Demo)' : 'تم تحديث الظهور (تجريبي)');
                                 } else {

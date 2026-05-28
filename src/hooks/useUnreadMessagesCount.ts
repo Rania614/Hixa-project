@@ -32,7 +32,7 @@ export const useUnreadMessagesCount = (refreshInterval: number = 60000) => {
     } catch (err: any) {
       // Don't show error for 429 (Too Many Requests) - just log it silently
       if (err.response?.status === 429) {
-        console.warn('Rate limit exceeded for unread messages count. Will retry later.');
+        
         // Don't set error state for rate limiting - it will retry automatically
         setLoading(false);
         return;
@@ -48,11 +48,7 @@ export const useUnreadMessagesCount = (refreshInterval: number = 60000) => {
         err.response?.status === 503 || // Service Unavailable
         err.response?.status === 504    // Gateway Timeout
       ) {
-        console.warn('Network/CORS error fetching unread count. Will retry later.', {
-          code: err.code,
-          status: err.response?.status,
-          message: err.message
-        });
+        
         // Don't set error state for network issues - it will retry automatically
         setLoading(false);
         return;
@@ -61,7 +57,7 @@ export const useUnreadMessagesCount = (refreshInterval: number = 60000) => {
       // Only set error for actual API errors (not network/CORS issues)
       const errorMessage = err.response?.data?.message || err.message || 'فشل في جلب عدد الرسائل غير المقروءة';
       setError(errorMessage);
-      console.error('Error fetching unread count:', err);
+      
     } finally {
       setLoading(false);
     }

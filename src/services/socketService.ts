@@ -39,7 +39,7 @@ class SocketService {
     
     // Fix: localhost doesn't support HTTPS - convert https://localhost to http://localhost
     if (socketURL.startsWith('https://localhost') || socketURL.startsWith('https://127.0.0.1')) {
-      console.warn("⚠️ Detected HTTPS on localhost - converting to HTTP for socket");
+      
       socketURL = socketURL.replace(/^https:\/\//, 'http://');
     }
     
@@ -56,7 +56,7 @@ class SocketService {
       socketURL = window.location.origin;
     }
     
-    console.log('🔌 Socket connecting to:', socketURL);
+    
 
     this.socket = io(socketURL, {
       auth: {
@@ -73,13 +73,13 @@ class SocketService {
     });
 
     this.socket.on('connect', () => {
-      console.log('✅ Socket connected:', this.socket?.id);
+      
     });
 
     this.socket.on('disconnect', (reason) => {
       // Only log if it was a manual disconnect or server error
       if (reason === 'io server disconnect' || reason === 'io client disconnect') {
-        console.log('❌ Socket disconnected:', reason);
+        
       }
       // Don't log for transport errors (they're expected during reconnection)
     });
@@ -93,7 +93,7 @@ class SocketService {
       // Only log errors if they're not too frequent (max once per 30 seconds)
       // And only log first few errors to avoid spam
       if (now - lastErrorTime > 30000 && errorCount <= 3) {
-        console.warn('Socket connection error (will retry silently):', error.message);
+        
         lastErrorTime = now;
       }
       
@@ -153,7 +153,7 @@ class SocketService {
   joinChatRoom(chatRoomId: string) {
     if (this.socket?.connected) {
       this.socket.emit('join_room', chatRoomId);
-      console.log('Joined chat room:', chatRoomId);
+      
     }
   }
 
@@ -161,7 +161,7 @@ class SocketService {
   leaveChatRoom(chatRoomId: string) {
     if (this.socket?.connected) {
       this.socket.emit('leave_room', chatRoomId);
-      console.log('Left chat room:', chatRoomId);
+      
     }
   }
 
@@ -207,7 +207,7 @@ class SocketService {
         try {
           callback(data);
         } catch (error) {
-          console.error('Error in socket event callback:', error);
+          
         }
       });
     }
