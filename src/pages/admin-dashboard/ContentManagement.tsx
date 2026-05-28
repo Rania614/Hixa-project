@@ -11,6 +11,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { HexagonIcon } from '@/components/ui/hexagon-icon';
 import { Plus, Trash2, ChevronUp, ChevronDown, ChevronDown as ChevronDownIcon, Upload, Eye, Edit } from 'lucide-react';
+import {
+  SOCIAL_PLATFORM_ICONS,
+  SOCIAL_PLATFORM_OPTIONS,
+  detectSocialPlatformFromUrl,
+  type SocialPlatformId,
+} from '@/utils/socialPlatforms';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -621,7 +627,7 @@ const ContentManagement = () => {
       <AdminSidebar />
       <div className="flex-1">
         <AdminTopBar />
-        <main className="p-8">
+        <main className="px-4 py-6 sm:px-5 md:px-6">
           <h2 className="text-3xl font-bold mb-4">
             {language === 'en' ? 'Content Management' : 'إدارة المحتوى'}
           </h2>
@@ -2134,7 +2140,7 @@ const ContentManagement = () => {
 
             {/* CTA Section */}
             <TabsContent value="cta">
-              <Card className="p-6">
+              <Card className="w-full p-4 sm:p-6">
                 <div className="mb-6">
                   <h3 className="text-2xl font-bold mb-4">
                     {language === 'en' ? 'CTA Section' : 'قسم اتصل بنا'}
@@ -2254,11 +2260,14 @@ const ContentManagement = () => {
                   </div>
 
                   {/* Social Links */}
-                  <div>
+                  <div className="w-full">
                     <label className="text-sm font-medium mb-2 block">{language === 'en' ? 'Social Media Links' : 'روابط السوشيال ميديا'}</label>
-                    <div className="space-y-2">
+                    <div className="space-y-2 w-full">
                       {(Array.isArray(cta?.social) ? cta.social : []).map((social: any, index: number) => (
-                        <div key={index} className="flex gap-2">
+                        <div
+                          key={index}
+                          className="grid w-full grid-cols-1 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_11rem_2.5rem]"
+                        >
                           <Input
                             placeholder={language === 'en' ? 'Name (e.g., Instagram)' : 'الاسم (مثل: إنستغرام)'}
                             value={social?.name || ''}
@@ -2267,41 +2276,74 @@ const ContentManagement = () => {
                               newSocial[index] = { ...newSocial[index], name: e.target.value };
                               setContent({ cta: { ...(cta || {}), social: newSocial } });
                             }}
-                            className="flex-1"
+                            className="w-full min-w-0"
                           />
                           <Input
                             placeholder={language === 'en' ? 'URL (https://...)' : 'الرابط (https://...)'}
                             value={social?.url || ''}
                             onChange={(e) => {
                               const newSocial = [...(Array.isArray(cta?.social) ? cta.social : [])];
-                              newSocial[index] = { ...newSocial[index], url: e.target.value };
+                              const url = e.target.value;
+                              const detected = detectSocialPlatformFromUrl(url);
+                              const nextIcon =
+                                !newSocial[index]?.icon && detected
+                                  ? detected
+                                  : newSocial[index]?.icon;
+                              newSocial[index] = { ...newSocial[index], url, icon: nextIcon || newSocial[index]?.icon };
                               setContent({ cta: { ...(cta || {}), social: newSocial } });
                             }}
-                            className="flex-1"
+                            className="w-full min-w-0"
                           />
                           <Select
-                            value={social?.icon || ''}
+                            value={social?.icon || undefined}
                             onValueChange={(value) => {
                               const newSocial = [...(Array.isArray(cta?.social) ? cta.social : [])];
-                              newSocial[index] = { ...newSocial[index], icon: value };
+                              newSocial[index] = { ...newSocial[index], icon: value as SocialPlatformId };
                               setContent({ cta: { ...(cta || {}), social: newSocial } });
                             }}
                           >
-                            <SelectTrigger className="w-[180px]">
-                              <SelectValue placeholder={language === 'en' ? 'Select Icon' : 'اختر الأيقونة'} />
+                            <SelectTrigger className="w-full min-w-0">
+                              {social?.icon && SOCIAL_PLATFORM_ICONS[social.icon as SocialPlatformId] ? (
+                                <div className="flex min-w-0 flex-row items-center gap-2">
+                                  {(() => {
+                                    const Icon = SOCIAL_PLATFORM_ICONS[social.icon as SocialPlatformId];
+                                    return <Icon className="h-4 w-4 shrink-0" />;
+                                  })()}
+                                  <span className="truncate">
+                                    {SOCIAL_PLATFORM_OPTIONS.find((p) => p.id === social.icon)?.[
+                                      language === 'en' ? 'labelEn' : 'labelAr'
+                                    ] ?? social.icon}
+                                  </span>
+                                </div>
+                              ) : (
+                                <SelectValue placeholder={language === 'en' ? 'Select Icon' : 'اختر الأيقونة'} />
+                              )}
                             </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="instagram">Instagram</SelectItem>
-                              <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                              <SelectItem value="twitter">Twitter</SelectItem>
-                              <SelectItem value="telegram">Telegram</SelectItem>
-                              <SelectItem value="facebook">Facebook</SelectItem>
-                              <SelectItem value="linkedin">LinkedIn</SelectItem>
+                            <SelectContent
+                              position="popper"
+                              className="z-[200] min-w-[12rem] border-border bg-[#0a0a0a] text-foreground shadow-2xl backdrop-blur-none"
+                            >
+                              {SOCIAL_PLATFORM_OPTIONS.map((platform) => {
+                                const Icon = SOCIAL_PLATFORM_ICONS[platform.id];
+                                return (
+                                  <SelectItem
+                                    key={platform.id}
+                                    value={platform.id}
+                                    className="focus:bg-muted data-[highlighted]:bg-muted data-[state=checked]:bg-gold/20"
+                                  >
+                                    <Icon className="h-4 w-4 shrink-0" />
+                                    <span className="whitespace-nowrap">
+                                      {language === 'en' ? platform.labelEn : platform.labelAr}
+                                    </span>
+                                  </SelectItem>
+                                );
+                              })}
                             </SelectContent>
                           </Select>
                           <Button
                             variant="destructive"
                             size="sm"
+                            className="w-full sm:w-10 sm:px-0"
                             onClick={() => {
                               const newSocial = [...(Array.isArray(cta?.social) ? cta.social : [])];
                               newSocial.splice(index, 1);

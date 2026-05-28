@@ -26,8 +26,8 @@ export const SEOHead = ({
     };
 
     const defaultDescription = {
-      ar: 'منصة هيكسا تربط بين العملاء والمهندسين والشركات لتنفيذ المشاريع الهندسية بكفاءة عالية. نوفر حلول مبتكرة لتحويل رؤيتك إلى واقع رقمي متميز.',
-      en: 'HIXA platform connects clients, engineers, and companies to execute engineering projects efficiently. We provide innovative solutions to transform your vision into outstanding digital reality.'
+      ar: 'هيكسا HIXA – High XpertA شركة مقاولات ومنصة هندسية. هيكسا ..لكل مشروع لاينسى ..شركة مقاولات وتصميم وإشراف هندسي وتطوير عقاري ومنصة تربط أصحاب المشاريع بالمهندسين والمقاولين لتنفيذ احترافي متكامل',
+      en: 'HIXA – High XpertA: A contracting company and engineering platform. HIXA — for every unforgettable project. Contracting, design, engineering supervision, real estate development, and a platform connecting project owners with engineers and contractors for integrated professional execution.'
     };
 
     const defaultKeywords = {

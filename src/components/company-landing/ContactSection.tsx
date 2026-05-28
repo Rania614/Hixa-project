@@ -1,5 +1,6 @@
 import React from "react";
-import { Instagram, MessageCircle, Twitter, Send, Facebook, Linkedin, Phone, MapPin } from "lucide-react";
+import { MessageCircle, Phone, MapPin } from "lucide-react";
+import { getSocialIcon, resolveSocialPlatform } from "@/utils/socialPlatforms";
 
 interface ContactSectionProps {
   language: "en" | "ar";
@@ -17,24 +18,6 @@ interface ContactSectionProps {
     social?: Array<{ name?: string; url?: string; icon?: string }>;
   } | null;
 }
-
-// Icon mapping for social media
-// Supported icon names: instagram, whatsapp, twitter, telegram, facebook, linkedin
-const iconMap: { [key: string]: React.ComponentType<any> } = {
-  instagram: Instagram,
-  whatsapp: MessageCircle,
-  twitter: Twitter,
-  telegram: Send,
-  facebook: Facebook,
-  linkedin: Linkedin,
-  // Alternative names
-  'whats-app': MessageCircle,
-  'whats app': MessageCircle,
-  'ig': Instagram,
-  'fb': Facebook,
-  'li': Linkedin,
-  'x': Twitter,
-};
 
 export const ContactSection: React.FC<ContactSectionProps> = ({ language, cta }) => {
   const isAr = language === 'ar';
@@ -66,40 +49,27 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ language, cta })
 
   // Build social links from CTA data or use defaults
   const socialLinks = React.useMemo(() => {
-    console.log('🔍 ContactSection - CTA data:', cta);
-    console.log('🔍 ContactSection - CTA social:', cta?.social);
-    console.log('🔍 ContactSection - Is social array?', Array.isArray(cta?.social));
-    console.log('🔍 ContactSection - Social length:', Array.isArray(cta?.social) ? cta.social.length : 0);
-    
     if (Array.isArray(cta?.social) && cta.social.length > 0) {
-      const filtered = cta.social.filter(s => s.url && s.url.trim() !== '');
-      console.log('🔍 ContactSection - Filtered social links:', filtered);
-      
-      const mapped = filtered.map(s => {
-        // Try icon field first, then name field, normalize to lowercase and trim
-        const iconName = (s.icon || s.name || 'whatsapp').toLowerCase().trim().replace(/\s+/g, '-');
-        const IconComponent = iconMap[iconName] || MessageCircle; // Default to WhatsApp icon
-        console.log('🔍 ContactSection - Mapping:', { iconName, hasIcon: !!iconMap[iconName], url: s.url });
-        return {
-          icon: IconComponent,
-          href: s.url || '#',
-          name: s.name || iconName,
-        };
-      });
-      
-      console.log('🔍 ContactSection - Final mapped links:', mapped);
-      return mapped;
+      return cta.social
+        .filter((s) => s.url && s.url.trim() !== "")
+        .map((s) => {
+          const platform = resolveSocialPlatform(s.icon, s.name, s.url);
+          return {
+            icon: getSocialIcon(s.icon, s.name, s.url),
+            href: s.url || "#",
+            name: s.name || platform,
+            platform,
+          };
+        });
     }
-    
-    console.log('⚠️ ContactSection - No social links in CTA, using defaults');
-    // Default social links (only shown if no social links in CTA data)
+
     return [
-      { icon: Instagram, href: "https://www.instagram.com/hixa_groups", name: 'Instagram' },
-      { icon: MessageCircle, href: "https://chat.whatsapp.com/LQrlGeLPOFjGlhN7d1Tl52", name: 'WhatsApp' },
-      { icon: Twitter, href: "https://x.com/HIXAGroup", name: 'Twitter' },
-      { icon: Send, href: "https://t.me/projectsco", name: 'Telegram' },
-      { icon: Facebook, href: "https://www.facebook.com/HIXAGroup", name: 'Facebook' },
-      { icon: Linkedin, href: "https://www.linkedin.com/company/hixagroup", name: 'LinkedIn' }
+      { icon: getSocialIcon("instagram"), href: "https://www.instagram.com/hixa_groups", name: "Instagram", platform: "instagram" },
+      { icon: getSocialIcon("whatsapp"), href: "https://chat.whatsapp.com/LQrlGeLPOFjGlhN7d1Tl52", name: "WhatsApp", platform: "whatsapp" },
+      { icon: getSocialIcon("twitter"), href: "https://x.com/HIXAGroup", name: "Twitter", platform: "twitter" },
+      { icon: getSocialIcon("telegram"), href: "https://t.me/projectsco", name: "Telegram", platform: "telegram" },
+      { icon: getSocialIcon("facebook"), href: "https://www.facebook.com/HIXAGroup", name: "Facebook", platform: "facebook" },
+      { icon: getSocialIcon("linkedin"), href: "https://www.linkedin.com/company/hixagroup", name: "LinkedIn", platform: "linkedin" },
     ];
   }, [cta?.social]);
 
@@ -133,8 +103,9 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ language, cta })
             <div className="flex flex-wrap gap-4 mt-auto relative z-10">
               {socialLinks.map((social, index) => (
                 <a 
-                  key={index} 
+                  key={`${social.platform}-${index}`}
                   href={social.href} 
+                  aria-label={social.name}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-12 h-12 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-gold hover:bg-gold hover:text-black transition-all duration-300"
